@@ -37,5 +37,9 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+<<<<<<< HEAD
 # Thêm dòng này để chắc chắn an toàn 100%
+=======
+# Environment variables
+>>>>>>> a0075dfe94ee98ec247d77acac8e0a624c378b5d
 .env*
