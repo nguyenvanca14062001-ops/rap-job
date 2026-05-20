@@ -3,7 +3,7 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = { 
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY, // Sửa thành dòng này
+  apiKey: "AIzaSyCQz9VulU2k-7O5JZhQxEHD1C5oz6HNO2w", // Dán cái chuỗi Key thật vào đây, giữ nguyên ngoặc kép nhé
   authDomain: "mmo-pro-6f133.firebaseapp.com", 
   projectId: "mmo-pro-6f133", 
   storageBucket: "mmo-pro-6f133.firebasestorage.app", 
