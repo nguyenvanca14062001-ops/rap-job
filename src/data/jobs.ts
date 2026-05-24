@@ -2,138 +2,52 @@
 export const jobsData: Record<string, any> = {
   
   // ==============================================
-  // NHÓM JOB SEEDING & MARKETING TƯƠNG TÁC (NEW)
+  // NHÓM JOB CINEMA RẠP PHIM
   // ==============================================
 
-  'view-tiktok': {
-    title: "CÀY VIEW TIKTOK",
-    reward: "30.000 xu",
-    color: "text-pink-400",
-    badge: "HOT 🔥",
+  'follow-cgv': {
+    title: "FOLLOW FANPAGE RẠP PHIM",
+    reward: "20.000 xu",
+    color: "text-red-400",
+    badge: "HOT 🎬",
     steps: [
-      { 
-        id: 1, 
-        title: "BƯỚC 1: TRUY CẬP VIDEO TIKTOK", 
-        content: "Nhấn vào nút bên dưới để mở video yêu cầu trên ứng dụng TikTok. Đảm bảo bạn đã đăng nhập tài khoản thật.",
-        downloadLink: "https://www.tiktok.com/@nhaf.official/video/7565367864157277458",
-        buttonText: "👉 MỞ VIDEO TIKTOK"
-      },
-      { 
-        id: 2, 
-        title: "BƯỚC 2: TƯƠNG TÁC ĐẦY ĐỦ", 
-        content: "Xem hết video (tuyệt đối KHÔNG TUA), nhấn thả tim (Like), Follow kênh và để lại 1 bình luận tích cực trên 10 chữ.",
-      },
-      { 
-        id: 3, 
-        title: "BƯỚC 3: CHỤP MÀN HÌNH BẰNG CHỨNG", 
-        content: "Chụp lại màn hình cho thấy bạn ĐÃ TIM, ĐÃ FOLLOW và CÓ HIỂN THỊ BÌNH LUẬN của bạn ở phía dưới video.",
-      },
-      { 
-        id: 4, 
-        title: "BƯỚC 4: NỘP BÀI CHỜ DUYỆT", 
-        content: "Upload ảnh màn hình đó lên mục 'Gửi Bằng Chứng'. Admin sẽ check đối soát và cộng XU cho bạn!" 
-      }
+      { id: 1, title: "Truy cập Fanpage CGV Cinemas VN", content: "Vào Facebook tìm 'CGV Cinemas Vietnam' (trang chính thức có tick xanh) → Nhấn FOLLOW (theo dõi)." },
+      { id: 2, title: "Like + Share bài trailer mới nhất", content: "Tìm bài đăng trailer phim mới nhất trên fanpage → Nhấn LIKE ❤️ và SHARE bài đó lên tường Facebook của bạn." },
+      { id: 3, title: "Chụp màn hình bằng chứng", content: "Chụp 1 ảnh: màn hình fanpage CGV rõ trạng thái đã Follow. Chụp 1 ảnh: bài Share trên tường của bạn. Gửi cả 2 ảnh.", note: "BẮT BUỘC: Tài khoản Facebook phải công khai (public) để kiểm tra được." }
     ]
   },
 
-  'view-youtube': {
-    title: "CÀY VIEW YOUTUBE",
-    reward: "30.000 xu",
-    color: "text-red-500",
-    badge: "HOT 🔥",
+  'review-cinema': {
+    title: "ĐÁNH GIÁ 5 SAO RẠP PHIM",
+    reward: "25.000 xu",
+    color: "text-amber-400",
+    badge: "CƠ BẢN",
     steps: [
-      { 
-        id: 1, 
-        title: "BƯỚC 1: MỞ VIDEO YOUTUBE", 
-        content: "Nhấn nút bên dưới để chuyển sang ứng dụng YouTube. (Yêu cầu dùng tài khoản thật, có avatar).",
-        downloadLink: "https://www.youtube.com/watch?v=EOhrUX30yjc",
-        buttonText: "👉 MỞ VIDEO YOUTUBE"
-      },
-      { 
-        id: 2, 
-        title: "BƯỚC 2: XEM & TƯƠNG TÁC", 
-        content: "Xem video tối thiểu 3 phút (Nếu video ngắn hơn thì xem hết). Bấm ĐĂNG KÝ KÊNH (Subscribe), LIKE video và viết một bình luận liên quan đến nội dung video.",
-      },
-      { 
-        id: 3, 
-        title: "BƯỚC 3: CHỤP ẢNH XÁC NHẬN", 
-        content: "Chụp lại màn hình điện thoại hiển thị rõ chữ 'Đã đăng ký', Nút Like đã sáng và thời lượng xem đã qua 3 phút.",
-      },
-      { 
-        id: 4, 
-        title: "BƯỚC 4: GỬI BÁO CÁO", 
-        content: "Tải ảnh vừa chụp lên hệ thống để xác nhận hoàn thành nhiệm vụ và nhận xu." 
-      }
+      { id: 1, title: "Tìm rạp phim trên Google Maps", content: "Mở Google Maps → Tìm kiếm 'CGV' hoặc 'Lotte Cinema' hoặc 'BHD Star' gần bạn → Chọn chi nhánh bất kỳ." },
+      { id: 2, title: "Viết review + chấm 5 sao", content: "Nhấn 'Viết đánh giá' → Chọn 5 sao ⭐⭐⭐⭐⭐ → Viết nhận xét tối thiểu 50 chữ (về chất lượng phim, ghế ngồi, âm thanh, v.v.)." },
+      { id: 3, title: "Chụp màn hình review", content: "Sau khi đăng thành công, chụp màn hình review của bạn rõ tên Google Account, nội dung review và 5 sao.", note: "Review phải còn hiển thị khi admin kiểm tra. Không được xóa review sau khi nhận thưởng." }
     ]
   },
 
-  'post-threads': {
-    title: "ĐĂNG BÀI THREADS",
+  'checkin-cinema': {
+    title: "CHECK-IN TẠI RẠP + ĐĂNG MẠNG XÃ HỘI",
     reward: "30.000 xu",
-    color: "text-slate-300",
-    badge: "TREND 📈",
+    color: "text-rose-400",
+    badge: "HOT 🎬",
     steps: [
-      { 
-        id: 1, 
-        title: "BƯỚC 1: CHỌN MẪU BÀI ĐĂNG (SAO CHÉP 1 TRONG 10 MẪU)", 
-        content: "Bấm nút SAO CHÉP ở một trong các mẫu nội dung dưới đây để chuẩn bị đăng lên tài khoản Threads của bạn:",
-        templates: [
-          "TUYỂN CTV SEEDING ONLINE\nYÊU CẦU: Acc Threads sử dụng trên 6 tháng, hay follow các chủ đề Gen Z, Idol KPOP, Anh em xinh,….\nNội dung Post bên mình đưa sẵn, chỉ việc đăng trên nền tảng Threads.\nthả tim + bình luận chấm bài viết , mình gửi JD ở phần bình luận",
-          "TUYỂN CTV Đánh giá google Map , Seeding, Cày view\n- sản phẩm: ô tô Vinfast , Vincom, kênh youtube Nhà F …\n- Mô tả công việc: tương tác , bình luận , follow kênh , đánh giá 5 sao ….\n* Làm online tại nhà, thời gian linh hoạt.\nCông việc bên mình không cần cọc, không cần vốn gì hết nên mọi người đừng có lo nha\nthả tim + chấm bài viết , mình có gửi JD phía dưới bình luận",
-          "TUYỂN CTV LÀM ONLINE TẠI NHÀ - NHẬN LƯƠNG TRONG NGÀY\nCông việc siêu đơn giản: Đánh giá 5 sao trên Google Map, cày view TikTok, YouTube.\n- Thời gian tự do, rảnh lúc nào cầm điện thoại làm lúc đó.\n- Thu nhập đều đặn 300k - 500k/ngày tùy độ chăm chỉ.\nCam kết 100% KHÔNG CỌC, KHÔNG VỐN!\n👉 Mọi người thả tim + chấm bài viết này, mình sẽ gửi JD chi tiết ở phần bình luận nha!",
-          "HOT: TUYỂN ĐỘI NGŨ SEEDING, CÀY VIEW PART-TIME\n- Nhiệm vụ: Seeding tương tác, cmt khen ngợi cho ô tô Vinfast; đăng bài đẩy trend Threads; cày view Tiktok...\n- Thu nhập từ 300k - 500k/ngày, làm xong duyệt tiền luôn.\nTuyệt đối không yêu cầu kinh nghiệm, không thu phí.\n👉 thả tim + bình luận dưới bài viết, mình gửi liền JD ở phần bình luận nhé!",
-          "TUYỂN CTV LÀM NHIỆM VỤ ONLINE (KHÔNG CỌC)\nBên mình đang cần người chạy các dự án sau:\n✅ Đánh giá địa điểm 5 sao Google Map.\n✅ Seeding, cmt tích cực cho ô tô Vinfast.\n✅ Cày view, tương tác TikTok, Youtube.\nThu nhập cực ổn: 300k - 500k/ngày.\n👉 thả tim + chấm bài viết giúp mình, mình gửi chi tiết JD ở ngay bình luận nha!",
-          "TUYỂN CTV TƯƠNG TÁC DẠO - KIẾM TIỀN TIÊU VẶT RẤT DỄ\nBạn nào hay lướt điện thoại rảnh rỗi thì về ngay đội mình!\n- Công việc: Cày view Youtube kênh Nhà F, seeding chéo cho dự án xe Vinfast, đăng bài Threads.\n- Kiếm 300k - 500k/ngày cực kỳ dễ thở. KHÔNG BẮT ĐÓNG TIỀN nha.\n👉 thả tim + bình luận chấm bài viết, mình gửi JD ngay dưới cmt ạ.",
-          "KIẾM TIỀN TỪ VIỆC XEM VIDEO TIKTOK, YOUTUBE - TẠI SAO KHÔNG?\n- Tuyển CTV chuyên cày view, cày sub. Rảnh rỗi nhận thêm job đánh giá Google Map hoặc Seeding Vinfast.\n- Lương tính theo nhiệm vụ, đều tay thì 300k - 500k/ngày. Tiền rút thẳng về thẻ.\nKhông cọc không vốn nha. \n👉 thả tim + bình luận bài viết, mình sẽ để link JD dưới phần bình luận.",
-          "CẦN GẤP CTV ĐÁNH GIÁ MAP VÀ SEEDING DỰ ÁN LỚN\n- Bên mình đang chạy KPI đánh giá 5 sao Google Map và seeding cho hãng xe Vinfast.\n- Công việc linh hoạt tại nhà, đút túi 300k - 500k/ngày.\n- Tham gia hoàn toàn miễn phí, không đa cấp lùa gà.\n👉 thả tim + chấm dưới bài, mình sẽ rep và gửi JD ở phần bình luận nhé.",
-          "TÌM ĐỒNG ĐỘI CÀY VIEW, SEEDING KIẾM THÊM TẠI NHÀ\nJob bên mình toàn việc nhàn: Xem video Tiktok thả tim, đánh giá 5 sao Map, cmt mồi nội dung cho ô tô Vinfast.\n- Việc làm 100% online, thu nhập tươi 300k - 500k/ngày. Không bắt nộp phí.\n👉 Thả tim + để lại 1 dấu chấm, mình gửi luôn link JD dưới phần bình luận nhé!",
-          "Đang rảnh rỗi lướt điện thoại thì bơi hết vào đây nhận việc nào mọi người ơi!\nMình cần tuyển gấp CTV cày view Youtube/Tiktok, đánh giá Map 5 sao và seeding dạo cho ô tô Vinfast. Nội dung bên mình cấp sẵn.\nSiêng năng là ngày kiếm 300k - 500k ngon ơ. KHÔNG THU PHÍ ĐẦU VÀO nhé.\n👉 thả tim + bình luận bài viết, mình sẽ ném cái JD xuống phần bình luận ạ."
-        ]
-      },
-      { 
-        id: 2, 
-        title: "BƯỚC 2: TẢI ẢNH QR ZALO, ĐĂNG BÀI VÀ GHIM BÌNH LUẬN", 
-        content: "1. Đăng bài lên Threads với Nội dung bạn vừa Copy.\n2. Bấm nút TẢI ẢNH bên dưới để lưu ảnh Mã QR Zalo về điện thoại.\n3. Bình luận bức ảnh QR đó vào bài viết bạn vừa đăng.",
-        img: "images/qr-zalo-nhom.jpg",
-        downloadLink: "images/qr-zalo-nhom.jpg",
-        buttonText: "📥 TẢI MÃ QR ZALO VỀ MÁY"
-      },
-      { 
-        id: 3, 
-        title: "BƯỚC 3: CHỤP ẢNH BẰNG CHỨNG XÁC NHẬN", 
-        content: "Chụp lại màn hình bài viết Threads của bạn. (Lưu ý: Bức ảnh phải hiển thị rõ NỘI DUNG BÀI ĐĂNG và CẢ PHẦN BÌNH LUẬN CÓ CHỨA ẢNH QR ZALO). Tải ảnh đó lên mục Gửi Bằng Chứng để Admin duyệt Xu." 
-      }
+      { id: 1, title: "Tải hoặc lưu ảnh liên quan đến rạp phim", content: "Tìm và lưu 1 ảnh bất kỳ liên quan đến CGV, Lotte Cinema hoặc BHD Star (ảnh sảnh rạp, poster phim, ảnh check-in, v.v.). Có thể tìm trên Google, Facebook hoặc trang chính thức của rạp." },
+      { id: 2, title: "Đăng lên Facebook hoặc Instagram", content: "Đăng ảnh vừa lưu lên Facebook/Instagram ở chế độ công khai. Caption phải có tag fanpage rạp (@CGV Cinemas Vietnam hoặc tương đương) và hashtag #CGV hoặc #RapPhim." },
+      { id: 3, title: "Gửi bằng chứng", content: "Chụp màn hình bài đăng rõ ảnh, caption có tag + hashtag, và trạng thái công khai (Public). Gửi lên hệ thống.", note: "BẮT BUỘC: Bài đăng phải để chế độ Public. Không đăng ảnh trống hoặc nội dung không liên quan đến rạp phim." }
     ]
   },
 
-  'seeding-vinfast': {
-    title: "SEEDING VINFAST",
-    reward: "30.000 xu",
-    color: "text-cyan-400",
-    badge: "DỰ ÁN VIP 💎",
+  'survey-cinema': {
+    title: "KHẢO SÁT THÓI QUEN XEM PHIM",
+    reward: "20.000 xu",
+    color: "text-violet-400",
+    badge: "SURVEY 📋",
     steps: [
-      { 
-        id: 1, 
-        title: "BƯỚC 1: TRUY CẬP BÀI VIẾT VINFAST", 
-        content: "Nhiệm vụ của bạn là hỗ trợ tương tác tích cực cho chiến dịch mới của VinFast. Nhấn nút dưới đây để mở bài viết Fanpage đích.",
-        downloadLink: "https://www.facebook.com/photo?fbid=1290890003259251&set=a.562483936099865",
-        buttonText: "👉 MỞ BÀI VIẾT"
-      },
-      { 
-        id: 2, 
-        title: "BƯỚC 2: THẢ TIM VÀ BÌNH LUẬN TÍCH CỰC", 
-        content: "Nhấn thả tim (Tuyệt vời/Thương thương) vào bài viết. Viết một bình luận khen ngợi xe hoặc chiến dịch (VD: Xe đẹp quá, tự hào xe Việt...).",
-      },
-      { 
-        id: 3, 
-        title: "BƯỚC 3: CHỤP ẢNH BẰNG CHỨNG", 
-        content: "Chụp ảnh màn hình điện thoại hiển thị rõ Icon thả tim và bình luận của bạn nằm trên bài viết đó.",
-      },
-      { 
-        id: 4, 
-        title: "BƯỚC 4: GỬI BÁO CÁO", 
-        content: "Gửi ảnh lên hệ thống để Admin duyệt tiền ngay nhé." 
-      }
+      { id: 1, title: "Trả lời 5 câu hỏi khảo sát", content: "Trả lời 5 câu hỏi trắc nghiệm về thói quen xem phim của bạn. Kết quả được ghi nhận tức thì, xu vào ví ngay khi hoàn thành." }
     ]
   },
 
@@ -141,29 +55,36 @@ export const jobsData: Record<string, any> = {
   // CÁC JOB CŨ (GIỮ NGUYÊN)
   // ==============================================
 
-  'google-map': {
-    title: "GOOGLE MAP",
+  'post-threads': {
+    title: "ĐĂNG BÀI THREADS",
     reward: "25.000 xu",
-    color: "text-cyan-400", 
-    badge: "CƠ BẢN", 
+    color: "text-fuchsia-400",
+    badge: "CƠ BẢN",
+    warning: "KHÔNG ĐƯỢC XÓA BÀI SAU KHI ĐĂNG! Bài phải để chế độ công khai ít nhất 7 ngày. Phát hiện gian lận hoặc xóa bài → KHÓA TÀI KHOẢN VĨNH VIỄN.",
     steps: [
-      { 
-        id: 1, 
-        title: "TÌM ĐỊA ĐIỂM VINCOM HÀ NỘI", 
-        content: "Mở Google Maps và tìm kiếm các từ khóa liên quan đến Vincom tại Hà Nội.", 
-        img: "images/anh-vincom1.jpg" 
+      {
+        id: 1,
+        title: "SAO CHÉP 1 TRONG 3 NỘI DUNG VÀ ĐĂNG LÊN THREADS",
+        content: "Chọn 1 trong 3 nội dung bên dưới, nhấn COPY rồi dán vào bài đăng Threads của bạn. Đăng bài ở chế độ công khai (Public).",
+        templates: [
+          `🎬 TUYỂN CTV ONLINE – LÀM NHIỆM VỤ RẠP PHIM TẠI NHÀ\n\nBên mình đang tuyển thêm cộng tác viên làm online các job cực dễ như:\n\n🍿 Follow fanpage rạp phim\n⭐ Đánh giá 5 sao Google Maps\n📸 Check-in rạp + đăng story/social\n📝 Khảo sát thói quen xem phim\n\n✅ Không yêu cầu kinh nghiệm\n✅ Làm bằng điện thoại được\n✅ Nhận job mỗi ngày\n✅ Thanh toán nhanh sau khi hoàn thành\n\n💸 Thu nhập: 200k – 500k/ngày tùy độ chăm chỉ\n\nPhù hợp cho sinh viên, dân văn phòng, người rảnh buổi tối muốn kiếm thêm 💰\n\n👇 Mọi người thả tim + chấm bài viết, mình sẽ gửi JD cụ thể tại phần bình luận.`,
+          `🔥 KIẾM TIỀN ONLINE MÙA HÈ – JOB NHẸ, DỄ LÀM 🔥\n\nHiện bên mình đang mở thêm các job online liên quan đến rạp phim & mạng xã hội:\n\n🎥 Follow/like/share trailer phim\n⭐ Review rạp trên Google Maps\n📍 Check-in nhận thưởng\n📋 Trả lời khảo sát ngắn\n\nChỉ cần có điện thoại + mạng là làm được 📱\n\n⏰ Thời gian linh hoạt\n💵 Thu nhập trung bình: 200 – 500k/ngày\n⚡ Làm xong nhận thưởng luôn\n\nKhông đa cấp – không ôm hàng – không yêu cầu vốn ❌\n\nAi muốn nhận việc thì thả ❤️ + chấm dưới bài viết, mình gửi JD cụ thể tại phần bình luận nhé.`,
+          `📢 TUYỂN CTV FREELANCE ONLINE – NHẬN VIỆC NGAY TRONG NGÀY\n\nMột số job bên mình đang chạy:\n\n🎬 Follow fanpage rạp phim\n⭐ Đánh giá 5 sao\n📸 Check-in rạp + đăng bài MXH\n📝 Khảo sát trải nghiệm xem phim\n\nCông việc đơn giản, mỗi task chỉ mất vài phút ⏳\n\n💰 Thu nhập: 200k – 500k/ngày\n📲 Làm online tại nhà\n🧾 Có hướng dẫn chi tiết từng bước\n⚡ Thanh toán nhanh sau khi duyệt task\n\nBên mình ưu tiên người online thường xuyên để nhận job đều mỗi ngày 🔥\n\n👇 Mọi người thả tim + chấm bài viết, mình sẽ gửi JD cụ thể tại phần bình luận.`
+        ]
       },
-      { 
-        id: 2, 
-        title: "ĐÁNH GIÁ 5 SAO", 
-        content: "Viết bình luận tốt, tích cực và đăng kèm ảnh chụp địa điểm thực tế.", 
-        img: "images/anh-vincom2.jpg",
-        note: "BÌNH LUẬN TRÊN 15 TỪ ĐỂ ĐƯỢC DUYỆT NHANH."
+      {
+        id: 2,
+        title: "TẢI MÃ QR VÀ GHIM VÀO BÌNH LUẬN ĐẦU TIÊN",
+        content: "Sau khi đăng bài, vào phần bình luận → Tải QR về máy → Đăng ảnh QR làm bình luận đầu tiên để mọi người dễ truy cập đăng ký.",
+        downloadLink: "images/ma-qr1.jpg",
+        buttonText: "📥 TẢI MÃ QR VỀ MÁY",
+        img: "images/ma-qr1.jpg",
+        note: "BẮT BUỘC: Phải ghim QR làm bình luận đầu tiên bên dưới bài đăng."
       },
-      { 
-        id: 3, 
-        title: "CHỤP LẠI ẢNH BẰNG CHỨNG", 
-        content: "CHỤP LẠI MÀN HÌNH BÀI ĐÁNH GIÁ ĐÃ ĐĂNG THÀNH CÔNG ĐỂ GỬI."
+      {
+        id: 3,
+        title: "CHỤP BẰNG CHỨNG VÀ GỬI LÊN HỆ THỐNG",
+        content: "Chụp 2 ảnh: (1) Ảnh bài đăng Threads với nội dung đã đăng — (2) Ảnh bình luận có QR được ghim bên dưới. Gửi cả 2 ảnh lên hệ thống."
       }
     ]
   },
@@ -178,7 +99,7 @@ export const jobsData: Record<string, any> = {
         id: 1, 
         title: "THAM ZALO NHÓM ZALO MMO PRO ", 
         content: "CHỌN NÚT THAM GIA NHÓM ĐỂ VÀO NHÓM .", 
-        downloadLink: "https://zalo.me/g/zbvsdm567",
+        downloadLink: "https://zalo.me/g/fambpb151",
         buttonText: "THAM GIA NHÓM ➔" 
       },
       { 
@@ -370,40 +291,37 @@ export const jobsData: Record<string, any> = {
     ]
   },
 
-  'tpbank': {
-    title: "NGÂN HÀNG TPB",
-    reward: "100.000 xu",
+  'app-chung-khoan-4': {
+    title: "APP CHỨNG KHOÁN SỐ 4",
+    reward: "85.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
     warning: "BẮT BUỘC TỪ 18 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
     steps: [
-      { 
-        id: 1, 
-        title: "CHỌN NÚT ĐĂNG KÝ NGAY ", 
-        content: "XEM ẢNH HƯỚNG DẪN BÊN DƯỚI ĐỂ TẢI APP .", 
-        downloadLink: "https://shorten.asia/YXH4eyQ7", 
-        buttonText: "🚀 ĐĂNG KÝ NGAY",
-        img: "images/anh-tpbank5.jpg" 
+      {
+        id: 1,
+        title: "VÀO CHPLAY HOẶC APPSTORE TẢI APP",
+        content: "Tải APP chứng khoán về điện thoại theo hình hướng dẫn bên dưới.",
+        img: "images/anh-maybank1.jpg"
       },
-      { 
-        id: 2, 
-        title: "NHẬP MÃ GIỚI THIỆU AT09", 
-        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU AT09 CHỤP LẠI ẢNH BẰNG CHỨNG.", 
-        img: "images/anh-tpbank2.jpg", 
-        note: "NHẬP MÃ: AT09 (BẮT BUỘC)" 
+      {
+        id: 2,
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU AT09",
+        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU AT09 VÀ CHỤP LẠI ẢNH.",
+        img: "images/anh-maybank2.jpg",
+        note: "NHẬP MÃ: AT09 (BẮT BUỘC)"
       },
-      { 
-        id: 3, 
-        title: "ĐĂNG KÝ THÀNH CÔNG , ĐĂNG NHẬP VÀ VÀO APP", 
-        content: "CHỤP LẠI ẢNH ĐĂNG KÝ THÀNH CÔNG NHƯ DƯỚI ĐÂY.", 
-        img: "images/anh-tpbank3.jpg" 
+      {
+        id: 3,
+        title: "ĐĂNG KÝ TÀI KHOẢN THÀNH CÔNG",
+        content: "CHỤP LẠI ẢNH ĐĂNG NHẬP THÀNH CÔNG ĐỂ GỬI BẰNG CHỨNG.",
+        
       },
       {
         id: 4,
-        title: "CHUYỂN VÀO TPBANK 50K , RỒI LẠI CHUYỂN RA ",
-        content: "Chuyển ra cho 1 người khác , xem ảnh bên dưới ",
-        img: "images/anh-tpbank6.jpg" 
-      },
+        title: "LƯU LẠI ẢNH VÀ GỬI",
+        content: "GỬI 2 ẢNH ĐÓ VÀ CHỜ PHÊ DUYỆT HOA HỒNG TRONG 1H."
+      }
     ]
   }
 };

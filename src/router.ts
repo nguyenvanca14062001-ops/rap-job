@@ -16,7 +16,7 @@ import JobDetailView from '@/views/JobDetailView.vue'
 // @ts-ignore
 import AdminView from '@/views/AdminView.vue'
 // @ts-ignore
-import ProfileView from '@/views/Profile.vue' 
+import ProfileView from '@/views/Profile.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -26,7 +26,9 @@ const routes = [
   { path: '/withdraw', name: 'withdraw', component: WithdrawView },
   { path: '/job/:id', name: 'job-detail', component: JobDetailView },
   { path: '/admin', name: 'admin', component: AdminView },
-  { path: '/profile', name: 'profile', component: ProfileView }
+  { path: '/profile', name: 'profile', component: ProfileView },
+  // @ts-ignore
+  { path: '/survey-cinema', name: 'survey-cinema', component: () => import('@/views/SurveyView.vue') }
 ]
 
 const router = createRouter({

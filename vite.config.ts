@@ -6,8 +6,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // https://vitejs.dev/config/
 export default defineConfig({
   /**
-   * VÌ REPO CỦA MÀY LÀ mmopro.github.io (DẠNG USER PAGE), 
-   * NÊN BASE PHẢI ĐỂ LÀ '/' ĐỂ LOAD ĐÚNG ASSETS TỪ THƯ MỤC GỐC.
+   * Custom domain rapjob.io → base phải là '/' để assets load đúng.
+   * Nếu bỏ custom domain (dùng github.io/rap-job) thì đổi lại '/rap-job/'.
    */
   base: '/',
 

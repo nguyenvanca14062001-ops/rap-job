@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   // Boss dán cái API Key chuẩn (mã AIzaSy...) của project có khách cũ vào đây nhé
-  apiKey: "AIzaSyDZsrN_ZM9YAzPnCTZHafOKhcsIZ--ll2", 
+  apiKey: "AIzaSyDZsrN_ZM9YAzPnCTZHafOKhcsIZ--ll2g", 
   authDomain: "mmo-pro-6f133.firebaseapp.com",
   projectId: "mmo-pro-6f133",
   storageBucket: "mmo-pro-6f133.firebasestorage.app",

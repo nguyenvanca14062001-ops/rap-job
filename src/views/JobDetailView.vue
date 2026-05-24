@@ -15,76 +15,69 @@ onMounted(() => {
   const jobId = route.params.id as string
   if (jobId && jobsData[jobId]) {
     currentJob.value = jobsData[jobId]
-    // Kích hoạt bốt gác chặn ngay khi vừa vào trang
     checkAgeLimitOnDetail(jobId);
   }
 })
 
-// ============================================================================
-// LÕI LỌC TUỔI CHẶN CỨNG - THIẾT KẾ MỚI: LIỀN MẠCH, NHẤN MẠNH, KÍCH THƯỚC CHUẨN
-// ============================================================================
 const checkAgeLimitOnDetail = (jobId: string) => {
-  const age18Jobs = ['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2'];
+  const age18Jobs = ['msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-4'];
   const age20Jobs = ['app-chung-khoan-3'];
 
-  // Nếu là job thường (Tiktok, Youtube, Map...) -> Cho qua luôn không cần hiện popup
   if (!age18Jobs.includes(jobId) && !age20Jobs.includes(jobId)) return;
 
   const hasSeenPopup = localStorage.getItem(`seen_age_popup_${jobId}`);
-  
+
   if (!hasSeenPopup) {
     let ageLimit = age18Jobs.includes(jobId) ? '18' : '20';
     let appType = jobId.includes('bank') ? 'Ngân Hàng' : 'Chứng Khoán';
 
     Swal.fire({
-      title: '⚠️ THÔNG BÁO ĐỘ TUỔI ĐĂNG KÝ',
-      html: `<div class="text-center font-sans normal-case text-white text-[14px] md:text-[15px] leading-relaxed">
-              Chiến dịch <span class="text-yellow-300 font-black italic underline">${appType}</span> này yêu cầu bạn phải từ:
-              <div class="my-3">
-                <span class="inline-block bg-white text-[#ea580c] px-4 py-1.5 rounded-full font-sans font-black text-[18px] shadow-xl border-2 border-orange-200 whitespace-nowrap">
+      title: '⚠️ THÔNG BÁO ĐỘ TUỔI',
+      html: `<div class="text-center font-sans normal-case text-white text-[11px] md:text-[14px] leading-tight">
+              Chiến dịch <span class="text-yellow-300 font-black italic underline">${appType}</span> yêu cầu từ:
+              <div class="my-2">
+                <span class="inline-block bg-white text-[#ea580c] px-3 py-1 rounded-full font-sans font-black text-[13px] md:text-[16px] shadow-lg border-2 border-orange-200">
                   🔞 ${ageLimit} TUỔI TRỞ LÊN
                 </span>
               </div>
-              mới đủ điều kiện đăng ký mở tài khoản hệ thống.
-              <br/><br/>
-              <div class="bg-black/20 p-4 rounded-2xl border border-white/10 text-left">
-                <span class="text-yellow-300 font-black text-[11px] tracking-wider block mb-1 uppercase">💡 Mẹo nhận hoa hồng:</span>
-                Nếu chưa đủ tuổi, bạn có thể <span class="text-white font-black underline">nhờ người thân hoặc bạn bè đủ tuổi đăng ký hộ</span>, sau đó chụp lại bằng chứng nộp lên hệ thống để nhận tiền thưởng hoa hồng bình thường nhé!
+              mới đủ điều kiện đăng ký.
+              <div class="bg-black/20 p-2 md:p-3 rounded-xl border border-white/10 text-left mt-3">
+                <span class="text-yellow-300 font-black text-[10px] block mb-0.5 uppercase tracking-wide">💡 Mẹo nhận hoa hồng:</span>
+                <span class="text-[9px] md:text-[11px] leading-snug">Nếu chưa đủ tuổi, có thể <span class="text-white font-black underline">nhờ người thân/bạn bè đủ tuổi đăng ký hộ</span>, sau đó chụp bằng chứng nộp lên hệ thống để nhận thưởng nhé!</span>
               </div>
              </div>`,
+      width: 'auto',
+      padding: '1rem',
       icon: 'warning',
-      iconColor: '#ffffff', // Biến icon chấm than thành màu trắng cho sang
-      background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', // Nền gradient Cam Cháy siêu sáng và đẹp
+      iconColor: '#ffffff',
+      background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
       color: '#ffffff',
       confirmButtonText: 'ĐÃ HIỂU VÀ TIẾP TỤC 🚀',
-      confirmButtonColor: '#1e293b', // Nút màu đá Slate tối tương phản cực mạnh với nền cam
-      allowOutsideClick: false, 
-      allowEscapeKey: false,    
-      backdrop: 'rgba(9,14,23,0.85)', // Làm mờ nhẹ giao diện web phía sau nhìn rất thiện cảm
+      confirmButtonColor: '#1e293b',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      backdrop: 'rgba(9,14,23,0.85)',
       customClass: {
-        popup: 'rounded-[32px] border-2 border-orange-400/30 shadow-[0_20px_50px_rgba(234,88,12,0.3)] p-5 md:p-8',
-        title: 'text-xl md:text-2xl font-black tracking-tight text-white italic font-sans pt-2'
+        popup: '!w-[85vw] !max-w-[300px] md:!max-w-md !rounded-2xl border-2 border-orange-400/30',
+        title: '!text-[15px] md:!text-xl font-black text-white italic font-sans !mt-0 !pt-1',
+        htmlContainer: '!m-2',
+        confirmButton: '!text-[10px] md:!text-sm py-2 px-4 !mt-1',
+        icon: '!w-12 !h-12 !my-2 !border-2 !text-2xl'
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        // Ghi nhớ thiết bị và mở khóa cho khách làm bài tiếp
         localStorage.setItem(`seen_age_popup_${jobId}`, 'true');
       } else {
-        // Nếu lách bằng cách khác -> Trả về trang chủ ngay
         router.push('/');
       }
     });
   }
 }
 
-// ==========================================
-// TÍNH NĂNG PHÓNG TO ẢNH (ZOOM) CHO TRANG HƯỚNG DẪN
-// ==========================================
 const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
 
-// Hàm copy đa năng dùng chung
 const handleCopy = (text: string) => {
   if (!text) return;
   navigator.clipboard.writeText(text).then(() => {
@@ -121,8 +114,8 @@ const handleCopy = (text: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#090e17] text-slate-300 p-4 md:p-8 font-black italic uppercase text-left relative">
-    
+  <div class="min-h-screen bg-transparent text-slate-300 p-4 md:p-8 font-black italic uppercase text-left relative">
+
     <Transition name="fade">
       <div class="fixed inset-0 z-[6000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md cursor-zoom-out" v-if="selectedImage" @click="closeImage">
         <button class="absolute top-6 right-6 md:top-10 md:right-10 w-12 h-12 bg-slate-800 border border-slate-700 hover:bg-red-600 rounded-full flex items-center justify-center text-white transition-colors z-[6010] shadow-2xl" @click.stop="closeImage">
@@ -150,7 +143,7 @@ const handleCopy = (text: string) => {
             THƯỞNG: {{ currentJob.reward }}
           </span>
         </div>
-        
+
         <div class="mt-6 max-w-xl mx-auto bg-[#1a0f14] border border-red-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-in fade-in zoom-in duration-500" v-if="currentJob.warning">
           <div class="flex items-start gap-3">
             <span class="text-red-500 text-xl animate-pulse">⚠️</span>
@@ -163,10 +156,10 @@ const handleCopy = (text: string) => {
 
       <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative">
         <div class="text-center space-y-5">
-          
+
          <div class="mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700"
-               v-if="['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3'].includes(route.params.id as string)">
-            
+                v-if="['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3'].includes(route.params.id as string)">
+
             <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
 
             <div class="text-2xl md:text-3xl animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.8)] mt-1">🪝</div>
@@ -192,7 +185,7 @@ const handleCopy = (text: string) => {
         <div class="mt-8 pt-8 border-t border-slate-800/50 space-y-8 animate-in fade-in duration-500" v-if="showGuide">
           <div class="relative pl-10" v-for="step in currentJob.steps" :key="step.id">
             <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
-            
+
             <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-sm font-black shadow-lg shadow-emerald-500/20">
               {{ step.id }}
             </div>
@@ -242,7 +235,7 @@ const handleCopy = (text: string) => {
                 <a class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl text-[11px] font-black uppercase hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95" :href="step.downloadLink" target="_blank" :download="step.downloadLink.includes('.png') || step.downloadLink.includes('.jpg') ? 'Tai_Lieu_MMO_PRO' : false">
                   {{ step.buttonText || 'TẢI APP NGAY ➔' }}
                 </a>
-                
+
                 <button class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 px-5 py-3 rounded-xl text-[11px] font-black uppercase transition-all shadow-md border border-slate-700 active:scale-95"
                   v-if="!step.downloadLink.includes('.png') && !step.downloadLink.includes('.jpg')"
                   @click="handleCopy(step.downloadLink)">
@@ -252,7 +245,7 @@ const handleCopy = (text: string) => {
 
               <div class="flex flex-col md:flex-row gap-6 items-start">
                 <div class="w-full md:max-w-[400px] rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
-                     v-if="step.img" 
+                     v-if="step.img"
                      @click="openImage(baseUrl + step.img)">
                   <img class="w-full h-auto object-contain hover:scale-105 transition-transform duration-500" :src="baseUrl + step.img" />
                   <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">🔍 CHẠM ĐỂ PHÓNG TO</div>
@@ -266,7 +259,7 @@ const handleCopy = (text: string) => {
 
               <div class="grid grid-cols-3 gap-2 md:gap-4 mt-4" v-if="step.images">
                 <div class="rounded-xl overflow-hidden border border-slate-700/50 shadow-lg relative group bg-slate-900 cursor-zoom-in"
-                     v-for="(imgSrc, idx) in step.images" :key="idx" 
+                     v-for="(imgSrc, idx) in step.images" :key="idx"
                      @click="openImage(baseUrl + imgSrc)">
                   <img class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" :src="baseUrl + imgSrc" />
                   <div class="absolute top-1.5 left-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-sm">ẢNH {{ idx + 1 }}</div>
@@ -280,7 +273,7 @@ const handleCopy = (text: string) => {
 
       <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20">
         <h2 class="text-lg text-slate-400 font-black italic mb-6 tracking-wide uppercase opacity-60">BẠN ĐÃ LÀM XONG?</h2>
-        
+
         <button class="w-full bg-[#00df89] hover:bg-[#00c578] text-[#090e17] py-5 rounded-2xl text-xl font-black italic uppercase shadow-[0_10px_40px_rgba(0,223,137,0.25)] transition-all active:scale-95" @click="router.push(`/submit-report?job=${route.params.id}`)">
           NỘP BẰNG CHỨNG NGAY
         </button>

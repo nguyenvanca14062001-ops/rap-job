@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a0505"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </radialGradient>
+    <radialGradient id="reel" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect width="64" height="64" rx="14" fill="none" stroke="#dc2626" stroke-width="2" opacity="0.5"/>
+
+  <!-- Film reel body -->
+  <circle cx="32" cy="30" r="18" fill="url(#reel)"/>
+  <!-- Inner dark circle -->
+  <circle cx="32" cy="30" r="7" fill="#0a0a0a"/>
+  <!-- Hub dot -->
+  <circle cx="32" cy="30" r="2.5" fill="#ef4444"/>
+
+  <!-- Sprocket holes (8 holes around the reel) -->
+  <circle cx="32" cy="13.5" r="3" fill="#0a0a0a"/>
+  <circle cx="43.5" cy="18.5" r="3" fill="#0a0a0a"/>
+  <circle cx="48.5" cy="30" r="3" fill="#0a0a0a"/>
+  <circle cx="43.5" cy="41.5" r="3" fill="#0a0a0a"/>
+  <circle cx="32" cy="46.5" r="3" fill="#0a0a0a"/>
+  <circle cx="20.5" cy="41.5" r="3" fill="#0a0a0a"/>
+  <circle cx="15.5" cy="30" r="3" fill="#0a0a0a"/>
+  <circle cx="20.5" cy="18.5" r="3" fill="#0a0a0a"/>
+
+  <!-- Spokes -->
+  <line x1="32" y1="23" x2="32" y2="14.5" stroke="#ff6666" stroke-width="1.5" opacity="0.4"/>
+  <line x1="32" y1="23" x2="41" y2="27.5" stroke="#ff6666" stroke-width="1.5" opacity="0.4"/>
+  <line x1="32" y1="23" x2="23" y2="27.5" stroke="#ff6666" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- "RJ" text bottom -->
+  <text x="32" y="59" text-anchor="middle" font-family="Arial Black, sans-serif" font-weight="900" font-size="8" fill="#dc2626" letter-spacing="1">RẠP JOB</text>
+</svg>
