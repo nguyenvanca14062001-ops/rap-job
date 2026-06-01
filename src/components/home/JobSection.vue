@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { jobsData } from '@/data/jobs';
 import Logo from '@/components/Logo.vue';
 
@@ -9,12 +10,31 @@ defineProps<{
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
+const showAgeModal = ref(false);
+const pendingJobId = ref('');
+const pendingJobTitle = ref('');
+
 const handleJobClick = (id: string) => {
+  const job = jobsData[id];
+  if (!job || (job as any).paused) return;
   if (typeof navigator !== 'undefined' && navigator.vibrate) {
     navigator.vibrate(50);
   }
-  emit('receiveJob', id);
-}
+  pendingJobId.value = id;
+  pendingJobTitle.value = job.title;
+  showAgeModal.value = true;
+};
+
+const confirmAge = () => {
+  showAgeModal.value = false;
+  emit('receiveJob', pendingJobId.value);
+};
+
+const cancelAge = () => {
+  showAgeModal.value = false;
+  pendingJobId.value = '';
+  pendingJobTitle.value = '';
+};
 
 const formatReward = (val: any) => {
   if (!val) return '0';
@@ -106,13 +126,22 @@ const getShortDesc = (id: string) => {
 
     <!-- HERO SECTION -->
     <div class="flex flex-col lg:flex-row gap-3">
-      <section class="lg:w-2/3 relative bg-gradient-to-br from-[#1c1109] to-[#120b0a] rounded-[30px] border border-red-700/30 p-6 md:p-10 overflow-hidden flex items-center min-h-[200px] md:min-h-[400px] shadow-[0_0_60px_rgba(185,28,28,0.18),0_20px_80px_rgba(0,0,0,0.5)]">
-        <!-- Shimmer sweep -->
-        <div class="absolute inset-0 pointer-events-none hero-shimmer rounded-[30px]"></div>
-        <div class="absolute -right-20 -top-20 w-[300px] h-[300px] bg-red-800/15 rounded-full blur-[90px]"></div>
-        <div class="absolute -left-10 bottom-10 w-[200px] h-[200px] bg-amber-900/8 rounded-full blur-[80px]"></div>
+      <section class="lg:w-2/3 relative bg-gradient-to-br from-[#1a1100] via-[#130d00] to-[#0c0800] rounded-[30px] border border-yellow-600/25 p-6 md:p-10 overflow-hidden flex items-center min-h-[200px] md:min-h-[400px] shadow-[0_0_60px_rgba(234,179,8,0.12),0_20px_80px_rgba(0,0,0,0.6)]">
 
-        <div class="relative z-10 space-y-4 w-full md:w-[65%]">
+        <!-- Gold glow orbs -->
+        <div class="absolute inset-0 pointer-events-none hero-shimmer rounded-[30px]"></div>
+        <div class="absolute -right-20 -top-20 w-[300px] h-[300px] bg-yellow-600/10 rounded-full blur-[90px]"></div>
+        <div class="absolute -left-10 bottom-10 w-[200px] h-[200px] bg-amber-700/8 rounded-full blur-[80px]"></div>
+        <div class="absolute right-1/3 bottom-0 w-[180px] h-[120px] bg-yellow-500/8 rounded-full blur-[60px]"></div>
+
+        <!-- RẠP JOB glow header -->
+        <div class="absolute top-4 left-1/2 -translate-x-1/2 text-center z-20 pointer-events-none hidden md:block whitespace-nowrap">
+          <div class="neon-gold-text text-[15px] font-black uppercase tracking-[10px]">RẠP JOB</div>
+          <div class="text-[7px] tracking-[3px] text-yellow-600/60 font-bold uppercase mt-0.5">FREELANCE · CINEMA · EARN</div>
+        </div>
+
+        <!-- LEFT SIDE — không đổi logic -->
+        <div class="relative z-10 space-y-4 w-full md:w-[55%]">
           <!-- Logo — chỉ mobile -->
           <div class="lg:hidden">
             <Logo size="lg" />
@@ -124,9 +153,9 @@ const getShortDesc = (id: string) => {
 
           <!-- Heading + circular buttons -->
           <div class="flex items-start justify-between gap-2">
-            <h1 class="text-2xl md:text-5xl text-white leading-tight tracking-tighter uppercase font-black italic">
+            <h1 class="text-xl md:text-4xl text-white leading-tight tracking-tighter uppercase font-black italic">
               CHÀO MỪNG,<br/>
-              <span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-400 text-3xl md:text-6xl">
+              <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-400 text-2xl md:text-5xl">
                 {{ username.toUpperCase() }}
               </span>
             </h1>
@@ -150,41 +179,106 @@ const getShortDesc = (id: string) => {
 
           <!-- Nút đăng nhập (khi chưa login) -->
           <button v-if="!isLoggedIn" @click="emit('routerPush', '/login')"
-                  class="bg-red-700 hover:bg-red-600 text-white w-full md:w-auto px-8 py-3.5 rounded-xl text-[10px] md:text-[12px] shadow-xl shadow-red-900/40 uppercase font-black italic transition-all active:scale-95">
+                  class="bg-yellow-600 hover:bg-yellow-500 text-black w-full md:w-auto px-8 py-3.5 rounded-xl text-[10px] md:text-[12px] shadow-xl shadow-yellow-900/40 uppercase font-black italic transition-all active:scale-95">
             ĐĂNG KÝ / ĐĂNG NHẬP NGAY
           </button>
 
-          <div class="border-l-4 border-red-700 pl-4 max-w-2xl space-y-2">
-            <p class="text-slate-300 text-[12px] md:text-[15px] font-medium leading-relaxed">
+          <div class="border-l-4 border-yellow-600 pl-4 max-w-2xl space-y-2">
+            <p class="hidden md:block text-slate-300 text-[12px] md:text-[15px] font-medium leading-relaxed">
               Nền tảng kiếm tiền Online minh bạch. Rút xu nhanh gọn 24/7 về mọi ngân hàng.
             </p>
-            <p class="text-rose-400 text-[10px] md:text-[13px] font-bold tracking-wide">
+            <p class="hidden md:block text-amber-400/80 text-[10px] md:text-[13px] font-bold tracking-wide">
               ⚠️ CẢNH BÁO: Nghiêm cấm gian lận hoặc gửi bằng chứng giả. Khóa vĩnh viễn nếu vi phạm.
             </p>
           </div>
 
-          <!-- Animated highlights -->
+          <!-- Trust badge pills -->
           <div class="space-y-2">
-            <div v-for="(item, i) in highlights" :key="i"
-                 class="highlight-row flex items-center gap-2.5"
-                 :style="`animation-delay: ${i * 0.18}s`">
-              <span class="dot-ring w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0 shadow-[0_0_6px_rgba(52,211,153,0.7)]"></span>
-              <span class="text-[11px] md:text-[13px] font-black uppercase tracking-widest text-white/90 highlight-text"
-                    :style="`animation-delay: ${i * 0.18 + 0.1}s`">
-                {{ item }}
+            <div class="flex flex-wrap gap-2">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
+                ✅ Không thu phí
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
+                ✅ Không nạp tiền
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
+                ✅ Công việc miễn phí
+              </span>
+            </div>
+            <div>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/40 text-indigo-300 text-[11px] font-black uppercase tracking-wide">
+                ⚡ Rút tiền trong 24h
               </span>
             </div>
           </div>
         </div>
 
-        <div class="absolute right-3 md:right-5 lg:right-10 top-0 bottom-0 flex items-center justify-center pointer-events-none opacity-20 md:opacity-100">
-          <div class="relative animate-jump-cycle">
-            <div class="absolute inset-0 bg-red-800/25 rounded-full blur-[70px] hidden md:block"></div>
-            <div class="text-[70px] md:text-[120px] lg:text-[150px] drop-shadow-[0_20px_50px_rgba(0,0,0,0.8)] filter contrast-125 saturate-150 rotate-12">🚀</div>
-          </div>
-        </div>
-      </section>
+        <!-- RIGHT SIDE — Maneki Neko + coins -->
+        <div class="absolute right-0 top-0 bottom-0 w-[42%] flex items-end justify-center pointer-events-none opacity-40 md:opacity-100 overflow-hidden">
 
+          <!-- Coin particles (CSS divs — không dùng emoji) -->
+          <div class="coin-fx coin-shape" style="--tx:-28px;--ty:-75px;--tx2:-18px;--dur:2.1s;--delay:0s;right:52%;bottom:55%"></div>
+          <div class="coin-fx coin-shape" style="--tx:30px;--ty:-90px;--tx2:20px;--dur:2.5s;--delay:0.4s;right:35%;bottom:52%"></div>
+          <div class="coin-fx coin-shape" style="--tx:-40px;--ty:-60px;--tx2:-30px;--dur:1.9s;--delay:0.8s;right:45%;bottom:60%"></div>
+          <div class="coin-fx coin-shape" style="--tx:18px;--ty:-80px;--tx2:10px;--dur:2.3s;--delay:0.2s;right:28%;bottom:58%"></div>
+          <div class="coin-fx coin-shape" style="--tx:-50px;--ty:-50px;--tx2:-35px;--dur:2.7s;--delay:1s;right:55%;bottom:48%"></div>
+          <div class="coin-fx coin-shape" style="--tx:45px;--ty:-70px;--tx2:28px;--dur:2s;--delay:0.6s;right:22%;bottom:54%"></div>
+          <div class="coin-fx coin-shape" style="--tx:-20px;--ty:-100px;--tx2:-12px;--dur:2.2s;--delay:1.3s;right:40%;bottom:65%"></div>
+          <div class="coin-fx coin-shape" style="--tx:35px;--ty:-55px;--tx2:22px;--dur:1.8s;--delay:0.9s;right:30%;bottom:50%"></div>
+
+          <!-- Ground glow -->
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 w-36 h-10 bg-yellow-400/25 blur-2xl rounded-full"></div>
+
+          <!-- Maneki Neko SVG -->
+          <svg viewBox="0 0 140 185" class="neko-cat w-28 md:w-36 lg:w-44 relative z-10 mb-2" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 24px rgba(234,179,8,0.65))">
+            <!-- Tail -->
+            <path d="M38 180 Q2 155 10 112 Q18 86 40 110" stroke="#f59e0b" stroke-width="13" fill="none" stroke-linecap="round"/>
+            <!-- Body -->
+            <ellipse cx="70" cy="142" rx="40" ry="43" fill="#fbbf24"/>
+            <!-- Left arm (lowered) -->
+            <ellipse cx="30" cy="138" rx="13" ry="24" fill="#fbbf24" transform="rotate(12,30,132)"/>
+            <!-- Belly patch -->
+            <ellipse cx="70" cy="152" rx="25" ry="27" fill="#fef3c7"/>
+            <!-- Coin on chest -->
+            <circle cx="70" cy="130" r="14" fill="#f59e0b" stroke="#d97706" stroke-width="2.5"/>
+            <text x="70" y="135" text-anchor="middle" fill="#7c2d12" font-size="13" font-weight="bold" font-family="serif">福</text>
+            <!-- Head -->
+            <circle cx="70" cy="76" r="38" fill="#fbbf24"/>
+            <!-- Ears -->
+            <polygon points="36,50 20,20 52,44" fill="#fbbf24"/>
+            <polygon points="104,50 120,20 88,44" fill="#fbbf24"/>
+            <polygon points="38,47 26,24 50,42" fill="#fca5a5"/>
+            <polygon points="102,47 114,24 90,42" fill="#fca5a5"/>
+            <!-- Face patch -->
+            <ellipse cx="70" cy="80" rx="27" ry="23" fill="#fefce8"/>
+            <!-- Eyes -->
+            <circle cx="55" cy="72" r="8" fill="#1e1b4b"/>
+            <circle cx="85" cy="72" r="8" fill="#1e1b4b"/>
+            <circle cx="58" cy="69" r="3" fill="white"/>
+            <circle cx="88" cy="69" r="3" fill="white"/>
+            <!-- Nose -->
+            <ellipse cx="70" cy="83" rx="5" ry="4" fill="#fda4af"/>
+            <!-- Mouth -->
+            <path d="M63 89 Q70 96 77 89" stroke="#92400e" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <!-- Whiskers -->
+            <line x1="8" y1="80" x2="58" y2="83" stroke="#92400e" stroke-width="1.2" opacity="0.7"/>
+            <line x1="8" y1="87" x2="58" y2="86" stroke="#92400e" stroke-width="1.2" opacity="0.7"/>
+            <line x1="82" y1="83" x2="132" y2="80" stroke="#92400e" stroke-width="1.2" opacity="0.7"/>
+            <line x1="82" y1="86" x2="132" y2="87" stroke="#92400e" stroke-width="1.2" opacity="0.7"/>
+            <!-- Forehead stripe -->
+            <path d="M57 57 Q70 51 83 57" stroke="#d97706" stroke-width="2" fill="none"/>
+            <!-- Right arm WAVING (animated) -->
+            <g class="neko-wave-arm">
+              <ellipse cx="112" cy="108" rx="13" ry="26" fill="#fbbf24" transform="rotate(-28,108,128)"/>
+              <circle cx="120" cy="80" r="16" fill="#fbbf24"/>
+              <circle cx="113" cy="68" r="9" fill="#fbbf24"/>
+              <circle cx="127" cy="71" r="9" fill="#fbbf24"/>
+              <circle cx="121" cy="65" r="9" fill="#fbbf24"/>
+            </g>
+          </svg>
+        </div>
+
+      </section>
     </div>
 
     <!-- JOB LIST — hidden on mobile, shown via CÔNG VIỆC bottom sheet -->
@@ -392,6 +486,85 @@ const getShortDesc = (id: string) => {
       </div>
     </section>
   </div>
+
+  <!-- AGE VERIFICATION MODAL -->
+  <Teleport to="body">
+    <Transition name="age-modal">
+      <div v-if="showAgeModal"
+           class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+           style="background: rgba(0,0,0,0.88); backdrop-filter: blur(6px);"
+           @click.self="cancelAge">
+        <div class="age-modal-box relative w-full max-w-[380px] rounded-[28px] overflow-hidden"
+             style="background: linear-gradient(145deg, #0f0a02, #1a1000, #0c0800); border: 1.5px solid rgba(245,158,11,0.55); box-shadow: 0 0 60px rgba(245,158,11,0.25), 0 0 120px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05);">
+
+          <!-- Top glow bar -->
+          <div style="height:3px; background: linear-gradient(90deg, transparent, #f59e0b, #fbbf24, #f59e0b, transparent);"></div>
+
+          <!-- Corner accents -->
+          <div class="absolute top-0 left-0 w-16 h-16 pointer-events-none" style="background: radial-gradient(circle at 0% 0%, rgba(245,158,11,0.12), transparent 70%);"></div>
+          <div class="absolute top-0 right-0 w-16 h-16 pointer-events-none" style="background: radial-gradient(circle at 100% 0%, rgba(245,158,11,0.12), transparent 70%);"></div>
+
+          <div class="px-6 pt-6 pb-7 text-center space-y-4">
+            <!-- Shield icon -->
+            <div class="flex justify-center">
+              <div class="w-16 h-16 rounded-full flex items-center justify-center age-shield-icon"
+                   style="background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); border: 1.5px solid rgba(245,158,11,0.4); box-shadow: 0 0 24px rgba(245,158,11,0.3);">
+                <svg viewBox="0 0 24 24" fill="none" class="w-8 h-8">
+                  <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/>
+                  <text x="12" y="16" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="900" font-family="Arial" style="font-style:italic">18+</text>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Title -->
+            <div class="space-y-1">
+              <p class="text-[11px] font-black uppercase tracking-[3px]"
+                 style="color:#f59e0b; text-shadow: 0 0 12px rgba(245,158,11,0.6);">
+                XÁC NHẬN ĐỘ TUỔI
+              </p>
+              <h3 class="text-[15px] font-black uppercase leading-snug tracking-tight"
+                  style="color:#fde68a; text-shadow: 0 0 20px rgba(251,191,36,0.4);">
+                {{ pendingJobTitle }}
+              </h3>
+            </div>
+
+            <!-- Message -->
+            <div class="rounded-2xl px-5 py-4"
+                 style="background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);">
+              <p class="text-[13px] font-semibold leading-relaxed" style="color:#e2d4a0;">
+                Công việc này yêu cầu
+                <span class="font-black" style="color:#fbbf24;">đủ 18 tuổi trở lên.</span>
+                <br/>Bạn đã đủ 18 tuổi chưa?
+              </p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3 pt-1">
+              <!-- HUỶ -->
+              <button @click="cancelAge"
+                      class="flex-1 py-3.5 rounded-2xl font-black text-[12px] uppercase tracking-wide transition-all active:scale-95 hover:brightness-110"
+                      style="background: linear-gradient(135deg, #7f1d1d, #991b1b); color: #fecaca; border: 1.5px solid rgba(239,68,68,0.5); box-shadow: 0 0 20px rgba(239,68,68,0.35), inset 0 1px 0 rgba(255,255,255,0.05); text-shadow: 0 0 8px rgba(239,68,68,0.5);">
+                ✕ HUỶ
+              </button>
+              <!-- ĐÃ ĐỦ 18 -->
+              <button @click="confirmAge"
+                      class="flex-1 py-3.5 rounded-2xl font-black text-[12px] uppercase tracking-wide transition-all active:scale-95 age-confirm-btn"
+                      style="background: linear-gradient(135deg, #d97706, #f59e0b, #fbbf24); color: #1c0d00; border: 1.5px solid rgba(251,191,36,0.6); text-shadow: 0 1px 0 rgba(255,255,255,0.2);">
+                ✓ ĐÃ ĐỦ 18
+              </button>
+            </div>
+
+            <p class="text-[9px] tracking-wider uppercase" style="color: rgba(120,100,60,0.7);">
+              Click ra ngoài để đóng
+            </p>
+          </div>
+
+          <!-- Bottom glow bar -->
+          <div style="height:2px; background: linear-gradient(90deg, transparent, rgba(245,158,11,0.4), transparent);"></div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -401,6 +574,57 @@ const getShortDesc = (id: string) => {
 @keyframes jump-cycle {
   0%, 100% { transform: translateY(0) rotate(12deg); }
   50% { transform: translateY(-20px) rotate(15deg); }
+}
+
+/* === MANEKI NEKO === */
+.neko-wave-arm {
+  transform-origin: 108px 128px;
+  animation: nekoWave 0.75s ease-in-out infinite alternate;
+}
+@keyframes nekoWave {
+  from { transform: rotate(-18deg); }
+  to   { transform: rotate(14deg); }
+}
+.neko-cat {
+  animation: nekoFloat 3s ease-in-out infinite;
+}
+@keyframes nekoFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* === GOLD COINS === */
+.coin-fx {
+  position: absolute;
+  animation: coinBurst var(--dur, 2.2s) var(--delay, 0s) ease-in-out infinite;
+}
+.coin-shape {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fde047, #f59e0b 55%, #b45309);
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 8px rgba(234,179,8,0.85), inset 0 1px 3px rgba(255,255,255,0.3);
+}
+@keyframes coinBurst {
+  0%   { transform: translate(0,0) rotate(0deg) scale(1);    opacity: 0; }
+  10%  { opacity: 1; }
+  45%  { transform: translate(var(--tx,-25px), var(--ty,-70px)) rotate(200deg) scale(1.3); opacity: 1; }
+  80%  { transform: translate(var(--tx2,-15px), 30px)  rotate(340deg) scale(0.7); opacity: 0.5; }
+  100% { transform: translate(var(--tx2,-15px), 55px)  rotate(360deg) scale(0.3); opacity: 0; }
+}
+
+/* === RẠP JOB NEON GOLD === */
+.neon-gold-text {
+  color: #fde047;
+  text-shadow:
+    0 0 8px rgba(234,179,8,0.9),
+    0 0 20px rgba(234,179,8,0.6),
+    0 0 40px rgba(234,179,8,0.3);
+  animation: goldPulse 2.5s ease-in-out infinite;
+}
+@keyframes goldPulse {
+  0%, 100% { text-shadow: 0 0 8px rgba(234,179,8,0.9), 0 0 20px rgba(234,179,8,0.6), 0 0 40px rgba(234,179,8,0.3); }
+  50%       { text-shadow: 0 0 14px rgba(234,179,8,1),  0 0 35px rgba(234,179,8,0.8), 0 0 60px rgba(234,179,8,0.4); }
 }
 
 /* VIP card: border glow nhấp nháy */
@@ -424,6 +648,27 @@ const getShortDesc = (id: string) => {
 /* Hide scrollbar for stats carousel */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* === AGE MODAL === */
+.age-modal-enter-active { transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+.age-modal-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
+.age-modal-enter-from  { opacity: 0; }
+.age-modal-leave-to    { opacity: 0; }
+.age-modal-enter-from .age-modal-box { transform: scale(0.85) translateY(20px); }
+.age-modal-enter-to   .age-modal-box { transform: scale(1) translateY(0); }
+.age-modal-leave-to   .age-modal-box { transform: scale(0.9); }
+
+@keyframes shield-pulse {
+  0%, 100% { box-shadow: 0 0 24px rgba(245,158,11,0.3); }
+  50%       { box-shadow: 0 0 40px rgba(245,158,11,0.6), 0 0 70px rgba(245,158,11,0.15); }
+}
+.age-shield-icon { animation: shield-pulse 2s ease-in-out infinite; }
+
+@keyframes confirm-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(245,158,11,0.4); }
+  50%       { box-shadow: 0 0 35px rgba(245,158,11,0.8), 0 0 60px rgba(245,158,11,0.2); }
+}
+.age-confirm-btn { animation: confirm-glow 1.6s ease-in-out infinite; }
 
 /* Hero shimmer sweep */
 @keyframes hero-shimmer-sweep {

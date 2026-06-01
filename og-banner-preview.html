@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px;
+    height: 630px;
+    overflow: hidden;
+    background: #090e17;
+    font-family: 'Arial Black', 'Segoe UI', sans-serif;
+  }
+
+  .banner {
+    width: 1200px;
+    height: 630px;
+    position: relative;
+    background: linear-gradient(135deg, #090e17 0%, #0f0520 40%, #0a0015 70%, #090e17 100%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 80px;
+    overflow: hidden;
+  }
+
+  /* Background glow orbs */
+  .orb1 {
+    position: absolute;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(109,40,217,0.25) 0%, transparent 70%);
+    top: -150px; left: -100px;
+    pointer-events: none;
+  }
+  .orb2 {
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(234,179,8,0.12) 0%, transparent 70%);
+    bottom: -100px; right: 200px;
+    pointer-events: none;
+  }
+  .orb3 {
+    position: absolute;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%);
+    bottom: -50px; left: 350px;
+    pointer-events: none;
+  }
+
+  /* Stars */
+  .stars {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 120px 60px, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 280px 130px, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1.5px 1.5px at 450px 40px, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1px 1px at 620px 90px, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 800px 50px, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1.5px 1.5px at 950px 120px, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 1100px 70px, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 180px 200px, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 400px 250px, rgba(255,255,255,0.2), transparent),
+      radial-gradient(1px 1px at 700px 180px, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1px 1px at 1050px 220px, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 60px 350px, rgba(255,255,255,0.2), transparent),
+      radial-gradient(1px 1px at 320px 580px, rgba(255,255,255,0.3), transparent),
+      radial-gradient(1px 1px at 900px 500px, rgba(255,255,255,0.4), transparent),
+      radial-gradient(1.5px 1.5px at 1150px 400px, rgba(255,255,255,0.5), transparent);
+    pointer-events: none;
+  }
+
+  /* Film strip top */
+  .filmstrip {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 28px;
+    background: rgba(109,40,217,0.15);
+    border-bottom: 1px solid rgba(139,92,246,0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+  }
+  .filmstrip-hole {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(139,92,246,0.25);
+    flex-shrink: 0;
+  }
+
+  /* Film strip bottom */
+  .filmstrip-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 28px;
+    background: rgba(109,40,217,0.15);
+    border-top: 1px solid rgba(139,92,246,0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+  }
+
+  /* Left content */
+  .left {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+    max-width: 620px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139,92,246,0.2);
+    border: 1px solid rgba(139,92,246,0.4);
+    border-radius: 100px;
+    padding: 6px 16px;
+    margin-bottom: 24px;
+  }
+  .badge-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #a78bfa;
+    box-shadow: 0 0 8px #7c3aed;
+  }
+  .badge-text {
+    font-size: 13px;
+    color: #a78bfa;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .logo-text {
+    font-size: 88px;
+    font-weight: 900;
+    line-height: 1;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: -3px;
+    text-shadow: 0 0 40px rgba(139,92,246,0.5);
+    margin-bottom: 8px;
+  }
+  .logo-text span {
+    background: linear-gradient(135deg, #c084fc, #7c3aed);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tagline {
+    font-size: 24px;
+    font-weight: 900;
+    color: #e2e8f0;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 32px;
+    opacity: 0.85;
+  }
+
+  /* Income row */
+  .income-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .income-pill {
+    background: linear-gradient(135deg, rgba(234,179,8,0.2), rgba(161,98,7,0.15));
+    border: 1.5px solid rgba(234,179,8,0.5);
+    border-radius: 14px;
+    padding: 10px 20px;
+  }
+  .income-amount {
+    font-size: 22px;
+    font-weight: 900;
+    color: #fde047;
+    text-shadow: 0 0 20px rgba(234,179,8,0.5);
+    letter-spacing: 0;
+  }
+  .income-label {
+    font-size: 11px;
+    color: #a16207;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .income-divider {
+    width: 1px; height: 40px;
+    background: rgba(139,92,246,0.3);
+  }
+
+  /* Feature pills */
+  .features {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .feature-pill {
+    background: rgba(139,92,246,0.12);
+    border: 1px solid rgba(139,92,246,0.25);
+    border-radius: 100px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 800;
+    color: #a78bfa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Right — coin visual */
+  .right {
+    position: relative;
+    z-index: 10;
+    width: 340px;
+    height: 340px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .coin-ring-outer {
+    position: absolute;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    border: 2px solid rgba(234,179,8,0.15);
+  }
+  .coin-ring-mid {
+    position: absolute;
+    width: 270px; height: 270px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(234,179,8,0.25);
+  }
+  .coin-ring-inner {
+    position: absolute;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    border: 2px solid rgba(234,179,8,0.4);
+  }
+
+  .coin {
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fde047, #eab308 50%, #854d0e 100%);
+    box-shadow:
+      0 0 40px rgba(234,179,8,0.6),
+      0 0 80px rgba(234,179,8,0.3),
+      inset 0 -8px 20px rgba(0,0,0,0.3),
+      inset 4px 6px 16px rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .coin-symbol {
+    font-size: 64px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+  }
+  .coin-label {
+    font-size: 18px;
+    font-weight: 900;
+    color: #7c2d12;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-top: 2px;
+  }
+
+  /* Domain bottom right */
+  .domain {
+    position: absolute;
+    bottom: 40px;
+    right: 80px;
+    z-index: 10;
+    font-size: 14px;
+    font-weight: 800;
+    color: rgba(139,92,246,0.6);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="banner">
+  <div class="orb1"></div>
+  <div class="orb2"></div>
+  <div class="orb3"></div>
+  <div class="stars"></div>
+
+  <!-- Film strips -->
+  <div class="filmstrip">
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+  </div>
+  <div class="filmstrip-bottom">
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+    <div class="filmstrip-hole"></div><div class="filmstrip-hole"></div><div class="filmstrip-hole"></div>
+  </div>
+
+  <!-- Left content -->
+  <div class="left">
+    <div class="badge">
+      <div class="badge-dot"></div>
+      <span class="badge-text">🎬 Nền tảng kiếm tiền rạp phim</span>
+    </div>
+
+    <div class="logo-text">RẠP <span>JOB</span></div>
+    <div class="tagline">Kiếm tiền online</div>
+
+    <div class="income-row">
+      <div class="income-pill">
+        <div class="income-amount">200K – 500K</div>
+        <div class="income-label">Thu nhập mỗi ngày</div>
+      </div>
+      <div class="income-divider"></div>
+      <div class="income-pill">
+        <div class="income-amount">Rút 24/7</div>
+        <div class="income-label">Về ngân hàng</div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-pill">✅ Làm tại nhà</div>
+      <div class="feature-pill">⚡ Nhận xu ngay</div>
+      <div class="feature-pill">🏦 Rút tiền nhanh</div>
+      <div class="feature-pill">🎬 Nhiệm vụ rạp phim</div>
+    </div>
+  </div>
+
+  <!-- Right coin -->
+  <div class="right">
+    <div class="coin-ring-outer"></div>
+    <div class="coin-ring-mid"></div>
+    <div class="coin-ring-inner"></div>
+    <div class="coin">
+      <div class="coin-symbol">🎬</div>
+      <div class="coin-label">XU</div>
+    </div>
+  </div>
+
+  <div class="domain">rapjob.dangkyxinviec.com</div>
+</div>
+</body>
+</html>

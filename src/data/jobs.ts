@@ -95,12 +95,14 @@ export const jobsData: Record<string, any> = {
     color: "text-blue-500",
     badge: "CƠ BẢN",
       steps: [
-      { 
-        id: 1, 
-        title: "THAM ZALO NHÓM ZALO MMO PRO ", 
-        content: "CHỌN NÚT THAM GIA NHÓM ĐỂ VÀO NHÓM .", 
-        downloadLink: "https://zalo.me/g/fambpb151",
-        buttonText: "THAM GIA NHÓM ➔" 
+      {
+        id: 1,
+        title: "THAM GIA NHÓM ZALO RẠP JOB",
+        content: "Chọn 1 trong 2 nhóm bên dưới để tham gia.",
+        extraLinks: [
+          { text: "THAM GIA NHÓM 1 ➔", url: "https://zalo.me/g/fambpb151" },
+          { text: "THAM GIA NHÓM 2 ➔", url: "https://zalo.me/g/1ucvwyabtkhevegfg0s6" }
+        ]
       },
       { 
         id: 2, 
@@ -254,7 +256,7 @@ export const jobsData: Record<string, any> = {
         img: "images/anh-msb3.jpg" 
       },
       { 
-        id: 3, 
+        id: 4, 
         title: "VÀO CÀI ĐẶT , CHỌN THÔNG TIN CÁ NHÂN , LẤY MÃ CIF MSB ", 
         content: "CHỤP ẢNH GỬI VÀO BẰNG CHỨNG .", 
         img: "images/anh-msb7.jpg" 

@@ -24,6 +24,8 @@ const jobIconMap: Record<string, string> = {
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦',
 }
 const VIP_IDS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank']
+// ⏸️ TẠM DỪNG — Thêm/xoá job ID ở đây để bật/tắt
+const PAUSED_JOBS = ['app-chung-khoan-2', 'vpbank']
 
 // --- Color maps cho 2-column card grid (CÔNG VIỆC sheet) ---
 const jobCardClass: Record<string, string> = {
@@ -76,6 +78,7 @@ const windowWidth = ref(0)
 const showWelcomePopup = ref(false)
 const showBankModal = ref(false)
 const activePopup = ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
+const jobCategory = ref<'basic' | 'vip' | ''>('')
 
 const isAdminRoute = computed(() => route.path.includes('admin'))
 const isAuthRoute = computed(() => route.path.includes('/login') || route.path.includes('/register'))
@@ -476,6 +479,10 @@ const handleNav = (path: string) => {
 
 const handleReceiveJob = (jobId: string) => {
   if (!isLoggedIn.value) { router.push('/login'); return; }
+  if (PAUSED_JOBS.includes(jobId)) {
+    alert('⏸️ CÔNG VIỆC TẠM DỪNG\nChương trình đang được cập nhật. Vui lòng quay lại sau!')
+    return
+  }
   if (jobId === 'survey-cinema') {
     router.push('/survey-cinema')
   } else if (jobId === 'APP NGÂN HÀNG' || jobId === 'app-ngan-hang') {
@@ -511,8 +518,12 @@ const logout = async () => {
 }
 
 const contactSupport = (t: string) => {
-  window.open(t === 'facebook' ? 'https://www.facebook.com/cgvcinemas/' : 'https://zalo.me/g/fambpb151', '_blank')
+  window.open(t === 'facebook' ? 'https://www.facebook.com/vieclamrapjob' : 'https://zalo.me/g/fambpb151', '_blank')
 }
+
+watch(activePopup, (val) => {
+  if (val !== 'cong-viec') jobCategory.value = ''
+})
 </script>
 
 <template>
@@ -987,7 +998,12 @@ const contactSupport = (t: string) => {
              </div>
            </footer>
         </template>
-        <router-view v-else />
+        <router-view v-else
+          :userBalance="userBalance"
+          :username="username"
+          :myReports="myReports"
+          :myWithdrawals="myWithdrawals"
+        />
       </main>
     </div>
 
@@ -1050,99 +1066,158 @@ const contactSupport = (t: string) => {
 
         </div>
 
-        <!-- CÔNG VIỆC popup — full job browser -->
+        <!-- CÔNG VIỆC popup — 2-step category flow -->
         <div v-if="activePopup === 'cong-viec'" class="flex flex-col flex-1 min-h-0">
-          <!-- Sticky header -->
+          <!-- Sticky header — dynamic based on step -->
           <div class="sticky top-0 bg-[#1e1309] px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
             <div class="flex items-center gap-2">
-              <div class="w-1 h-5 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)]"></div>
-              <h3 class="text-white text-sm font-black italic uppercase tracking-tight">CÔNG VIỆC</h3>
+              <!-- Back button (screen 2 only) -->
+              <button v-if="jobCategory !== ''" @click="jobCategory = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform mr-0.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <div class="w-1 h-5 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)]"
+                   :class="jobCategory === 'vip' ? 'bg-amber-400' : 'bg-red-500'"></div>
+              <h3 class="text-white text-sm font-black italic uppercase tracking-tight">
+                <template v-if="jobCategory === ''">CHỌN LOẠI CÔNG VIỆC</template>
+                <template v-else-if="jobCategory === 'basic'">⚡ CƠ BẢN</template>
+                <template v-else>👑 VIP</template>
+              </h3>
             </div>
             <button @click="activePopup = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
 
-          <!-- Scrollable job list -->
-          <div class="overflow-y-auto flex-1 px-3 py-3 space-y-4">
+          <!-- SCREEN 1: Chọn loại công việc -->
+          <div v-if="jobCategory === ''" class="flex-1 flex flex-col gap-4 p-4 justify-center">
 
-            <!-- TIER CƠ BẢN — 2-column card grid -->
-            <div class="space-y-2">
-              <p class="text-[9px] text-slate-500 font-black uppercase tracking-[3px] px-1">⚡ CƠ BẢN — NHANH &amp; DỄ</p>
-              <div class="grid grid-cols-2 gap-2.5">
-                <template v-for="(j, id) in jobsData" :key="id">
-                  <button v-if="!VIP_IDS.includes(id as string)"
-                    @click="handleReceiveJob(id as string); activePopup = ''"
-                    class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left"
-                    :class="jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700'">
-
-                    <!-- Highlight layer -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
-
-                    <!-- Badge top-right -->
-                    <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-white/15 text-white z-10"
-                         :class="jobBadgeClass[id as string] || 'bg-slate-700'">
-                      {{ j.badge || 'CƠ BẢN' }}
-                    </div>
-
-                    <!-- Icon -->
-                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-3 border border-white/10 relative z-10"
-                         :class="jobIconBgClass[id as string] || 'bg-white/5'">
-                      {{ jobIconMap[id as string] || '🎯' }}
-                    </div>
-
-                    <!-- Title -->
-                    <p class="text-white text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
-                      {{ j.title }}
-                    </p>
-
-                    <!-- Reward -->
-                    <div class="flex items-baseline gap-1 mb-3 relative z-10">
-                      <span class="text-lg font-black italic tracking-tighter"
-                            :class="jobRewardClass[id as string] || 'text-yellow-400'">
-                        +{{ String(j.reward).replace(/\D/g,'') }}
-                      </span>
-                      <span class="text-[9px] font-black text-slate-400">XU</span>
-                    </div>
-
-                    <!-- CTA button -->
-                    <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10"
-                         :class="jobBtnClass[id as string] || 'bg-slate-700'">
-                      BẮT ĐẦU ⚡
-                    </div>
-                  </button>
-                </template>
+            <!-- Card CƠ BẢN -->
+            <button @click="jobCategory = 'basic'"
+              class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#2a0c0c] to-[#1a0808] border-2 border-red-600/50 active:border-red-500/80 active:scale-[0.97] transition-all overflow-hidden group">
+              <div class="absolute inset-0 bg-gradient-to-r from-red-600/10 to-transparent pointer-events-none"></div>
+              <div class="w-14 h-14 rounded-2xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-2xl shrink-0">⚡</div>
+              <div class="text-left flex-1 relative z-10">
+                <p class="text-white text-base font-black italic uppercase leading-tight">CÔNG VIỆC CƠ BẢN</p>
+                <p class="text-red-400 text-[11px] font-black uppercase tracking-wider mt-0.5">NHANH &amp; DỄ • 10K–30K XU</p>
+                <p class="text-slate-500 text-[10px] mt-1">Follow, check-in, đánh giá, khảo sát...</p>
               </div>
-            </div>
+              <svg class="w-5 h-5 text-red-400 shrink-0 group-active:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
 
-            <!-- DIVIDER VIP -->
-            <div class="flex items-center gap-3 py-1">
-              <div class="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
-              <span class="text-[9px] font-black uppercase tracking-[3px] text-amber-400 px-2">👑 VIP — THU NHẬP CAO</span>
-              <div class="flex-1 h-px bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
-            </div>
+            <!-- Card VIP -->
+            <button @click="jobCategory = 'vip'"
+              class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#2A1C00] to-[#1a1000] border-2 border-amber-500/50 active:border-amber-400/80 active:scale-[0.97] transition-all overflow-hidden group">
+              <div class="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent pointer-events-none"></div>
+              <div class="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-2xl shrink-0">👑</div>
+              <div class="text-left flex-1 relative z-10">
+                <p class="text-amber-300 text-base font-black italic uppercase leading-tight">CÔNG VIỆC VIP</p>
+                <p class="text-amber-400 text-[11px] font-black uppercase tracking-wider mt-0.5">THU NHẬP CAO • 85K–100K XU</p>
+                <p class="text-slate-500 text-[10px] mt-1">App chứng khoán, ngân hàng...</p>
+              </div>
+              <svg class="w-5 h-5 text-amber-400 shrink-0 group-active:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
 
-            <!-- TIER VIP -->
-            <div class="space-y-2">
+          <!-- SCREEN 2a: Basic jobs — 2-column card grid -->
+          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto flex-1 px-3 py-3">
+            <div class="grid grid-cols-2 gap-2.5">
               <template v-for="(j, id) in jobsData" :key="id">
-                <button v-if="VIP_IDS.includes(id as string)"
+                <button v-if="!VIP_IDS.includes(id as string)"
                   @click="handleReceiveJob(id as string); activePopup = ''"
-                  class="w-full flex items-center gap-3 bg-gradient-to-r from-[#2A1C00]/80 to-[#1e1309]/80 border border-amber-500/40 hover:border-amber-400/70 rounded-[18px] px-4 py-3 transition-all active:scale-[0.98] group text-left">
-                  <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-lg shrink-0 border border-amber-400/20 group-active:scale-90 transition-transform">
-                    {{ jobIconMap[id as string] || '💎' }}
+                  class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left"
+                  :class="jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700'">
+
+                  <!-- Highlight layer -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
+
+                  <!-- Badge top-right -->
+                  <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-white/15 text-white z-10"
+                       :class="jobBadgeClass[id as string] || 'bg-slate-700'">
+                    {{ j.badge || 'CƠ BẢN' }}
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p class="text-amber-300 text-[12px] font-black italic uppercase tracking-tight truncate">{{ j.title }}</p>
-                    <p class="text-amber-700 text-[9px] font-bold">VIP · Đang mở đăng ký</p>
+
+                  <!-- Icon -->
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-3 border border-white/10 relative z-10"
+                       :class="jobIconBgClass[id as string] || 'bg-white/5'">
+                    {{ jobIconMap[id as string] || '🎯' }}
                   </div>
-                  <div class="text-right shrink-0">
-                    <p class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500 text-sm font-black italic tracking-tighter">+{{ String(j.reward).replace(/\D/g,'') }}</p>
-                    <p class="text-amber-600 text-[8px] font-black">XU</p>
+
+                  <!-- Title -->
+                  <p class="text-white text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
+                    {{ j.title }}
+                  </p>
+
+                  <!-- Reward -->
+                  <div class="flex items-baseline gap-1 mb-3 relative z-10">
+                    <span class="text-lg font-black italic tracking-tighter"
+                          :class="jobRewardClass[id as string] || 'text-yellow-400'">
+                      +{{ String(j.reward).replace(/\D/g,'') }}
+                    </span>
+                    <span class="text-[9px] font-black text-slate-400">XU</span>
+                  </div>
+
+                  <!-- CTA button -->
+                  <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10"
+                       :class="jobBtnClass[id as string] || 'bg-slate-700'">
+                    BẮT ĐẦU ⚡
                   </div>
                 </button>
               </template>
             </div>
+            <div class="h-2"></div>
+          </div>
 
+          <!-- SCREEN 2b: VIP jobs — 2-column card grid (amber theme) -->
+          <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto flex-1 px-3 py-3">
+            <div class="grid grid-cols-2 gap-2.5">
+              <template v-for="(j, id) in jobsData" :key="id">
+                <button v-if="VIP_IDS.includes(id as string)"
+                  @click="handleReceiveJob(id as string); activePopup = ''"
+                  class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left bg-gradient-to-br from-[#2A1C00] to-[#1a1000] border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
+                  :class="PAUSED_JOBS.includes(id as string) ? 'opacity-50 grayscale' : ''">
+
+                  <!-- Highlight layer -->
+                  <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
+
+                  <!-- Paused overlay -->
+                  <div v-if="PAUSED_JOBS.includes(id as string)" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">⏸ TẠM DỪNG</span>
+                  </div>
+
+                  <!-- Badge top-right -->
+                  <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-amber-400/20 text-amber-200 z-10 bg-amber-700">
+                    {{ j.badge || 'VIP' }}
+                  </div>
+
+                  <!-- Icon -->
+                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-3 border border-amber-400/20 bg-amber-500/15 relative z-10">
+                    {{ jobIconMap[id as string] || '💎' }}
+                  </div>
+
+                  <!-- Title -->
+                  <p class="text-amber-200 text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
+                    {{ j.title }}
+                  </p>
+
+                  <!-- Reward -->
+                  <div class="flex items-baseline gap-1 mb-3 relative z-10">
+                    <span class="text-lg font-black italic tracking-tighter text-amber-400">
+                      +{{ String(j.reward).replace(/\D/g,'') }}
+                    </span>
+                    <span class="text-[9px] font-black text-slate-400">XU</span>
+                  </div>
+
+                  <!-- CTA button -->
+                  <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10 bg-amber-600">
+                    ĐĂNG KÝ 👑
+                  </div>
+                </button>
+              </template>
+            </div>
             <div class="h-2"></div>
           </div>
         </div>
@@ -1238,7 +1313,10 @@ const contactSupport = (t: string) => {
     </Transition>
 
     <nav v-if="!isAuthRoute || isLoggedIn"
-         class="cosmic-nav fixed bottom-0 left-0 w-full lg:hidden z-[4000] flex justify-between items-end px-2 pb-5 pt-2 bg-[#0a0a0a]/96 backdrop-blur-xl border-t border-red-900/20 overflow-hidden">
+         class="cosmic-nav fixed bottom-0 left-0 w-full lg:hidden z-[4000] flex justify-between items-end px-2 pb-5 pt-2 bg-[#06000f]/97 backdrop-blur-xl border-t border-violet-500/15 overflow-hidden">
+
+      <!-- Laser border — 2 beams continuous sweep -->
+      <div class="laser-border" aria-hidden="true"></div>
 
       <!-- ① CÔNG VIỆC — vị trí 1 (HOT 🔥) -->
       <button @click="activePopup === 'cong-viec' ? activePopup = '' : activePopup = 'cong-viec'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
@@ -1248,8 +1326,9 @@ const contactSupport = (t: string) => {
           <div class="absolute -top-2 -right-2 z-10 flex items-center gap-0.5 bg-red-600 text-white text-[6px] font-black px-1.5 py-0.5 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.7)] uppercase leading-none">🔥 HOT</div>
           <!-- Orbit ring -->
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#dc2626; border-right-color:rgba(220,38,38,0.25);"></div>
+          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(220,38,38,0.35);"></div>
           <!-- Icon circle -->
-          <div class="w-[52px] h-[52px] rounded-full bg-[#140808] border border-red-900/50 flex items-center justify-center nav-icon-glow group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'cong-viec' ? 'border-red-500/70 bg-red-900/20' : ''">
+          <div class="w-[52px] h-[52px] rounded-full bg-[#140808] border border-red-900/50 flex items-center justify-center nav-glow-red group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'cong-viec' ? 'border-red-500/70 bg-red-900/20' : ''">
             <svg class="w-5 h-5 transition-colors duration-300" :class="activePopup === 'cong-viec' ? 'text-red-400' : 'text-slate-400 group-hover:text-red-400'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
           </div>
         </div>
@@ -1261,7 +1340,8 @@ const contactSupport = (t: string) => {
         <div class="absolute -top-2 w-5 h-[3px] bg-sky-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.9)]" v-if="activePopup === 'lich-su'"></div>
         <div class="relative">
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#38bdf8; border-right-color:rgba(56,189,248,0.2);"></div>
-          <div class="w-[52px] h-[52px] rounded-full bg-[#080e14] border border-sky-900/50 flex items-center justify-center nav-icon-glow group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'lich-su' ? 'border-sky-500/70 bg-sky-900/20' : ''">
+          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(56,189,248,0.35);"></div>
+          <div class="w-[52px] h-[52px] rounded-full bg-[#080e14] border border-sky-900/50 flex items-center justify-center nav-glow-sky group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'lich-su' ? 'border-sky-500/70 bg-sky-900/20' : ''">
             <svg class="w-5 h-5 transition-colors duration-300" :class="activePopup === 'lich-su' ? 'text-sky-400' : 'text-slate-400 group-hover:text-sky-400'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
           </div>
         </div>
@@ -1289,7 +1369,8 @@ const contactSupport = (t: string) => {
         <div class="absolute -top-2 w-5 h-[3px] bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.9)]" v-if="activePopup === 'nop-bai'"></div>
         <div class="relative">
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#10b981; border-right-color:rgba(16,185,129,0.2);"></div>
-          <div class="w-[52px] h-[52px] rounded-full bg-[#081410] border border-emerald-900/50 flex items-center justify-center nav-icon-glow group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'nop-bai' ? 'border-emerald-500/70 bg-emerald-900/20' : ''">
+          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(16,185,129,0.35);"></div>
+          <div class="w-[52px] h-[52px] rounded-full bg-[#081410] border border-emerald-900/50 flex items-center justify-center nav-glow-emerald group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'nop-bai' ? 'border-emerald-500/70 bg-emerald-900/20' : ''">
             <svg class="w-5 h-5 transition-colors duration-300" :class="activePopup === 'nop-bai' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           </div>
         </div>
@@ -1300,7 +1381,8 @@ const contactSupport = (t: string) => {
       <button @click="contactSupport('facebook')" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
         <div class="relative">
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#f43f5e; border-right-color:rgba(244,63,94,0.2);"></div>
-          <div class="w-[52px] h-[52px] rounded-full bg-[#140810] border border-rose-900/50 flex items-center justify-center nav-icon-glow group-hover:-translate-y-[5px] transition-transform duration-300">
+          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(244,63,94,0.35);"></div>
+          <div class="w-[52px] h-[52px] rounded-full bg-[#140810] border border-rose-900/50 flex items-center justify-center nav-glow-rose group-hover:-translate-y-[5px] transition-transform duration-300">
             <svg class="w-5 h-5 text-slate-400 group-hover:text-rose-400 transition-colors duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
           </div>
         </div>
@@ -1372,30 +1454,85 @@ const contactSupport = (t: string) => {
 <style>
 /* ===== COSMIC NAV ===== */
 .cosmic-nav {
-  box-shadow: 0 -20px 60px rgba(0,0,0,0.98), 0 -1px 0 rgba(220,38,38,0.15);
+  box-shadow:
+    0 -30px 80px rgba(0,0,0,0.99),
+    0 -1px 0 rgba(139,92,246,0.3),
+    0 -8px 40px rgba(88,28,220,0.12);
+  background: linear-gradient(180deg, rgba(14,0,28,0.97) 0%, rgba(6,0,15,0.98) 100%);
 }
 .cosmic-nav::before {
   content: '';
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(1px 1px at 8% 35%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 22% 65%, rgba(255,255,255,0.25) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 38% 20%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(1px 1px at 55% 75%, rgba(255,255,255,0.2) 0%, transparent 100%),
-    radial-gradient(1px 1px at 70% 30%, rgba(255,255,255,0.35) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 85% 55%, rgba(255,255,255,0.25) 0%, transparent 100%),
-    radial-gradient(1px 1px at 14% 80%, rgba(220,38,38,0.35) 0%, transparent 100%),
-    radial-gradient(1px 1px at 93% 25%, rgba(251,191,36,0.25) 0%, transparent 100%),
-    radial-gradient(1px 1px at 47% 50%, rgba(255,255,255,0.15) 0%, transparent 100%),
-    radial-gradient(1px 1px at 62% 10%, rgba(220,38,38,0.2) 0%, transparent 100%);
-  animation: starTwinkle 4s ease-in-out infinite;
+    radial-gradient(1.5px 1.5px at 8% 40%, rgba(167,139,250,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 18% 70%, rgba(255,255,255,0.4) 0%, transparent 100%),
+    radial-gradient(2px 2px at 32% 25%, rgba(56,189,248,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.25) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 58% 35%, rgba(251,191,36,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 72% 65%, rgba(255,255,255,0.3) 0%, transparent 100%),
+    radial-gradient(2px 2px at 83% 20%, rgba(244,63,94,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 75%, rgba(167,139,250,0.4) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 25% 50%, rgba(16,185,129,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 65% 15%, rgba(255,255,255,0.2) 0%, transparent 100%);
+  animation: starTwinkle 3s ease-in-out infinite;
   pointer-events: none;
   z-index: 0;
 }
 @keyframes starTwinkle {
   0%, 100% { opacity: 0.5; }
   50%       { opacity: 1; }
+}
+
+/* ⚡ Dual laser beams — chạy liên tục không nghỉ */
+.laser-border {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+.laser-border::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 160px; height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(139,92,246,0.4) 20%,
+    rgba(255,255,255,1) 50%,
+    rgba(251,191,36,1) 65%,
+    rgba(56,189,248,0.6) 85%,
+    transparent 100%
+  );
+  box-shadow: 0 0 8px rgba(255,255,255,0.9), 0 0 20px rgba(139,92,246,0.7), 0 0 35px rgba(251,191,36,0.4);
+  filter: blur(0.3px);
+  animation: laserSweep1 2.4s linear infinite;
+}
+.laser-border::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 90px; height: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(244,63,94,0.4) 30%,
+    rgba(255,255,255,0.9) 55%,
+    rgba(56,189,248,0.8) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 6px rgba(56,189,248,0.8), 0 0 18px rgba(244,63,94,0.6);
+  filter: blur(0.4px);
+  animation: laserSweep2 3.7s linear infinite;
+  animation-delay: -1.6s;
+}
+@keyframes laserSweep1 {
+  0%   { transform: translateX(-160px); }
+  100% { transform: translateX(calc(100vw + 60px)); }
+}
+@keyframes laserSweep2 {
+  0%   { transform: translateX(-90px); }
+  100% { transform: translateX(calc(100vw + 40px)); }
 }
 
 /* Orbit ring — regular buttons */
@@ -1408,18 +1545,48 @@ const contactSupport = (t: string) => {
   animation: orbitSpin 2s linear infinite;
   transform-origin: center;
 }
+/* Orbit ring — counter-clockwise (dual ring effect) */
+.orbit-ring-reverse {
+  animation: orbitSpinReverse 5s linear infinite;
+  transform-origin: center;
+}
 @keyframes orbitSpin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
-
-/* Nav icon glow pulse */
-.nav-icon-glow {
-  animation: navIconPulse 2.5s ease-in-out infinite;
+@keyframes orbitSpinReverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
 }
-@keyframes navIconPulse {
-  0%, 100% { box-shadow: 0 0 6px rgba(220,38,38,0.15); }
-  50%       { box-shadow: 0 0 18px rgba(220,38,38,0.45), 0 0 35px rgba(220,38,38,0.12); }
+
+/* Per-button colored glow pulses */
+.nav-glow-red {
+  animation: pulseRed 2.5s ease-in-out infinite;
+}
+@keyframes pulseRed {
+  0%,100% { box-shadow: 0 0 8px rgba(220,38,38,0.2), inset 0 0 8px rgba(220,38,38,0.05); }
+  50%     { box-shadow: 0 0 24px rgba(220,38,38,0.65), 0 0 48px rgba(220,38,38,0.2), inset 0 0 14px rgba(220,38,38,0.12); }
+}
+.nav-glow-sky {
+  animation: pulseSky 2.8s ease-in-out infinite;
+}
+@keyframes pulseSky {
+  0%,100% { box-shadow: 0 0 8px rgba(56,189,248,0.2), inset 0 0 8px rgba(56,189,248,0.05); }
+  50%     { box-shadow: 0 0 24px rgba(56,189,248,0.65), 0 0 48px rgba(56,189,248,0.2), inset 0 0 14px rgba(56,189,248,0.12); }
+}
+.nav-glow-emerald {
+  animation: pulseEmerald 3s ease-in-out infinite;
+}
+@keyframes pulseEmerald {
+  0%,100% { box-shadow: 0 0 8px rgba(16,185,129,0.2), inset 0 0 8px rgba(16,185,129,0.05); }
+  50%     { box-shadow: 0 0 24px rgba(16,185,129,0.65), 0 0 48px rgba(16,185,129,0.2), inset 0 0 14px rgba(16,185,129,0.12); }
+}
+.nav-glow-rose {
+  animation: pulseRose 2.6s ease-in-out infinite;
+}
+@keyframes pulseRose {
+  0%,100% { box-shadow: 0 0 8px rgba(244,63,94,0.2), inset 0 0 8px rgba(244,63,94,0.05); }
+  50%     { box-shadow: 0 0 24px rgba(244,63,94,0.65), 0 0 48px rgba(244,63,94,0.2), inset 0 0 14px rgba(244,63,94,0.12); }
 }
 
 /* FAB pulse ring */

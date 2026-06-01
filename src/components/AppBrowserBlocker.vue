@@ -7,7 +7,9 @@ const isCopied = ref(false)
 const linkInputRef = ref<HTMLInputElement | null>(null)
 
 onMounted(() => {
-  currentUrl.value = window.location.href
+  const url = new URL(window.location.href)
+  url.searchParams.delete('fbclid')
+  currentUrl.value = url.toString()
   const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
   
   // NÂNG CẤP LƯỚI LỌC TIA X: Thêm 'Barcelona' (Tên mã của Threads), 'wv', 'WebView', 'FBIOS'

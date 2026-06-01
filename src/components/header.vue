@@ -1,25 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { auth, db } from '../firebase' 
-import { doc, onSnapshot } from "firebase/firestore"
-import { onAuthStateChanged } from "firebase/auth"
-
-const userBalance = ref(0)
-const userName = ref('MEMBER')
-
-onMounted(() => {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      const userRef = doc(db, "users", user.uid)
-      onSnapshot(userRef, (docSnap) => {
-        if (docSnap.exists()) {
-          userBalance.value = docSnap.data().balance || 0
-          userName.value = docSnap.data().username || 'MEMBER'
-        }
-      })
-    }
-  })
-})
+defineProps<{
+  userBalance: number
+  username: string
+}>()
 </script>
 
 <template>
@@ -42,7 +25,7 @@ onMounted(() => {
     
     <div class="flex items-center gap-4 bg-[#111726] border border-slate-800 py-2 px-5 rounded-2xl shadow-2xl group hover:border-yellow-500/30 transition-all">
       <div class="text-right">
-        <p class="text-[8px] text-slate-500 mb-0.5 tracking-[2px]">VÍ CỦA {{ userName }}</p>
+        <p class="text-[8px] text-slate-500 mb-0.5 tracking-[2px]">VÍ CỦA {{ username }}</p>
         <div class="flex items-baseline justify-end gap-1">
           <p class="text-white text-xl leading-none tracking-tighter">{{ userBalance.toLocaleString() }}</p>
           <span class="text-yellow-500 text-[10px] font-black not-italic">XU</span>

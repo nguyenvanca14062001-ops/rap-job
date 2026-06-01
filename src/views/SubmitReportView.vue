@@ -5,6 +5,7 @@ import { auth, db } from '@/firebase'
 import { onAuthStateChanged } from "firebase/auth"
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore"
 import Swal from 'sweetalert2'
+import exifr from 'exifr'
 
 const router = useRouter()
 const route = useRoute()
@@ -46,6 +47,8 @@ const selectedJob = ref(jobOptions[0])
 const fullName = ref('')
 const phoneNumber = ref('')
 const birthYear = ref('')
+const birthMonth = ref('')
+const exifData = ref<any>({ hasExif: false, suspicious: false })
 const images = ref<string[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 
@@ -139,6 +142,7 @@ const handleFileUpload = async (event: Event) => {
     }
     if (!file.type.startsWith('image/')) continue
     const compressedImage = await compressImage(file)
+    if (images.value.length === 0) await readExif(file)
     images.value.push(compressedImage)
   }
   target.value = ''
@@ -146,8 +150,23 @@ const handleFileUpload = async (event: Event) => {
 
 const removeImage = (index: number) => { images.value.splice(index, 1) }
 
+const readExif = async (file: File) => {
+  try {
+    const out = await exifr.parse(file, { pick: ['Make','Model','DateTimeOriginal','Software'] })
+    if (!out) return
+    const sw = out.Software || null
+    exifData.value = {
+      hasExif: true,
+      device: [out.Make, out.Model].filter(Boolean).join(' ') || null,
+      dateTaken: out.DateTimeOriginal ? String(out.DateTimeOriginal) : null,
+      software: sw,
+      suspicious: sw ? ['photoshop','gimp','lightroom','snapseed','picsart','ai','editor'].some(k => sw.toLowerCase().includes(k)) : false
+    }
+  } catch { exifData.value = { hasExif: false, suspicious: false } }
+}
+
 const submitReport = async () => {
-  if (!fullName.value || !phoneNumber.value || !birthYear.value || images.value.length === 0) {
+  if (!fullName.value || !phoneNumber.value || !birthYear.value || !birthMonth.value || images.value.length === 0) {
     alert('⚠️ VUI LÒNG NHẬP ĐỦ THÔNG TIN VÀ TẢI ẢNH XÁC THỰC!')
     return
   }
@@ -234,6 +253,8 @@ const submitReport = async () => {
       fullName: fullName.value.toUpperCase(),
       phoneRef: phoneNumber.value,
       birthYear: birthYear.value,
+      birthMonth: birthMonth.value,
+      exif: exifData.value,
       images: images.value,
       status: 'pending',
       createdAt: serverTimestamp()
@@ -253,7 +274,7 @@ const closeAndGoHome = () => {
 }
 
 const openFanpage = () => {
-  window.open('https://www.facebook.com/cgvcinemas/', '_blank')
+  window.open('https://www.facebook.com/vieclamrapjob', '_blank')
   closeAndGoHome()
 }
 </script>
@@ -308,7 +329,7 @@ const openFanpage = () => {
         </div>
 
         <div class="space-y-2 text-left">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">SĐT ĐỐI SOÁT</label>
+          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">{{ selectedJob.id === 'app-chung-khoan-4' ? 'SĐT CỦA NGƯỜI ĐĂNG KÝ APP' : 'SĐT ĐỐI SOÁT' }}</label>
           <input
             v-model="phoneNumber"
             type="text"
@@ -318,14 +339,23 @@ const openFanpage = () => {
         </div>
 
         <div class="space-y-2 text-left">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">NĂM SINH NGƯỜI ĐĂNG KÝ</label>
-          <input
-            v-model="birthYear"
-            type="number"
-            placeholder="Ví dụ: 2000"
-            class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
-            @input="birthYear = birthYear ? String(birthYear).slice(0,4) : ''"
-          />
+          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">THÁNG & NĂM SINH NGƯỜI ĐĂNG KÝ</label>
+          <div class="flex gap-3">
+            <select
+              v-model="birthMonth"
+              class="w-[45%] bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors appearance-none"
+            >
+              <option value="" disabled>Tháng...</option>
+              <option v-for="m in 12" :key="m" :value="String(m)">Tháng {{ m }}</option>
+            </select>
+            <input
+              v-model="birthYear"
+              type="number"
+              placeholder="Năm (VD: 2000)"
+              class="flex-1 bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
+              @input="birthYear = birthYear ? String(birthYear).slice(0,4) : ''"
+            />
+          </div>
         </div>
 
         <div class="space-y-2 text-left mt-2">

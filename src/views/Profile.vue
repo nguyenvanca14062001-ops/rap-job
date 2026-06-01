@@ -1,21 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { auth, db } from '@/firebase'
-import { doc, onSnapshot, collection, query, where } from "firebase/firestore"
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const userUid = ref('')
-const userData = ref<any>(null)
-const reports = ref<any[]>([])
-const isPageLoading = ref(true)
+
+const props = defineProps<{
+  username: string
+  myReports: any[]
+}>()
 
 const stats = computed(() => {
-  const total = reports.value.length
-  const approved = reports.value.filter(r => r.status === 'approved' || r.status === 'collected').length
-  const pending = reports.value.filter(r => r.status === 'pending').length
-  const rejected = reports.value.filter(r => r.status === 'rejected').length
-  const totalEarned = reports.value
+  const total = props.myReports.length
+  const approved = props.myReports.filter(r => r.status === 'approved' || r.status === 'collected').length
+  const pending = props.myReports.filter(r => r.status === 'pending').length
+  const rejected = props.myReports.filter(r => r.status === 'rejected').length
+  const totalEarned = props.myReports
     .filter(r => r.status === 'approved' || r.status === 'collected')
     .reduce((sum, r) => sum + (Number(r.reward) || 0), 0)
   return { total, approved, pending, rejected, totalEarned }
@@ -23,24 +22,6 @@ const stats = computed(() => {
 
 const progress10 = computed(() => Math.min((stats.value.approved / 10) * 100, 100))
 const canClaim10 = computed(() => stats.value.approved >= 10)
-
-onMounted(() => {
-  auth.onAuthStateChanged((user) => {
-    if (user) {
-      userUid.value = user.uid
-      onSnapshot(doc(db, "users", user.uid), (snap) => {
-        if (snap.exists()) userData.value = snap.data()
-      })
-      const q = query(collection(db, "reports"), where("uid", "==", user.uid))
-      onSnapshot(q, (snap) => {
-        reports.value = snap.docs.map(d => d.data())
-        isPageLoading.value = false
-      })
-    } else {
-      router.push('/login')
-    }
-  })
-})
 </script>
 
 <template>
@@ -56,9 +37,7 @@ onMounted(() => {
       </defs>
     </svg>
 
-    <div v-if="isPageLoading" class="text-blue-500 animate-pulse mt-10 text-xs">ĐANG TẢI...</div>
-
-    <div v-else class="w-full max-w-2xl">
+    <div class="w-full max-w-2xl">
       <button @click="router.back()" class="text-slate-500 hover:text-white flex items-center gap-1.5 text-[9px] mb-4 transition-colors tracking-[2px]">
         <span class="font-sans not-italic text-sm leading-none">✕</span> TRỞ LẠI
       </button>
@@ -72,7 +51,7 @@ onMounted(() => {
         <div class="flex items-center gap-4 pb-4 border-b border-slate-800/50 relative z-10">
           <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(37,99,235,0.3)]">👤</div>
           <div>
-            <h2 class="text-lg text-white leading-none mb-1.5">{{ userData?.username || 'MEMBER' }}</h2>
+            <h2 class="text-lg text-white leading-none mb-1.5">{{ username || 'MEMBER' }}</h2>
             <div class="inline-flex items-center gap-1.5 bg-blue-500/10 text-blue-400 text-[8px] px-2 py-0.5 rounded-full border border-blue-500/20">
               <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span> CẤP BẬC: THÀNH VIÊN VIP
             </div>

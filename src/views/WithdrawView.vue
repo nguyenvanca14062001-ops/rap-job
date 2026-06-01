@@ -2,19 +2,30 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
-import { collection, addDoc, doc, updateDoc, onSnapshot, query, where, getDocs } from "firebase/firestore"
-import { onAuthStateChanged } from "firebase/auth"
+import { collection, addDoc, doc, updateDoc } from "firebase/firestore"
 import Swal from 'sweetalert2'
 
 const router = useRouter()
+
+const props = defineProps<{
+  userBalance: number
+  myReports: any[]
+  myWithdrawals: any[]
+}>()
+
 const amount = ref<number | null>(null)
 const bankInfo = ref('')
 const isLoading = ref(false)
-const userBalance = ref(0)
-const currentUser = ref<any>(null)
-const hasPendingWithdraw = ref(false)
-const approvedJobsCount = ref(0)
-const previous200kWithdrawalsCount = ref(0)
+
+const hasPendingWithdraw = computed(() => props.myWithdrawals.some(w => w.status === 'pending'))
+const approvedJobsCount = computed(() =>
+  props.myReports.filter(r => r.status === 'approved' || r.status === 'collected').length
+)
+const previous200kWithdrawalsCount = computed(() =>
+  props.myWithdrawals.filter(w =>
+    w.status === 'approved' && (w.amount === 200000 || w.amountXu === 200000)
+  ).length
+)
 
 const showConfirmModal = ref(false)
 const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuối cùng
@@ -69,46 +80,9 @@ const startFakeLoop = () => {
 }
 
 onMounted(() => {
+  if (!auth.currentUser) { router.push('/login'); return }
   initFakeList()
   startFakeLoop()
-
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUser.value = user
-      onSnapshot(doc(db, "users", user.uid), (docSnap) => {
-        if (docSnap.exists()) {
-          userBalance.value = docSnap.data().balance || 0
-          hasPendingWithdraw.value = docSnap.data().hasPendingWithdraw || false
-        }
-      })
-
-      try {
-        const qJobs = query(
-          collection(db, "reports"),
-          where("uid", "==", user.uid),
-          where("status", "in", ["approved", "collected"])
-        );
-        const snapJobs = await getDocs(qJobs);
-        approvedJobsCount.value = snapJobs.size;
-      } catch (err) {
-        console.error("Lỗi khi đếm số job:", err);
-      }
-
-      try {
-        const qWithdrawals = query(collection(db, "withdrawals"), where("uid", "==", user.uid), where("status", "==", "approved"));
-        const snapWithdrawals = await getDocs(qWithdrawals);
-        previous200kWithdrawalsCount.value = snapWithdrawals.docs.filter(d => {
-          const data = d.data();
-          return (data.amount === 200000 || data.amountXu === 200000);
-        }).length;
-      } catch (err) {
-        console.error("Lỗi khi check lịch sử rút tiền:", err);
-      }
-
-    } else {
-      router.push('/login')
-    }
-  })
 })
 
 onUnmounted(() => {
@@ -138,7 +112,7 @@ const triggerWithdraw = () => {
     return
   }
 
-  if (amount.value > userBalance.value) {
+  if (amount.value > props.userBalance) {
     Swal.fire({
       title: 'SỐ DƯ KHÔNG ĐỦ!',
       text: 'Số dư ví XU của bạn không đủ để thực hiện giao dịch này!',
@@ -165,7 +139,8 @@ const triggerWithdraw = () => {
 }
 
 const handleConfirmWithdraw = async () => {
-  if (isLoading.value || !currentUser.value || !amount.value) return
+  const user = auth.currentUser
+  if (isLoading.value || !user || !amount.value) return
 
   if (approvedJobsCount.value < requiredJobs.value) {
     Swal.fire({
@@ -185,7 +160,7 @@ const handleConfirmWithdraw = async () => {
     const realMoneyVND = Math.floor(amount.value / 12)
 
     await addDoc(withdrawalRef, {
-      uid: currentUser.value.uid,
+      uid: user.uid,
       amount: amount.value,
       realMoney: realMoneyVND,
       bankInfo: bankInfo.value,
@@ -193,9 +168,9 @@ const handleConfirmWithdraw = async () => {
       createdAt: new Date()
     })
 
-    const userRef = doc(db, "users", currentUser.value.uid)
+    const userRef = doc(db, "users", user.uid)
     await updateDoc(userRef, {
-      balance: userBalance.value - amount.value,
+      balance: props.userBalance - amount.value,
       hasPendingWithdraw: true
     })
 

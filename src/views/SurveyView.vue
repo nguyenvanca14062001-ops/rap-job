@@ -47,6 +47,7 @@ const checking = ref(true)
 const progress = computed(() => (currentQuestion.value / questions.length) * 100)
 
 onMounted(async () => {
+  await auth.authStateReady()   // Đợi Firebase restore auth session trước khi check
   const user = auth.currentUser
   if (!user) {
     router.push('/login')
