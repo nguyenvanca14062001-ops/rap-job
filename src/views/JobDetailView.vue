@@ -15,64 +15,8 @@ onMounted(() => {
   const jobId = route.params.id as string
   if (jobId && jobsData[jobId]) {
     currentJob.value = jobsData[jobId]
-    checkAgeLimitOnDetail(jobId);
   }
 })
-
-const checkAgeLimitOnDetail = (jobId: string) => {
-  const age18Jobs = ['msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-4'];
-  const age20Jobs = ['app-chung-khoan-3'];
-
-  if (!age18Jobs.includes(jobId) && !age20Jobs.includes(jobId)) return;
-
-  const hasSeenPopup = localStorage.getItem(`seen_age_popup_${jobId}`);
-
-  if (!hasSeenPopup) {
-    let ageLimit = age18Jobs.includes(jobId) ? '18' : '20';
-    let appType = jobId.includes('bank') ? 'Ngân Hàng' : 'Chứng Khoán';
-
-    Swal.fire({
-      title: '⚠️ THÔNG BÁO ĐỘ TUỔI',
-      html: `<div class="text-center font-sans normal-case text-white text-[11px] md:text-[14px] leading-tight">
-              Chiến dịch <span class="text-yellow-300 font-black italic underline">${appType}</span> yêu cầu từ:
-              <div class="my-2">
-                <span class="inline-block bg-white text-[#ea580c] px-3 py-1 rounded-full font-sans font-black text-[13px] md:text-[16px] shadow-lg border-2 border-orange-200">
-                  🔞 ${ageLimit} TUỔI TRỞ LÊN
-                </span>
-              </div>
-              mới đủ điều kiện đăng ký.
-              <div class="bg-black/20 p-2 md:p-3 rounded-xl border border-white/10 text-left mt-3">
-                <span class="text-yellow-300 font-black text-[10px] block mb-0.5 uppercase tracking-wide">💡 Mẹo nhận hoa hồng:</span>
-                <span class="text-[9px] md:text-[11px] leading-snug">Nếu chưa đủ tuổi, có thể <span class="text-white font-black underline">nhờ người thân/bạn bè đủ tuổi đăng ký hộ</span>, sau đó chụp bằng chứng nộp lên hệ thống để nhận thưởng nhé!</span>
-              </div>
-             </div>`,
-      width: 'auto',
-      padding: '1rem',
-      icon: 'warning',
-      iconColor: '#ffffff',
-      background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-      color: '#ffffff',
-      confirmButtonText: 'ĐÃ HIỂU VÀ TIẾP TỤC 🚀',
-      confirmButtonColor: '#1e293b',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      backdrop: 'rgba(9,14,23,0.85)',
-      customClass: {
-        popup: '!w-[85vw] !max-w-[300px] md:!max-w-md !rounded-2xl border-2 border-orange-400/30',
-        title: '!text-[15px] md:!text-xl font-black text-white italic font-sans !mt-0 !pt-1',
-        htmlContainer: '!m-2',
-        confirmButton: '!text-[10px] md:!text-sm py-2 px-4 !mt-1',
-        icon: '!w-12 !h-12 !my-2 !border-2 !text-2xl'
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localStorage.setItem(`seen_age_popup_${jobId}`, 'true');
-      } else {
-        router.push('/');
-      }
-    });
-  }
-}
 
 const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }

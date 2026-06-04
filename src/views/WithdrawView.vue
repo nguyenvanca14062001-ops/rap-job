@@ -30,7 +30,7 @@ const previous200kWithdrawalsCount = computed(() =>
 const showConfirmModal = ref(false)
 const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuối cùng
 
-const withdrawOptions = [200000, 500000, 650000, 800000, 1000000, 2000000]
+const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
 
 const requiredJobs = computed(() => {
   if (amount.value === 200000 && previous200kWithdrawalsCount.value > 0) {
@@ -57,7 +57,7 @@ const generateFakeWithdraw = () => {
   const ho = hoHo[Math.floor(Math.random() * hoHo.length)]
   const ten = tenTen[Math.floor(Math.random() * tenTen.length)]
   const name = `${ho} *** ${ten}`
-  const mocs = [200000, 500000, 650000, 800000, 1000000]
+  const mocs = [250000, 500000, 650000, 800000, 1000000]
   const randomAmount = mocs[Math.floor(Math.random() * mocs.length)]
   const times = ['Vừa xong', '1 phút trước', '3 phút trước', '5 phút trước', '10 phút trước']
   const randomTime = times[Math.floor(Math.random() * times.length)]

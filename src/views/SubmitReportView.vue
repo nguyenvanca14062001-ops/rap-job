@@ -339,23 +339,25 @@ const openFanpage = () => {
         </div>
 
         <div class="space-y-2 text-left">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">THÁNG & NĂM SINH NGƯỜI ĐĂNG KÝ</label>
-          <div class="flex gap-3">
-            <select
-              v-model="birthMonth"
-              class="w-[45%] bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors appearance-none"
-            >
-              <option value="" disabled>Tháng...</option>
-              <option v-for="m in 12" :key="m" :value="String(m)">Tháng {{ m }}</option>
-            </select>
-            <input
-              v-model="birthYear"
-              type="number"
-              placeholder="Năm (VD: 2000)"
-              class="flex-1 bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
-              @input="birthYear = birthYear ? String(birthYear).slice(0,4) : ''"
-            />
-          </div>
+          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">NĂM SINH NGƯỜI ĐĂNG KÝ</label>
+          <input
+            v-model="birthYear"
+            type="number"
+            placeholder="Năm (VD: 2000)"
+            class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
+            @input="birthYear = birthYear ? String(birthYear).slice(0,4) : ''"
+          />
+        </div>
+
+        <div class="space-y-2 text-left">
+          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">THÁNG SINH</label>
+          <select
+            v-model="birthMonth"
+            class="w-1/2 bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-3 px-5 text-white outline-none font-sans not-italic font-semibold text-[13px] shadow-inner transition-colors appearance-none"
+          >
+            <option value="" disabled>Tháng...</option>
+            <option v-for="m in 12" :key="m" :value="String(m)">Tháng {{ m }}</option>
+          </select>
         </div>
 
         <div class="space-y-2 text-left mt-2">

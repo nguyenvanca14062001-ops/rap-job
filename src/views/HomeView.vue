@@ -3,7 +3,6 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '@/firebase'
 import { onAuthStateChanged, signOut } from "firebase/auth"
-import Swal from 'sweetalert2'
 
 import Sidebar from '@/components/home/Sidebar.vue'
 import JobSection from '@/components/home/JobSection.vue'
@@ -87,50 +86,6 @@ const handleQuickJob = () => {
 
 // ============================================================================
 // HÀM KIỂM TRA ĐỘ TUỔI KHỚP KHÍT 100% THEO FILE JOBS.TS CỦA BOSS
-// ============================================================================
-const checkJobAgeLimit = (jobId: string, callback: () => void) => {
-  const age18Jobs = ['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2'];
-  const age20Jobs = ['app-chung-khoan-3'];
-
-  // Nếu không phải ô job cần lọc tuổi thì cho nhảy thẳng vào hướng dẫn
-  if (!age18Jobs.includes(jobId) && !age20Jobs.includes(jobId)) {
-    callback();
-    return;
-  }
-
-  let ageLimit = age18Jobs.includes(jobId) ? '18' : '20';
-  let appType = jobId.includes('bank') ? 'Ngân hàng' : 'Ứng dụng Chứng khoán';
-
-  const hasSeenPopup = localStorage.getItem(`seen_age_popup_${jobId}`);
-
-  if (!hasSeenPopup) {
-    Swal.fire({
-      title: '⚠️ LƯU Ý ĐỘ TUỔI ĐĂNG KÝ',
-      html: `<div class="text-left font-sans normal-case text-slate-300 text-sm leading-relaxed">
-              Chiến dịch <span class="text-yellow-400 font-black italic">${appType}</span> này yêu cầu bắt buộc bạn phải từ <span class="text-rose-400 font-black text-base">${ageLimit} tuổi trở lên</span> mới đủ điều kiện đăng ký mở tài khoản.<br/><br/>
-              👉 <span class="text-emerald-400 font-bold">Mẹo kiếm tiền:</span> Nếu bạn chưa đủ tuổi, bạn hoàn toàn có thể <span class="text-white font-bold">nhờ người thân hoặc bạn bè đủ tuổi đăng ký hộ</span>, sau đó chụp lại bằng chứng nộp lên hệ thống để nhận hoa hồng bình thường nhé!
-             </div>`,
-      icon: 'warning',
-      background: '#111726',
-      color: '#ffffff',
-      confirmButtonText: 'ĐÃ HIỂU VÀ TIẾP TỤC',
-      confirmButtonColor: '#2563eb',
-      allowOutsideClick: false,
-      customClass: {
-        popup: 'rounded-[30px] border border-slate-800 shadow-2xl',
-        title: 'text-lg font-black tracking-wide text-white font-sans'
-      }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        localStorage.setItem(`seen_age_popup_${jobId}`, 'true');
-        callback();
-      }
-    });
-  } else {
-    callback();
-  }
-}
-
 const executeJobNavigation = (jobId: string) => {
   if (!isLoggedIn.value) { router.push('/login'); return; }
   router.push(`/job/${jobId}`);
@@ -139,16 +94,12 @@ const executeJobNavigation = (jobId: string) => {
 const handleReceiveJob = (jobId: string) => {
   if (!isLoggedIn.value) { router.push('/login'); return; }
 
-  // Nếu click vào mục lớn "APP NGÂN HÀNG" trên menu điều hướng mobile/sidebar
   if (jobId === 'APP NGÂN HÀNG' || jobId === 'app-ngan-hang') {
     showBankModal.value = true;
     return;
   }
 
-  // Click trực tiếp từ danh sách các ô card ngoài trang chủ
-  checkJobAgeLimit(jobId, () => {
-    executeJobNavigation(jobId);
-  });
+  executeJobNavigation(jobId);
 }
 
 const contactSupport = () => {
@@ -220,7 +171,7 @@ const logout = async () => {
         
         <div class="space-y-4 font-bold uppercase italic font-black pb-10 lg:pb-0">
           <div v-for="bank in [{ id: 'msb-bank', name: 'MSB' }, { id: 'vpbank', name: 'VPBank' }, { id: 'tpbank', name: 'TPBank' }]" 
-            :key="bank.id" @click="checkJobAgeLimit(bank.id, () => { showBankModal = false; executeJobNavigation(bank.id) })"
+            :key="bank.id" @click="() => { showBankModal = false; executeJobNavigation(bank.id) }"
             class="flex items-center justify-between p-6 bg-[#0d121f] border border-slate-800 rounded-2xl cursor-pointer hover:border-blue-500 transition-all active:scale-95 shadow-lg"
           >
              <div class="flex items-center gap-4">

@@ -43,16 +43,25 @@ const isStatsLoading = ref(false)
 
 const loadDashboardStats = async () => {
   isStatsLoading.value = true;
+  const site = siteFilter.value;
   try {
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     statsTodayTotal.value = 0;
     statsTodayAppTotal.value = 0;
     Object.keys(statsAppBreakdown.value).forEach(k => statsAppBreakdown.value[k].today = 0);
-    const qStats = query(collection(db, "reports"), where("createdAt", ">=", Timestamp.fromDate(startOfDay)));
+    // Khi lọc theo site cụ thể: lấy toàn bộ docs của site đó (ít), filter ngày client-side
+    // Khi 'all': dùng where createdAt >= startOfDay nhưng thêm limit để tránh đọc vô hạn
+    const qStats = site !== 'all'
+      ? query(collection(db, "reports"), where("site", "==", site), limit(500))
+      : query(collection(db, "reports"), where("createdAt", ">=", Timestamp.fromDate(startOfDay)), limit(500));
     const snap = await getDocs(qStats);
     snap.forEach(doc => {
       const data = doc.data();
+      if (site !== 'all') {
+        const t = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt || 0);
+        if (t < startOfDay) return;
+      }
       if (data.status === 'approved' || data.status === 'collected') {
         statsTodayTotal.value++;
         if (isAppJob(data.jobName)) {
@@ -151,9 +160,9 @@ const handleSearch = () => {
   const limitedUids = matchedUids.slice(0, 10);
   let qReports;
   if (limitedUids.length > 0) {
-    qReports = query(collection(db, "reports"), where("uid", "in", limitedUids));
+    qReports = query(collection(db, "reports"), where("uid", "in", limitedUids), limit(100));
   } else {
-    qReports = query(collection(db, "reports"), where("phoneRef", "==", text));
+    qReports = query(collection(db, "reports"), where("phoneRef", "==", text), limit(50));
   }
 
   unsubReports = onSnapshot(qReports, (snapshot) => {
@@ -239,6 +248,7 @@ const bulkApproveOtherJobs = async () => {
 // ============================================================================
 let unsubReports: any = null;
 let unsubWithdrawals: any = null;
+let unsubNotes: any = null;
 
 const loadData = (newStatus: string) => {
   if (searchQuery.value.trim() !== '') return;
@@ -246,13 +256,21 @@ const loadData = (newStatus: string) => {
   if (unsubReports) unsubReports();
   if (unsubWithdrawals) unsubWithdrawals();
 
+  const site = siteFilter.value;
   let qReports;
   if (newStatus === 'all') {
-    qReports = query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(200));
+    // Khi lọc theo site cụ thể: bỏ orderBy để tránh cần composite index, sort client-side
+    qReports = site !== 'all'
+      ? query(collection(db, "reports"), where("site", "==", site), limit(100))
+      : query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(100));
   } else if (newStatus === 'approved') {
-    qReports = query(collection(db, "reports"), where("status", "in", ["approved", "collected"]), limit(300));
+    qReports = site !== 'all'
+      ? query(collection(db, "reports"), where("site", "==", site), where("status", "in", ["approved", "collected"]), limit(100))
+      : query(collection(db, "reports"), where("status", "in", ["approved", "collected"]), limit(100));
   } else {
-    qReports = query(collection(db, "reports"), where("status", "==", newStatus), limit(300));
+    qReports = site !== 'all'
+      ? query(collection(db, "reports"), where("site", "==", site), where("status", "==", newStatus), limit(100))
+      : query(collection(db, "reports"), where("status", "==", newStatus), limit(100));
   }
 
   unsubReports = onSnapshot(qReports, (snapshot) => {
@@ -265,9 +283,13 @@ const loadData = (newStatus: string) => {
 
   let qWithdrawals;
   if (newStatus === 'all') {
-    qWithdrawals = query(collection(db, "withdrawals"), orderBy("createdAt", "desc"), limit(100));
+    qWithdrawals = site !== 'all'
+      ? query(collection(db, "withdrawals"), where("site", "==", site), limit(50))
+      : query(collection(db, "withdrawals"), orderBy("createdAt", "desc"), limit(50));
   } else {
-    qWithdrawals = query(collection(db, "withdrawals"), where("status", "==", newStatus), limit(150));
+    qWithdrawals = site !== 'all'
+      ? query(collection(db, "withdrawals"), where("site", "==", site), where("status", "==", newStatus), limit(50))
+      : query(collection(db, "withdrawals"), where("status", "==", newStatus), limit(50));
   }
   unsubWithdrawals = onSnapshot(qWithdrawals, (snapshot) => {
     let wData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -276,16 +298,23 @@ const loadData = (newStatus: string) => {
     withdrawals.value = wData;
   }, (error) => { console.error("LỖI RÚT TIỀN:", error); });
 
-  onSnapshot(query(collection(db, "admin_notes"), limit(50)), (snapshot) => {
-    let notesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime();
-    notesData.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
-    dailyNotes.value = notesData;
-  });
+  // Chỉ tạo 1 lần duy nhất, không recreate khi statusFilter thay đổi
+  if (!unsubNotes) {
+    unsubNotes = onSnapshot(query(collection(db, "admin_notes"), limit(50)), (snapshot) => {
+      let notesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime();
+      notesData.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt));
+      dailyNotes.value = notesData;
+    });
+  }
 }
 
 watch(statusFilter, (newVal) => {
   if (!isCheckingAuth.value) { searchQuery.value = ''; loadData(newVal); }
+})
+
+watch(siteFilter, () => {
+  if (!isCheckingAuth.value) { searchQuery.value = ''; loadData(statusFilter.value); loadDashboardStats(); }
 })
 
 // ============================================================================
@@ -326,7 +355,7 @@ onMounted(() => {
         return
       }
       isCheckingAuth.value = false;
-      onSnapshot(collection(db, "users"), (snapshot) => {
+      onSnapshot(query(collection(db, "users"), limit(1000)), (snapshot) => {
         const map: Record<string, any> = {}
         snapshot.docs.forEach(doc => { map[doc.id] = doc.data() })
         usersMap.value = map

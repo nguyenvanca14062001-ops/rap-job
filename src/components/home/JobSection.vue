@@ -10,39 +10,19 @@ defineProps<{
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const showAgeModal = ref(false);
-const pendingJobId = ref('');
-const pendingJobTitle = ref('');
+const VIP_JOBS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank'];
 
 const handleJobClick = (id: string) => {
   const job = jobsData[id];
   if (!job || (job as any).paused) return;
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    navigator.vibrate(50);
-  }
-  pendingJobId.value = id;
-  pendingJobTitle.value = job.title;
-  showAgeModal.value = true;
-};
-
-const confirmAge = () => {
-  showAgeModal.value = false;
-  emit('receiveJob', pendingJobId.value);
-};
-
-const cancelAge = () => {
-  showAgeModal.value = false;
-  pendingJobId.value = '';
-  pendingJobTitle.value = '';
+  if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
+  emit('receiveJob', id);
 };
 
 const formatReward = (val: any) => {
   if (!val) return '0';
   return String(val).replace(/\D/g, '');
 };
-
-
-const VIP_JOBS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank'];
 
 const isVip = (id: string) => VIP_JOBS.includes(id);
 
@@ -417,7 +397,10 @@ const getShortDesc = (id: string) => {
           <template v-for="(j, id) in jobsData" :key="id">
             <div v-if="isVip(id as string)"
               @click="handleJobClick(id as string)"
-              class="vip-card relative p-5 md:p-7 rounded-[28px] border-[2px] border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] transition-all duration-500 flex flex-col group cursor-pointer active:scale-95 overflow-hidden">
+              class="relative p-5 md:p-7 rounded-[28px] border-[2px] transition-all duration-500 flex flex-col group overflow-hidden"
+              :class="(jobsData[id as string] as any).paused
+                ? 'border-slate-600/50 bg-gradient-to-br from-[#1a1a1a] to-[#111111] cursor-not-allowed opacity-70'
+                : 'vip-card border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] cursor-pointer active:scale-95'">
 
               <!-- Glow nền VIP -->
               <div class="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-yellow-300/5 pointer-events-none rounded-[26px]"></div>
@@ -471,13 +454,18 @@ const getShortDesc = (id: string) => {
                 </div>
               </div>
 
-              <div class="flex items-center gap-1.5 text-[9px] text-amber-500/70 mt-3 mb-2">
-                <span class="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
-                <span>Đang mở đăng ký — {{ getSocialProof(id as string) }} người đã nhận</span>
+              <div class="flex items-center gap-1.5 text-[9px] mt-3 mb-2"
+                   :class="(jobsData[id as string] as any).paused ? 'text-red-400/80' : 'text-amber-500/70'">
+                <span class="w-1.5 h-1.5 rounded-full"
+                      :class="(jobsData[id as string] as any).paused ? 'bg-red-500' : 'bg-amber-500 animate-pulse'"></span>
+                <span>{{ (jobsData[id as string] as any).paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
               </div>
               <button @click.stop="handleJobClick(id as string)"
-                class="vip-btn w-full py-3.5 md:py-4 rounded-xl text-[11px] md:text-[13px] font-black italic uppercase transition-all relative z-10 border border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95">
-                NHẬN NGAY 💰
+                class="w-full py-3.5 md:py-4 rounded-xl text-[11px] md:text-[13px] font-black italic uppercase transition-all relative z-10 border"
+                :class="(jobsData[id as string] as any).paused
+                  ? 'bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed'
+                  : 'vip-btn border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95'">
+                {{ (jobsData[id as string] as any).paused ? 'TẠM DỪNG ⏸' : 'NHẬN NGAY 💰' }}
               </button>
             </div>
           </template>
@@ -487,84 +475,6 @@ const getShortDesc = (id: string) => {
     </section>
   </div>
 
-  <!-- AGE VERIFICATION MODAL -->
-  <Teleport to="body">
-    <Transition name="age-modal">
-      <div v-if="showAgeModal"
-           class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-           style="background: rgba(0,0,0,0.88); backdrop-filter: blur(6px);"
-           @click.self="cancelAge">
-        <div class="age-modal-box relative w-full max-w-[380px] rounded-[28px] overflow-hidden"
-             style="background: linear-gradient(145deg, #0f0a02, #1a1000, #0c0800); border: 1.5px solid rgba(245,158,11,0.55); box-shadow: 0 0 60px rgba(245,158,11,0.25), 0 0 120px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.05);">
-
-          <!-- Top glow bar -->
-          <div style="height:3px; background: linear-gradient(90deg, transparent, #f59e0b, #fbbf24, #f59e0b, transparent);"></div>
-
-          <!-- Corner accents -->
-          <div class="absolute top-0 left-0 w-16 h-16 pointer-events-none" style="background: radial-gradient(circle at 0% 0%, rgba(245,158,11,0.12), transparent 70%);"></div>
-          <div class="absolute top-0 right-0 w-16 h-16 pointer-events-none" style="background: radial-gradient(circle at 100% 0%, rgba(245,158,11,0.12), transparent 70%);"></div>
-
-          <div class="px-6 pt-6 pb-7 text-center space-y-4">
-            <!-- Shield icon -->
-            <div class="flex justify-center">
-              <div class="w-16 h-16 rounded-full flex items-center justify-center age-shield-icon"
-                   style="background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); border: 1.5px solid rgba(245,158,11,0.4); box-shadow: 0 0 24px rgba(245,158,11,0.3);">
-                <svg viewBox="0 0 24 24" fill="none" class="w-8 h-8">
-                  <path d="M12 2L3 7v5c0 5.25 3.75 10.15 9 11.25C17.25 22.15 21 17.25 21 12V7L12 2z" fill="rgba(245,158,11,0.2)" stroke="#f59e0b" stroke-width="1.5" stroke-linejoin="round"/>
-                  <text x="12" y="16" text-anchor="middle" fill="#fbbf24" font-size="9" font-weight="900" font-family="Arial" style="font-style:italic">18+</text>
-                </svg>
-              </div>
-            </div>
-
-            <!-- Title -->
-            <div class="space-y-1">
-              <p class="text-[11px] font-black uppercase tracking-[3px]"
-                 style="color:#f59e0b; text-shadow: 0 0 12px rgba(245,158,11,0.6);">
-                XÁC NHẬN ĐỘ TUỔI
-              </p>
-              <h3 class="text-[15px] font-black uppercase leading-snug tracking-tight"
-                  style="color:#fde68a; text-shadow: 0 0 20px rgba(251,191,36,0.4);">
-                {{ pendingJobTitle }}
-              </h3>
-            </div>
-
-            <!-- Message -->
-            <div class="rounded-2xl px-5 py-4"
-                 style="background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2);">
-              <p class="text-[13px] font-semibold leading-relaxed" style="color:#e2d4a0;">
-                Công việc này yêu cầu
-                <span class="font-black" style="color:#fbbf24;">đủ 18 tuổi trở lên.</span>
-                <br/>Bạn đã đủ 18 tuổi chưa?
-              </p>
-            </div>
-
-            <!-- Buttons -->
-            <div class="flex gap-3 pt-1">
-              <!-- HUỶ -->
-              <button @click="cancelAge"
-                      class="flex-1 py-3.5 rounded-2xl font-black text-[12px] uppercase tracking-wide transition-all active:scale-95 hover:brightness-110"
-                      style="background: linear-gradient(135deg, #7f1d1d, #991b1b); color: #fecaca; border: 1.5px solid rgba(239,68,68,0.5); box-shadow: 0 0 20px rgba(239,68,68,0.35), inset 0 1px 0 rgba(255,255,255,0.05); text-shadow: 0 0 8px rgba(239,68,68,0.5);">
-                ✕ HUỶ
-              </button>
-              <!-- ĐÃ ĐỦ 18 -->
-              <button @click="confirmAge"
-                      class="flex-1 py-3.5 rounded-2xl font-black text-[12px] uppercase tracking-wide transition-all active:scale-95 age-confirm-btn"
-                      style="background: linear-gradient(135deg, #d97706, #f59e0b, #fbbf24); color: #1c0d00; border: 1.5px solid rgba(251,191,36,0.6); text-shadow: 0 1px 0 rgba(255,255,255,0.2);">
-                ✓ ĐÃ ĐỦ 18
-              </button>
-            </div>
-
-            <p class="text-[9px] tracking-wider uppercase" style="color: rgba(120,100,60,0.7);">
-              Click ra ngoài để đóng
-            </p>
-          </div>
-
-          <!-- Bottom glow bar -->
-          <div style="height:2px; background: linear-gradient(90deg, transparent, rgba(245,158,11,0.4), transparent);"></div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
 </template>
 
 <style scoped>
