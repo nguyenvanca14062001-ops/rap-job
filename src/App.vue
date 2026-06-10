@@ -67,6 +67,9 @@ const jobBtnClass: Record<string, string> = {
 const router = useRouter()
 const route = useRoute()
 
+// Haptic feedback helper — safe to call anywhere including templates
+const vibrate = (ms = 20) => { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(ms) }
+
 // Trạng thái ẩn/hiện số dư (Mặc định là hiện)
 const isBalanceVisible = ref(localStorage.getItem('mmo_balance_hide') !== 'true');
 
@@ -833,7 +836,7 @@ watch(activePopup, (val) => {
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-10 pb-24 md:pb-10 space-y-10 custom-scrollbar relative text-left">
+      <main class="flex-1 overflow-y-auto p-4 md:p-10 pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-10 space-y-10 custom-scrollbar relative text-left">
         <template v-if="route.path === '/'">
            <!-- Mobile Profile Card -->
            <div class="lg:hidden mb-2">
@@ -1023,12 +1026,15 @@ watch(activePopup, (val) => {
              </div>
            </footer>
         </template>
-        <router-view v-else
-          :userBalance="userBalance"
-          :username="username"
-          :myReports="myReports"
-          :myWithdrawals="myWithdrawals"
-        />
+        <Transition v-else name="page-fade" mode="out-in">
+          <router-view
+            :key="route.path"
+            :userBalance="userBalance"
+            :username="username"
+            :myReports="myReports"
+            :myWithdrawals="myWithdrawals"
+          />
+        </Transition>
       </main>
     </div>
 
@@ -1066,7 +1072,7 @@ watch(activePopup, (val) => {
     <!-- BOTTOM SHEET PANEL -->
     <Transition name="sheet-up">
       <div v-if="activePopup"
-           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[78vh] flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.7)] bg-gradient-to-b from-[#221510] to-[#160d0b] border border-white/10">
+           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[78vh] flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.7)] bg-gradient-to-b from-[#221510] to-[#160d0b] border border-white/10 select-none">
 
         <!-- Handle bar -->
         <div class="flex justify-center pt-3 pb-1">
@@ -1148,7 +1154,7 @@ watch(activePopup, (val) => {
           </div>
 
           <!-- SCREEN 2a: Basic jobs — 2-column card grid -->
-          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto flex-1 px-3 py-3">
+          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
             <div class="grid grid-cols-2 gap-2.5">
               <template v-for="(j, id) in jobsData" :key="id">
                 <button v-if="!VIP_IDS.includes(id as string)"
@@ -1197,7 +1203,7 @@ watch(activePopup, (val) => {
           </div>
 
           <!-- SCREEN 2b: VIP jobs — 2-column card grid (amber theme) -->
-          <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto flex-1 px-3 py-3">
+          <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
             <div class="grid grid-cols-2 gap-2.5">
               <template v-for="(j, id) in jobsData" :key="id">
                 <button v-if="VIP_IDS.includes(id as string)"
@@ -1261,7 +1267,7 @@ watch(activePopup, (val) => {
           </div>
 
           <!-- Scrollable content -->
-          <div class="overflow-y-auto flex-1 px-3 py-3 space-y-2">
+          <div class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3 space-y-2">
 
             <div v-if="!isLoggedIn" class="text-center py-12">
               <p class="text-slate-500 font-black italic uppercase tracking-widest text-[10px]">Vui lòng đăng nhập để xem lịch sử</p>
@@ -1338,13 +1344,13 @@ watch(activePopup, (val) => {
     </Transition>
 
     <nav v-if="!isAuthRoute || isLoggedIn"
-         class="cosmic-nav fixed bottom-0 left-0 w-full lg:hidden z-[4000] flex justify-between items-end px-2 pb-5 pt-2 bg-[#06000f]/97 backdrop-blur-xl border-t border-violet-500/15 overflow-hidden">
+         class="cosmic-nav fixed bottom-0 left-0 w-full lg:hidden z-[4000] flex justify-between items-end px-2 pb-5 pt-2 bg-[#06000f]/97 backdrop-blur-xl border-t border-violet-500/15 overflow-hidden select-none">
 
       <!-- Laser border — 2 beams continuous sweep -->
       <div class="laser-border" aria-hidden="true"></div>
 
       <!-- ① CÔNG VIỆC — vị trí 1 (HOT 🔥) -->
-      <button @click="activePopup === 'cong-viec' ? activePopup = '' : activePopup = 'cong-viec'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
+      <button @click="vibrate(); activePopup === 'cong-viec' ? activePopup = '' : activePopup = 'cong-viec'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
         <div class="absolute -top-2 w-5 h-[3px] bg-red-500 rounded-full shadow-[0_0_8px_#dc2626]" v-if="activePopup === 'cong-viec'"></div>
         <div class="relative">
           <!-- HOT badge -->
@@ -1361,7 +1367,7 @@ watch(activePopup, (val) => {
       </button>
 
       <!-- ② LỊCH SỬ — vị trí 2 -->
-      <button @click="activePopup === 'lich-su' ? activePopup = '' : activePopup = 'lich-su'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
+      <button @click="vibrate(); activePopup === 'lich-su' ? activePopup = '' : activePopup = 'lich-su'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
         <div class="absolute -top-2 w-5 h-[3px] bg-sky-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.9)]" v-if="activePopup === 'lich-su'"></div>
         <div class="relative">
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#38bdf8; border-right-color:rgba(56,189,248,0.2);"></div>
@@ -1390,7 +1396,7 @@ watch(activePopup, (val) => {
       </button>
 
       <!-- ④ NỘP BÀI — vị trí 4 -->
-      <button @click="activePopup === 'nop-bai' ? activePopup = '' : activePopup = 'nop-bai'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
+      <button @click="vibrate(); activePopup === 'nop-bai' ? activePopup = '' : activePopup = 'nop-bai'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
         <div class="absolute -top-2 w-5 h-[3px] bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.9)]" v-if="activePopup === 'nop-bai'"></div>
         <div class="relative">
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#10b981; border-right-color:rgba(16,185,129,0.2);"></div>
@@ -1466,10 +1472,14 @@ watch(activePopup, (val) => {
       </div>
     </div>
 
-    <div v-if="isMenuOpen && windowWidth < 1024" @click="isMenuOpen = false" class="fixed inset-0 bg-black/80 z-[1200] lg:hidden backdrop-blur-sm transition-opacity"></div>
-    <button v-if="isMenuOpen && windowWidth < 1024" @click.stop="isMenuOpen = false" class="fixed top-4 left-4 z-[5000] p-3 bg-[#150f0d] border border-slate-800 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-all active:scale-95 flex items-center justify-center">
-      <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
-    </button>
+    <Transition name="fade">
+      <div v-if="isMenuOpen && windowWidth < 1024" @click="isMenuOpen = false" class="fixed inset-0 bg-black/80 z-[1200] lg:hidden backdrop-blur-sm"></div>
+    </Transition>
+    <Transition name="fade">
+      <button v-if="isMenuOpen && windowWidth < 1024" @click.stop="isMenuOpen = false" class="fixed top-4 left-4 z-[5000] p-3 bg-[#150f0d] border border-slate-800 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)] transition-transform active:scale-95 flex items-center justify-center">
+        <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </Transition>
     
     <AppBrowserBlocker />
 
@@ -1552,6 +1562,8 @@ watch(activePopup, (val) => {
     0 -1px 0 rgba(139,92,246,0.3),
     0 -8px 40px rgba(88,28,220,0.12);
   background: linear-gradient(180deg, rgba(14,0,28,0.97) 0%, rgba(6,0,15,0.98) 100%);
+  /* iPhone X+ home indicator safe area */
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
 }
 .cosmic-nav::before {
   content: '';
@@ -1901,9 +1913,10 @@ watch(activePopup, (val) => {
 .fade-backdrop-enter-active, .fade-backdrop-leave-active { transition: opacity 0.2s ease; }
 .fade-backdrop-enter-from, .fade-backdrop-leave-to { opacity: 0; }
 
-.sheet-up-enter-active { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease; }
-.sheet-up-leave-active  { transition: transform 0.25s ease, opacity 0.2s ease; }
-.sheet-up-enter-from, .sheet-up-leave-to { transform: translateY(30px); opacity: 0; }
+.sheet-up-enter-active { transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.22s ease; }
+.sheet-up-leave-active  { transition: transform 0.22s ease, opacity 0.18s ease; }
+.sheet-up-enter-from { transform: translateY(72px); opacity: 0; }
+.sheet-up-leave-to   { transform: translateY(40px); opacity: 0; }
 
 /* ── CINEMA ATMOSPHERE ─────────────────────────────── */
 .cinema-bg {
@@ -1946,4 +1959,8 @@ watch(activePopup, (val) => {
   50%       { box-shadow: 0 0 35px rgba(245,158,11,0.8), 0 0 60px rgba(245,158,11,0.2); }
 }
 .age-btn-confirm-app { animation: confirm-glow-app 1.6s ease-in-out infinite; }
+
+/* ── ROUTE PAGE TRANSITION (mobile app feel) ───────── */
+.page-fade-enter-active, .page-fade-leave-active { transition: opacity 0.18s ease; }
+.page-fade-enter-from, .page-fade-leave-to { opacity: 0; }
 </style>

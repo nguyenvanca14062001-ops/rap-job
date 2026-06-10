@@ -70,7 +70,7 @@ const handleCopy = (text: string) => {
     </Transition>
 
     <div class="flex justify-between items-center mb-8 max-w-4xl mx-auto border-b border-slate-800 pb-4">
-      <button class="text-[10px] tracking-[3px] text-slate-500 hover:text-white transition-all flex items-center gap-1" @click="router.push('/')">
+      <button class="text-[10px] tracking-[3px] text-slate-500 hover:text-white active:text-white transition-colors flex items-center gap-1 px-3 py-2.5 -mx-3 -my-2 active:scale-95 transition-transform" @click="router.push('/')">
         <span class="text-base font-light not-italic font-sans">✕</span> QUAY LẠI
       </button>
       <span class="text-[10px] tracking-[4px] text-slate-600">HƯỚNG DẪN CHI TIẾT</span>

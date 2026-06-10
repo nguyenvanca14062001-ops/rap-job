@@ -37,3 +37,11 @@
 ::-webkit-scrollbar {
   width: 0px;
 }
+
+/* ── MOBILE APP FEEL ──────────────────────────────── */
+/* Xóa tap delay 300ms (Android) và flash highlight (iOS/Android) */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}

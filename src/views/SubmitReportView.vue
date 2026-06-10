@@ -32,7 +32,7 @@ const jobOptions = [
   { id: 'app-chung-khoan-4', name: 'APP CHỨNG KHOÁN SỐ 4 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'msb-bank',       name: 'ĐĂNG KÝ NGÂN HÀNG MSB (100.000 XU)',             reward: '100.000 xu' },
   { id: 'vpbank',         name: 'ĐĂNG KÝ NGÂN HÀNG VPBANK (100.000 XU)',          reward: '100.000 xu' },
-  { id: 'liobank',       name: 'ĐĂNG KÝ NGÂN HÀNG LIOBANK (50.000 XU)',          reward: '50.000 xu' }
+  { id: 'liobank',       name: 'ĐĂNG KÝ NGÂN HÀNG LIOBANK (65.000 XU)',          reward: '65.000 xu' }
 ]
 
 const jobSamples: Record<string, string[]> = {
