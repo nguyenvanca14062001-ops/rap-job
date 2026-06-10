@@ -10,7 +10,7 @@ defineProps<{
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const VIP_JOBS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank'];
+const VIP_JOBS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'liobank'];
 
 const handleJobClick = (id: string) => {
   const job = jobsData[id];

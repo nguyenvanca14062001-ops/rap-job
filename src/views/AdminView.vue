@@ -371,7 +371,7 @@ onMounted(() => {
 const isAppJob = (jobName: string) => {
   if (!jobName) return false;
   const name = jobName.toLowerCase();
-  const keywords = ['app', 'ngân hàng', 'chứng khoán', 'vpbank', 'tpbank', 'mbbank', 'msb', 'cake', 'tnex', 'kafi', 'dnse', 'kis'];
+  const keywords = ['app', 'ngân hàng', 'chứng khoán', 'vpbank', 'tpbank', 'mbbank', 'msb', 'cake', 'tnex', 'kafi', 'dnse', 'kis', 'liobank'];
   return keywords.some(kw => name.includes(kw));
 }
 

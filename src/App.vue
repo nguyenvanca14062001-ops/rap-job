@@ -21,9 +21,9 @@ const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
-  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦',
+  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦',
 }
-const VIP_IDS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank']
+const VIP_IDS = ['app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'liobank']
 // ⏸️ TẠM DỪNG — Thêm/xoá job ID ở đây để bật/tắt
 const PAUSED_JOBS = ['vpbank', 'msb-bank']
 
@@ -498,7 +498,7 @@ const handleReceiveJob = (jobId: string) => {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
     ageConfirmJobTitle.value = jobsData[jobId]?.title || jobId
-    ageConfirmAge.value = jobId === 'app-chung-khoan-3' ? 20 : 18
+    ageConfirmAge.value = jobId === 'app-chung-khoan-3' ? 20 : jobId === 'liobank' ? 22 : 18
     showAgeConfirmModal.value = true
   } else {
     activePopup.value = ''

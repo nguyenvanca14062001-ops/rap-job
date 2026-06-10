@@ -31,7 +31,8 @@ const jobOptions = [
   { id: 'app-chung-khoan-3', name: 'APP CHỨNG KHOÁN SỐ 3 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'app-chung-khoan-4', name: 'APP CHỨNG KHOÁN SỐ 4 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'msb-bank',       name: 'ĐĂNG KÝ NGÂN HÀNG MSB (100.000 XU)',             reward: '100.000 xu' },
-  { id: 'vpbank',         name: 'ĐĂNG KÝ NGÂN HÀNG VPBANK (100.000 XU)',          reward: '100.000 xu' }
+  { id: 'vpbank',         name: 'ĐĂNG KÝ NGÂN HÀNG VPBANK (100.000 XU)',          reward: '100.000 xu' },
+  { id: 'liobank',       name: 'ĐĂNG KÝ NGÂN HÀNG LIOBANK (50.000 XU)',          reward: '50.000 xu' }
 ]
 
 const jobSamples: Record<string, string[]> = {
@@ -40,7 +41,8 @@ const jobSamples: Record<string, string[]> = {
   'msb-bank': ['images/anh-msb2.jpg', 'images/anh-msb3.jpg', 'images/anh-msb10.jpg'],
   'app-chung-khoan': ['images/anh-kafi2.jpg', 'images/anh-kafi3.jpg', 'images/anh-kafi10.jpg'],
   'app-chung-khoan-2': ['images/anh-dnse2.jpg', 'images/anh-dnse3.jpg', 'images/anh-dnse10.jpg'],
-  'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg']
+  'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg'],
+  'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg']
 }
 
 const selectedJob = ref(jobOptions[0])
@@ -77,11 +79,11 @@ watch(() => route.query.job, (newJobId) => {
 })
 
 const isFanpageTask = computed(() =>
-  ['vpbank', 'msb-bank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4'].includes(selectedJob.value.id)
+  ['vpbank', 'msb-bank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank'].includes(selectedJob.value.id)
 )
 
 const fourImageJobs: string[] = []
-const threeImageJobs = ['vpbank', 'msb-bank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4']
+const threeImageJobs = ['vpbank', 'msb-bank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank']
 
 const imageRequirementText = computed(() => {
   const jobId = selectedJob.value.id

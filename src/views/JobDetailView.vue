@@ -179,6 +179,20 @@ const handleCopy = (text: string) => {
                 {{ step.content }}
               </p>
 
+              <div class="mb-5 max-w-sm" v-if="step.referralCode">
+                <div class="bg-[#0d121f] border border-emerald-500/50 p-3 rounded-2xl flex items-center gap-3 shadow-xl">
+                  <div class="flex-1">
+                    <p class="text-[9px] text-emerald-400 font-black tracking-[2px] uppercase mb-0.5">MÃ GIỚI THIỆU</p>
+                    <p class="text-white text-lg font-black italic tracking-wider select-all">{{ step.referralCode }}</p>
+                  </div>
+                  <button
+                    class="bg-emerald-500 hover:bg-emerald-400 text-[#090e17] px-4 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg shrink-0"
+                    @click="handleCopy(step.referralCode)">
+                    📋 SAO CHÉP
+                  </button>
+                </div>
+              </div>
+
               <div class="mb-8 space-y-4" v-if="step.templates && step.templates.length > 0">
                 <div class="bg-[#0d121f] p-5 rounded-2xl border border-slate-700/80 relative group shadow-inner" v-for="(temp, idx) in step.templates" :key="idx">
                   <p class="text-slate-300 text-[12px] normal-case italic opacity-90 whitespace-pre-wrap leading-relaxed pr-24 select-all">

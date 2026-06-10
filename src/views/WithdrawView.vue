@@ -21,23 +21,12 @@ const hasPendingWithdraw = computed(() => props.myWithdrawals.some(w => w.status
 const approvedJobsCount = computed(() =>
   props.myReports.filter(r => r.status === 'approved' || r.status === 'collected').length
 )
-const previous200kWithdrawalsCount = computed(() =>
-  props.myWithdrawals.filter(w =>
-    w.status === 'approved' && (w.amount === 200000 || w.amountXu === 200000)
-  ).length
-)
-
 const showConfirmModal = ref(false)
 const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuối cùng
 
 const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
 
-const requiredJobs = computed(() => {
-  if (amount.value === 200000 && previous200kWithdrawalsCount.value > 0) {
-    return 10
-  }
-  return 9
-})
+const requiredJobs = computed(() => 9)
 
 const formatNumber = (num: number) => {
   return Math.floor(num).toLocaleString('vi-VN')
@@ -321,7 +310,7 @@ const handleConfirmWithdraw = async () => {
 
         <div class="relative w-full max-w-md bg-gradient-to-b from-[#1a2333] to-[#111726] border border-slate-700 rounded-[30px] p-8 md:p-10 text-center shadow-2xl">
 
-          <template v-if="amount === 200000 && approvedJobsCount < requiredJobs">
+          <template v-if="approvedJobsCount < requiredJobs">
             <!-- Amber top accent line -->
             <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent rounded-t-[30px]"></div>
             <!-- Ambient glow -->
@@ -345,7 +334,7 @@ const handleConfirmWithdraw = async () => {
               </div>
               <h3 class="text-xl md:text-2xl text-white font-black tracking-tighter mb-2 uppercase italic">CẦN THÊM NHIỆM VỤ</h3>
               <p class="text-slate-400 text-[11px] normal-case font-medium not-italic mb-5 px-2 leading-relaxed">
-                Hoàn thành đủ <span class="text-amber-400 font-bold">{{ requiredJobs }} nhiệm vụ</span> được duyệt để mở khóa rút tiền mốc <span class="text-amber-400 font-bold">200.000 XU</span>
+                Hoàn thành đủ <span class="text-amber-400 font-bold">{{ requiredJobs }} nhiệm vụ</span> được duyệt để mở khóa rút tiền mốc <span class="text-amber-400 font-bold">{{ formatNumber(amount || 0) }} XU</span>
               </p>
 
               <!-- Progress card -->
