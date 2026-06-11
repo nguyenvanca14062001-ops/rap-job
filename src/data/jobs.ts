@@ -186,41 +186,6 @@ export const jobsData: Record<string, any> = {
     ]
   },
 
-  'app-chung-khoan-2': {
-    title: "APP CHỨNG KHOÁN SỐ 2",
-    reward: "85.000 xu",
-    color: "text-orange-500",
-    badge: "SIÊU HOT",
-    warning: "BẮT BUỘC TỪ 18 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
-    steps: [
-      {
-        id: 1,
-        title: "VÀO CHPLAY HOẶC APPSTORE TẢI APP",
-        content: "Tải APP chứng khoán DNSE về điện thoại theo hình hướng dẫn bên dưới.",
-        img: "images/anh-dnse1.jpg"
-      },
-      {
-        id: 2,
-        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU AT00007",
-        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU AT00007 VÀ CHỤP LẠI ẢNH.",
-        referralCode: "AT00007",
-        img: "images/anh-dnse2.jpg",
-        note: "NHẬP MÃ: AT00007 (BẮT BUỘC)"
-      },
-      {
-        id: 3,
-        title: "CHỤP LẠI ẢNH ĐĂNG KÝ THÀNH CÔNG VÀ ĐĂNG NHẬP",
-        content: "CHỤP LẠI ẢNH ĐĂNG KÝ THÀNH CÔNG HOẶC ẢNH ĐĂNG NHẬP VÀO APP.",
-        img: "images/anh-dnse3.jpg",
-      },
-      {
-        id: 4,
-        title: "LƯU LẠI ẢNH NHẬP MÃ VÀ ẢNH ĐĂNG KÝ THÀNH CÔNG",
-        content: "GỬI 2 ẢNH ĐÓ VÀ CHỜ PHÊ DUYỆT HOA HỒNG."
-      }
-    ]
-  },
-
   'app-chung-khoan-3': {
     title: "APP CHỨNG KHOÁN SỐ 3",
     reward: "85.000 xu",
@@ -355,6 +320,42 @@ export const jobsData: Record<string, any> = {
         title: "ĐĂNG NHẬP ,  CHUYỂN VÀO VPBANK 20K,  XONG LẠI CHUYỂN RA ",
         content: "Chuyển 20k ra cho 1 người khác , xem ảnh hướng dẫn bên dưới .",
         img: "images/anh-vpbank6.jpg"
+      }
+    ]
+  },
+
+  'app-chung-khoan-2': {
+    title: "APP CHỨNG KHOÁN SỐ 2",
+    reward: "85.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    paused: true,
+    warning: "BẮT BUỘC TỪ 18 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
+    steps: [
+      {
+        id: 1,
+        title: "VÀO CHPLAY HOẶC APPSTORE TẢI APP",
+        content: "Tải APP chứng khoán DNSE về điện thoại theo hình hướng dẫn bên dưới.",
+        img: "images/anh-dnse1.jpg"
+      },
+      {
+        id: 2,
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU AT00007",
+        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU AT00007 VÀ CHỤP LẠI ẢNH.",
+        referralCode: "AT00007",
+        img: "images/anh-dnse2.jpg",
+        note: "NHẬP MÃ: AT00007 (BẮT BUỘC)"
+      },
+      {
+        id: 3,
+        title: "CHỤP LẠI ẢNH ĐĂNG KÝ THÀNH CÔNG VÀ ĐĂNG NHẬP",
+        content: "CHỤP LẠI ẢNH ĐĂNG KÝ THÀNH CÔNG HOẶC ẢNH ĐĂNG NHẬP VÀO APP.",
+        img: "images/anh-dnse3.jpg",
+      },
+      {
+        id: 4,
+        title: "LƯU LẠI ẢNH NHẬP MÃ VÀ ẢNH ĐĂNG KÝ THÀNH CÔNG",
+        content: "GỬI 2 ẢNH ĐÓ VÀ CHỜ PHÊ DUYỆT HOA HỒNG."
       }
     ]
   }
