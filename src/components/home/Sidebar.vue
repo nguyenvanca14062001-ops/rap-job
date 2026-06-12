@@ -155,11 +155,7 @@ const navigateTo = (path: string, authRequired = false) => {
          { id: 'google-map',     name: 'Google Map',           tag: 'MAP', color: 'text-fuchsia-400', mobile: true,  route: '' },
          { id: 'join-zalo',      name: 'Nhóm Zalo',           tag: 'ZALO', color: 'text-red-400',   mobile: false, route: '' },
          { id: 'app-chung-khoan',   name: 'APP Kafi X',   tag: 'CK1', color: 'text-orange-500', mobile: false, route: '' },
-         { id: 'app-chung-khoan-2', name: 'APP DNSE',    tag: 'CK2', color: 'text-orange-500', mobile: false, route: '' },
-         { id: 'app-chung-khoan-3', name: 'APP KIS',     tag: 'CK3', color: 'text-orange-500', mobile: false, route: '' },
-         { id: 'msb-bank',          name: 'APP MSB',     tag: 'MSB', color: 'text-orange-500', mobile: false, route: '' },
-         { id: 'vpbank',            name: 'APP VPBank',  tag: 'VPB', color: 'text-orange-500', mobile: false, route: '' },
-         { id: 'tpbank',            name: 'APP TPBank',  tag: 'TPB', color: 'text-orange-500', mobile: false, route: '' }
+         { id: 'app-chung-khoan-3', name: 'APP KIS',     tag: 'CK3', color: 'text-orange-500', mobile: false, route: '' }
        ]"
                :key="job.id"
                @click="navigateTo(job.route || ('/job/' + job.id))"
