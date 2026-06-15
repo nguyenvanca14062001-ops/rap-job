@@ -159,7 +159,7 @@ const submitSurvey = async () => {
       <div class="bg-[#1a0f2e] border border-violet-700/40 rounded-[25px] p-7 shadow-[0_0_30px_rgba(139,92,246,0.2)]">
         <p class="text-slate-400 text-[10px] tracking-widest mb-4">PHẦN THƯỞNG ĐÃ VÀO VÍ</p>
         <div class="flex items-center justify-center gap-3">
-          <span class="text-4xl font-black text-violet-400 tracking-tighter">+20.000</span>
+          <span class="text-4xl font-black text-violet-400 tracking-tighter">+30.000</span>
           <div class="flex flex-col items-center">
             <svg class="w-7 h-7 drop-shadow-[0_0_8px_rgba(234,179,8,0.7)]" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" fill="url(#surveyGoldGrad)" />
@@ -187,7 +187,7 @@ const submitSurvey = async () => {
         </button>
         <div>
           <h1 class="text-lg text-white tracking-tighter leading-none">KHẢO SÁT PHIM</h1>
-          <p class="text-violet-400 text-[10px] tracking-widest normal-case font-bold not-italic mt-0.5">Trả lời để nhận 20.000 xu</p>
+          <p class="text-violet-400 text-[10px] tracking-widest normal-case font-bold not-italic mt-0.5">Trả lời để nhận 30.000 xu</p>
         </div>
       </div>
 

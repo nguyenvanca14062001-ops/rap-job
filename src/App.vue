@@ -162,10 +162,10 @@ const names = ['TRUNG NGUYỄN', 'HOÀNG ANH', 'MINH TUẤN', 'THANH HẰNG', 'V
 const banks = ['MB BANK', 'VPBANK', 'TPBANK', 'VIETCOMBANK', 'TECHCOMBANK', 'MOMO', 'MSB BANK']
 
 const jobList = [
-  { name: 'Follow Fanpage CGV', reward: '20.000' },
+  { name: 'Follow Fanpage CGV', reward: '30.000' },
   { name: 'Đánh Giá 5 Sao Rạp Phim', reward: '25.000' },
   { name: 'Check-in Tại Rạp', reward: '30.000' },
-  { name: 'Khảo Sát Phim', reward: '20.000' },
+  { name: 'Khảo Sát Phim', reward: '30.000' },
   { name: 'Đánh Giá Google Map', reward: '25.000' },
   { name: 'Tham Gia Nhóm Zalo', reward: '10.000' },
   { name: 'App Chứng Khoán Kafi', reward: '85.000' },
@@ -175,10 +175,10 @@ const jobList = [
 
 // Pool các loại hoạt động (không có tên — tên lấy ngẫu nhiên từ names[])
 const activityPool = [
-  { icon: '🎬', job: 'FOLLOW FANPAGE CGV',       reward: '20.000',    type: 'job'      },
+  { icon: '🎬', job: 'FOLLOW FANPAGE CGV',       reward: '30.000',    type: 'job'      },
   { icon: '⭐', job: 'ĐÁNH GIÁ 5 SAO RẠP PHIM', reward: '25.000',    type: 'job'      },
   { icon: '📸', job: 'CHECK-IN TẠI RẠP',         reward: '30.000',    type: 'job'      },
-  { icon: '📋', job: 'KHẢO SÁT PHIM',            reward: '20.000',    type: 'job'      },
+  { icon: '📋', job: 'KHẢO SÁT PHIM',            reward: '30.000',    type: 'job'      },
   { icon: '📍', job: 'ĐÁNH GIÁ GOOGLE MAP',      reward: '25.000',    type: 'job'      },
   { icon: '💬', job: 'THAM GIA NHÓM ZALO',       reward: '10.000',    type: 'job'      },
   { icon: '📈', job: 'APP CHỨNG KHOÁN KAFI',     reward: '85.000',    type: 'job'      },

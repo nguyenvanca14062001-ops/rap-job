@@ -20,11 +20,11 @@ const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
 
 const jobOptions = [
-  { id: 'follow-cgv',     name: 'FOLLOW FANPAGE RẠP PHIM (20.000 XU)',             reward: '20.000 xu' },
+  { id: 'follow-cgv',     name: 'FOLLOW FANPAGE RẠP PHIM (30.000 XU)',             reward: '30.000 xu' },
   { id: 'review-cinema',  name: 'ĐÁNH GIÁ 5 SAO RẠP PHIM (25.000 XU)',             reward: '25.000 xu' },
   { id: 'checkin-cinema', name: 'CHECK-IN TẠI RẠP + ĐĂNG MXH (30.000 XU)',         reward: '30.000 xu' },
-  { id: 'survey-cinema',  name: 'KHẢO SÁT THÓI QUEN XEM PHIM (20.000 XU)',         reward: '20.000 xu' },
-  { id: 'post-threads',   name: 'ĐĂNG BÀI THREADS (25.000 XU)',                    reward: '25.000 xu' },
+  { id: 'survey-cinema',  name: 'KHẢO SÁT THÓI QUEN XEM PHIM (30.000 XU)',         reward: '30.000 xu' },
+  { id: 'post-threads',   name: 'ĐĂNG BÀI THREADS (30.000 XU)',                    reward: '30.000 xu' },
   { id: 'join-zalo',      name: 'THAM GIA NHÓM ZALO (10.000 XU)',                  reward: '10.000 xu' },
   { id: 'app-chung-khoan',   name: 'APP CHỨNG KHOÁN SỐ 1 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'app-chung-khoan-3', name: 'APP CHỨNG KHOÁN SỐ 3 (85.000 XU)',            reward: '85.000 xu' },

@@ -7,7 +7,7 @@ export const jobsData: Record<string, any> = {
 
   'follow-cgv': {
     title: "FOLLOW FANPAGE RẠP PHIM",
-    reward: "20.000 xu",
+    reward: "30.000 xu",
     color: "text-red-400",
     badge: "HOT 🎬",
     steps: [
@@ -43,7 +43,7 @@ export const jobsData: Record<string, any> = {
 
   'survey-cinema': {
     title: "KHẢO SÁT THÓI QUEN XEM PHIM",
-    reward: "20.000 xu",
+    reward: "30.000 xu",
     color: "text-violet-400",
     badge: "SURVEY 📋",
     steps: [
@@ -57,7 +57,7 @@ export const jobsData: Record<string, any> = {
 
   'post-threads': {
     title: "ĐĂNG BÀI THREADS",
-    reward: "25.000 xu",
+    reward: "30.000 xu",
     color: "text-fuchsia-400",
     badge: "CƠ BẢN",
     warning: "KHÔNG ĐƯỢC XÓA BÀI SAU KHI ĐĂNG! Bài phải để chế độ công khai ít nhất 7 ngày. Phát hiện gian lận hoặc xóa bài → KHÓA TÀI KHOẢN VĨNH VIỄN.",
