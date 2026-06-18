@@ -26,7 +26,6 @@ const jobOptions = [
   { id: 'survey-cinema',  name: 'KHẢO SÁT THÓI QUEN XEM PHIM (30.000 XU)',         reward: '30.000 xu' },
   { id: 'post-threads',   name: 'ĐĂNG BÀI THREADS (30.000 XU)',                    reward: '30.000 xu' },
   { id: 'join-zalo',      name: 'THAM GIA NHÓM ZALO (10.000 XU)',                  reward: '10.000 xu' },
-  { id: 'app-chung-khoan',   name: 'APP CHỨNG KHOÁN SỐ 1 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'app-chung-khoan-3', name: 'APP CHỨNG KHOÁN SỐ 3 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'app-chung-khoan-4', name: 'APP CHỨNG KHOÁN SỐ 4 (85.000 XU)',            reward: '85.000 xu' },
   { id: 'liobank',       name: 'ĐĂNG KÝ NGÂN HÀNG LIOBANK (65.000 XU)',          reward: '65.000 xu' }

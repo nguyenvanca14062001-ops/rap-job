@@ -154,7 +154,6 @@ const navigateTo = (path: string, authRequired = false) => {
          { id: 'survey-cinema',  name: 'Khảo Sát Xem Phim',  tag: '📋', color: 'text-violet-400', mobile: true,  route: '/survey-cinema' },
          { id: 'google-map',     name: 'Google Map',           tag: 'MAP', color: 'text-fuchsia-400', mobile: true,  route: '' },
          { id: 'join-zalo',      name: 'Nhóm Zalo',           tag: 'ZALO', color: 'text-red-400',   mobile: false, route: '' },
-         { id: 'app-chung-khoan',   name: 'APP Kafi X',   tag: 'CK1', color: 'text-orange-500', mobile: false, route: '' },
          { id: 'app-chung-khoan-3', name: 'APP KIS',     tag: 'CK3', color: 'text-orange-500', mobile: false, route: '' }
        ]"
                :key="job.id"
