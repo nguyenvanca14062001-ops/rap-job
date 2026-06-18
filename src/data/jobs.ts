@@ -156,6 +156,7 @@ export const jobsData: Record<string, any> = {
     reward: "85.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
+    paused: true,
     warning: "BẮT BUỘC TỪ 18 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
     steps: [
       {

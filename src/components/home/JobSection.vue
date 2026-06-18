@@ -10,7 +10,7 @@ defineProps<{
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const VIP_JOBS = ['liobank', 'app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2'];
+const VIP_JOBS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2'];
 
 const handleJobClick = (id: string) => {
   const job = jobsData[id];
@@ -394,8 +394,8 @@ const getShortDesc = (id: string) => {
 
         <!-- TIER VIP -->
         <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          <template v-for="(j, id) in jobsData" :key="id">
-            <div v-if="isVip(id as string)"
+          <template v-for="id in VIP_JOBS" :key="id">
+            <div v-if="jobsData[id as string]"
               @click="handleJobClick(id as string)"
               class="relative p-5 md:p-7 rounded-[28px] border-[2px] transition-all duration-500 flex flex-col group overflow-hidden"
               :class="(jobsData[id as string] as any).paused
@@ -431,7 +431,7 @@ const getShortDesc = (id: string) => {
               </div>
 
               <h4 class="text-[13px] md:text-lg text-amber-300 font-black italic uppercase leading-tight mb-1">
-                {{ j.title }}
+                {{ (jobsData[id as string] as any).title }}
               </h4>
 
               <p class="text-[10px] md:text-[13px] text-slate-400 font-medium line-clamp-2 leading-relaxed mb-4 mt-1">
@@ -442,7 +442,7 @@ const getShortDesc = (id: string) => {
                 <p class="text-[9px] md:text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-1">Thưởng ngay:</p>
                 <div class="flex items-center gap-1.5">
                   <p class="font-black text-2xl md:text-4xl tracking-tighter italic leading-none text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">
-                    {{ formatReward(j.reward).toLocaleString() }}
+                    {{ formatReward((jobsData[id as string] as any).reward).toLocaleString() }}
                   </p>
                   <div class="flex flex-col items-start translate-y-[-2px]">
                     <svg class="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]" viewBox="0 0 24 24">

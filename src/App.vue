@@ -23,9 +23,9 @@ const jobIconMap: Record<string, string> = {
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦',
 }
-const VIP_IDS = ['liobank', 'app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2']
+const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan']
 // ⏸️ TẠM DỪNG — Thêm/xoá job ID ở đây để bật/tắt
-const PAUSED_JOBS = ['vpbank', 'msb-bank', 'app-chung-khoan-2']
+const PAUSED_JOBS = ['vpbank', 'msb-bank', 'app-chung-khoan-2', 'app-chung-khoan']
 
 // --- Age confirmation modal (mobile bottom sheet) ---
 const showAgeConfirmModal = ref(false)
@@ -1205,8 +1205,8 @@ watch(activePopup, (val) => {
           <!-- SCREEN 2b: VIP jobs — 2-column card grid (amber theme) -->
           <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
             <div class="grid grid-cols-2 gap-2.5">
-              <template v-for="(j, id) in jobsData" :key="id">
-                <button v-if="VIP_IDS.includes(id as string)"
+              <template v-for="id in VIP_IDS" :key="id">
+                <button v-if="jobsData[id as string]"
                   @click="handleReceiveJob(id as string)"
                   class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left bg-gradient-to-br from-[#2A1C00] to-[#1a1000] border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
                   :class="PAUSED_JOBS.includes(id as string) ? 'opacity-50 grayscale' : ''">
@@ -1221,7 +1221,7 @@ watch(activePopup, (val) => {
 
                   <!-- Badge top-right -->
                   <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-amber-400/20 text-amber-200 z-10 bg-amber-700">
-                    {{ j.badge || 'VIP' }}
+                    {{ (jobsData[id as string] as any).badge || 'VIP' }}
                   </div>
 
                   <!-- Icon -->
@@ -1231,13 +1231,13 @@ watch(activePopup, (val) => {
 
                   <!-- Title -->
                   <p class="text-amber-200 text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
-                    {{ j.title }}
+                    {{ (jobsData[id as string] as any).title }}
                   </p>
 
                   <!-- Reward -->
                   <div class="flex items-baseline gap-1 mb-3 relative z-10">
                     <span class="text-lg font-black italic tracking-tighter text-amber-400">
-                      +{{ String(j.reward).replace(/\D/g,'') }}
+                      +{{ String((jobsData[id as string] as any).reward).replace(/\D/g,'') }}
                     </span>
                     <span class="text-[9px] font-black text-slate-400">XU</span>
                   </div>
