@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { auth, db } from '@/firebase' 
-import { onAuthStateChanged, signOut } from "firebase/auth" 
+import { auth, db } from '@/firebase'
+import { onAuthStateChanged, signOut } from "firebase/auth"
 import { doc, onSnapshot, collection, query, where, updateDoc, increment, arrayUnion } from "firebase/firestore"
+import { useVipJobs } from '@/composables/useVipJobs'
+import { startAppConfigListener } from '@/composables/useAppConfig'
+import { startSupportListener, supportConfig, supportBadge, shouldAutoPopup, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
+import SupportPanel from '@/components/SupportPanel.vue'
 
 // --- IMPORT COMPONENT ---
 import AppBrowserBlocker from '@/components/AppBrowserBlocker.vue'
@@ -24,8 +28,55 @@ const jobIconMap: Record<string, string> = {
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦',
 }
 const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan']
-// ⏸️ TẠM DỪNG — Thêm/xoá job ID ở đây để bật/tắt
-const PAUSED_JOBS = ['vpbank', 'msb-bank', 'app-chung-khoan-2', 'app-chung-khoan']
+
+// VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
+const { vipJobs, ready: vipJobsReady } = useVipJobs()
+startAppConfigListener()
+startSupportListener()
+
+const showSupportPanel = ref(false)
+
+watch(shouldAutoPopup, (val) => { if (val) showSupportPanel.value = true })
+
+const handleSupportClose = () => { markSupportSeen() }
+
+// Merge vip_jobs Firestore lên static jobs.ts
+// - Trước snapshot đầu tiên: {} → không flash job list
+// - Sau snapshot: vip_jobs rỗng → dùng nguyên jobsData
+// - Nếu có: override field-level, lọc hidden, gắn cờ paused/soldout
+const mergedJobs = computed((): Record<string, any> => {
+  if (!vipJobsReady.value) return {}
+  if (vipJobs.value.length === 0) return { ...jobsData }
+  const result: Record<string, any> = {}
+  for (const [id, staticJob] of Object.entries(jobsData)) {
+    const override = vipJobs.value.find(v => v.id === id)
+    if (!override) { result[id] = staticJob; continue }
+    if (override.status === 'hidden') continue
+    result[id] = {
+      ...staticJob,
+      title:   override.title   ?? staticJob.title,
+      reward:  override.reward  ?? staticJob.reward,
+      badge:   override.badge   ?? staticJob.badge,
+      color:   override.color   ?? staticJob.color,
+      warning: override.warning ?? staticJob.warning,
+      paused:  override.status === 'paused',
+      soldout: override.status === 'soldout',
+      status:  override.status,
+    }
+  }
+  return result
+})
+
+// Thứ tự VIP jobs theo Firestore order; lọc hidden; fallback về vị trí gốc trong VIP_IDS
+const sortedVipJobIds = computed(() =>
+  VIP_IDS
+    .filter(id => id in mergedJobs.value)
+    .sort((a, b) => {
+      const oA = mergedJobs.value[a]?.order ?? VIP_IDS.indexOf(a)
+      const oB = mergedJobs.value[b]?.order ?? VIP_IDS.indexOf(b)
+      return oA - oB
+    })
+)
 
 // --- Age confirmation modal (mobile bottom sheet) ---
 const showAgeConfirmModal = ref(false)
@@ -87,6 +138,7 @@ const windowWidth = ref(0)
 const showWelcomePopup = ref(false)
 const showBankModal = ref(false)
 const activePopup = ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
+const mobileRejectNote = ref<string | null>(null)
 const jobCategory = ref<'basic' | 'vip' | ''>('')
 
 const isAdminRoute = computed(() => route.path.includes('admin'))
@@ -94,6 +146,9 @@ const isAuthRoute = computed(() => route.path.includes('/login') || route.path.i
 
 const username = ref(localStorage.getItem('mmo_username') || 'Member')
 const userBalance = ref(Number(localStorage.getItem('mmo_balance')) || 0)
+const userFullName = ref('')
+const userPhone = ref('')
+const userBirthYear = ref('')
 
 const myReports = ref<any[]>([])
 const myWithdrawals = ref<any[]>([])
@@ -407,12 +462,16 @@ const initFirebaseSync = (user: any) => {
   if (!user || isAdminRoute.value) return
 
   isLoggedIn.value = true
+  setUserContext(user.uid)
 
   unsubscribeUser = onSnapshot(doc(db, "users", user.uid), async (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data()
       claimedChests.value = Array.isArray(data.claimedChests) ? data.claimedChests : []
       username.value = data.username || data.fullName || 'Member'
+      userFullName.value = data.fullName || ''
+      userPhone.value = data.phone || ''
+      userBirthYear.value = data.dob || ''
       const realBalance = data.balance ? Number(data.balance) : 0;
       userBalance.value = realBalance;
       
@@ -456,7 +515,9 @@ onMounted(() => {
     if (user) {
       initFirebaseSync(user)
     } else {
-      isLoggedIn.value = false; isDataLoading.value = false; username.value = 'Member'; userBalance.value = 0; 
+      isLoggedIn.value = false; isDataLoading.value = false; username.value = 'Member'; userBalance.value = 0;
+      userFullName.value = ''; userPhone.value = ''; userBirthYear.value = ''
+      setUserContext(null)
       myReports.value = []; myWithdrawals.value = []; localStorage.clear()
     }
   })
@@ -489,7 +550,7 @@ const handleNav = (path: string) => {
 
 const handleReceiveJob = (jobId: string) => {
   if (!isLoggedIn.value) { router.push('/login'); return; }
-  if (PAUSED_JOBS.includes(jobId)) {
+  if (mergedJobs.value[jobId]?.paused || mergedJobs.value[jobId]?.soldout) {
     alert('⏸️ CÔNG VIỆC TẠM DỪNG\nChương trình đang được cập nhật. Vui lòng quay lại sau!')
     return
   }
@@ -500,7 +561,7 @@ const handleReceiveJob = (jobId: string) => {
   } else if (VIP_IDS.includes(jobId)) {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
-    ageConfirmJobTitle.value = jobsData[jobId]?.title || jobId
+    ageConfirmJobTitle.value = mergedJobs.value[jobId]?.title || jobId
     ageConfirmAge.value = jobId === 'app-chung-khoan-3' ? 20 : jobId === 'liobank' ? 22 : 18
     showAgeConfirmModal.value = true
   } else {
@@ -925,6 +986,7 @@ watch(activePopup, (val) => {
            <JobSection
              :username="username"
              :isLoggedIn="isLoggedIn"
+             :jobs="mergedJobs"
              @receiveJob="handleReceiveJob"
              @routerPush="handleNav"
              @contactSupport="contactSupport"
@@ -1033,6 +1095,9 @@ watch(activePopup, (val) => {
             :username="username"
             :myReports="myReports"
             :myWithdrawals="myWithdrawals"
+            :userFullName="userFullName"
+            :userPhone="userPhone"
+            :userBirthYear="userBirthYear"
           />
         </Transition>
       </main>
@@ -1156,7 +1221,7 @@ watch(activePopup, (val) => {
           <!-- SCREEN 2a: Basic jobs — 2-column card grid -->
           <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
             <div class="grid grid-cols-2 gap-2.5">
-              <template v-for="(j, id) in jobsData" :key="id">
+              <template v-for="(j, id) in mergedJobs" :key="id">
                 <button v-if="!VIP_IDS.includes(id as string)"
                   @click="handleReceiveJob(id as string)"
                   class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left"
@@ -1205,23 +1270,26 @@ watch(activePopup, (val) => {
           <!-- SCREEN 2b: VIP jobs — 2-column card grid (amber theme) -->
           <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
             <div class="grid grid-cols-2 gap-2.5">
-              <template v-for="id in VIP_IDS" :key="id">
-                <button v-if="jobsData[id as string]"
+              <template v-for="id in sortedVipJobIds" :key="id">
+                <button
                   @click="handleReceiveJob(id as string)"
                   class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left bg-gradient-to-br from-[#2A1C00] to-[#1a1000] border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-                  :class="PAUSED_JOBS.includes(id as string) ? 'opacity-50 grayscale' : ''">
+                  :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'opacity-50 grayscale' : ''">
 
                   <!-- Highlight layer -->
                   <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
 
-                  <!-- Paused overlay -->
-                  <div v-if="PAUSED_JOBS.includes(id as string)" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <!-- Paused / Soldout overlay -->
+                  <div v-if="mergedJobs[id as string]?.soldout" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <span class="bg-black/70 text-red-400 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">HẾT SLOT</span>
+                  </div>
+                  <div v-else-if="mergedJobs[id as string]?.paused" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                     <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">⏸ TẠM DỪNG</span>
                   </div>
 
                   <!-- Badge top-right -->
                   <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-amber-400/20 text-amber-200 z-10 bg-amber-700">
-                    {{ (jobsData[id as string] as any).badge || 'VIP' }}
+                    {{ mergedJobs[id as string]?.badge || 'VIP' }}
                   </div>
 
                   <!-- Icon -->
@@ -1231,13 +1299,13 @@ watch(activePopup, (val) => {
 
                   <!-- Title -->
                   <p class="text-amber-200 text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
-                    {{ (jobsData[id as string] as any).title }}
+                    {{ mergedJobs[id as string]?.title }}
                   </p>
 
                   <!-- Reward -->
                   <div class="flex items-baseline gap-1 mb-3 relative z-10">
                     <span class="text-lg font-black italic tracking-tighter text-amber-400">
-                      +{{ String((jobsData[id as string] as any).reward).replace(/\D/g,'') }}
+                      +{{ String(mergedJobs[id as string]?.reward || '0').replace(/\D/g,'') }}
                     </span>
                     <span class="text-[9px] font-black text-slate-400">XU</span>
                   </div>
@@ -1296,25 +1364,36 @@ watch(activePopup, (val) => {
 
               <div v-for="item in combinedHistory" :key="item.id"
                    :class="[
-                     'relative bg-[#1e1309]/70 border border-slate-700/40 p-4 rounded-[20px] flex items-center justify-between',
-                     item.status === 'rejected' ? 'opacity-50 grayscale' : ''
+                     'relative bg-[#1e1309]/70 border border-slate-700/40 p-4 rounded-[20px] flex justify-between',
+                     item.status === 'rejected' ? 'border-rose-500/30 !bg-rose-950/10 items-start' : 'items-center'
                    ]">
                 <div class="absolute left-0 top-0 bottom-0 w-1 rounded-l-[20px]"
                      :class="item.status === 'approved' || item.status === 'collected' ? 'bg-emerald-500/60'
-                           : item.status === 'pending' ? 'bg-yellow-500/60' : 'bg-rose-500/40'"></div>
+                           : item.status === 'pending' ? 'bg-yellow-500/60' : 'bg-rose-500/70'"></div>
 
                 <div class="pl-2 flex flex-col gap-0.5 flex-1 min-w-0">
                   <span class="text-red-500 text-[8px] font-black tracking-[2px] opacity-80">{{ item.displayTime }}</span>
                   <h4 class="text-white text-[11px] font-black italic uppercase tracking-tight truncate">
                     {{ item.type === 'withdraw' ? '🏦 RÚT TIỀN VỀ VÍ' : item.jobName }}
                   </h4>
+                  <template v-if="item.status === 'rejected' && item.type !== 'withdraw'">
+                    <p v-if="(item.note || '').length <= 60"
+                       class="text-rose-400/80 text-[8px] font-bold normal-case leading-tight">
+                      Lý do: {{ item.note || 'Không đạt điều kiện duyệt.' }}
+                    </p>
+                    <button v-else
+                            @click.stop="mobileRejectNote = item.note"
+                            class="text-rose-400 text-[8px] font-black underline underline-offset-1">
+                      Xem lý do
+                    </button>
+                  </template>
                 </div>
 
                 <div class="flex items-center gap-3 shrink-0">
                   <div class="flex items-center gap-1.5">
                     <span :class="[
                       'text-lg font-black italic tracking-tighter',
-                      item.status === 'rejected' ? 'text-slate-500' : (item.type === 'withdraw' ? 'text-rose-500' : 'text-emerald-400')
+                      item.status === 'rejected' ? 'text-rose-400/60' : (item.type === 'withdraw' ? 'text-rose-500' : 'text-emerald-400')
                     ]">
                       {{ item.type === 'withdraw' ? '-' : '+' }}{{ (item.reward || item.amount || 0).toLocaleString('vi-VN') }}
                     </span>
@@ -1337,6 +1416,21 @@ watch(activePopup, (val) => {
             </template>
 
           </div>
+
+          <Teleport to="body">
+            <div v-if="mobileRejectNote !== null"
+                 @click.self="mobileRejectNote = null"
+                 class="fixed inset-0 z-[99999] flex items-end justify-center bg-black/70 backdrop-blur-sm pb-6 px-4">
+              <div class="bg-[#1a0b08] border border-rose-500/40 rounded-2xl p-5 w-full max-w-sm shadow-xl">
+                <p class="text-rose-400 text-[10px] font-black uppercase tracking-widest mb-2">LÝ DO TỪ CHỐI</p>
+                <p class="text-white text-sm font-bold italic normal-case leading-relaxed">{{ mobileRejectNote }}</p>
+                <button @click="mobileRejectNote = null"
+                        class="mt-4 w-full py-2.5 bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-black uppercase rounded-xl tracking-widest">
+                  ĐÓNG
+                </button>
+              </div>
+            </div>
+          </Teleport>
         </div>
 
         <div class="h-2"></div>
@@ -1409,15 +1503,16 @@ watch(activePopup, (val) => {
       </button>
 
       <!-- ⑤ HỖ TRỢ — vị trí 5 -->
-      <button @click="contactSupport('facebook')" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
+      <button @click="showSupportPanel = true" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
         <div class="relative">
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#f43f5e; border-right-color:rgba(244,63,94,0.2);"></div>
           <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(244,63,94,0.35);"></div>
           <div class="w-[52px] h-[52px] rounded-full bg-[#140810] border border-rose-900/50 flex items-center justify-center nav-glow-rose group-hover:-translate-y-[5px] transition-transform duration-300">
             <svg class="w-5 h-5 text-slate-400 group-hover:text-rose-400 transition-colors duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
           </div>
+          <span v-if="supportBadge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0a0507] animate-pulse pointer-events-none"></span>
         </div>
-        <span class="text-[8px] font-black tracking-widest uppercase text-slate-500 group-hover:text-rose-400 transition-colors">HỖ TRỢ</span>
+        <span class="text-[8px] font-black tracking-widest uppercase transition-colors" :class="supportBadge ? 'text-rose-400' : 'text-slate-500 group-hover:text-rose-400'">HỖ TRỢ</span>
       </button>
 
     </nav>
@@ -1452,16 +1547,17 @@ watch(activePopup, (val) => {
     </Transition>
 
     <div class="fixed bottom-4 right-2 md:bottom-8 md:right-8 z-[999] hidden lg:flex flex-col gap-4 items-end scale-75 md:scale-100 origin-bottom-right">
-      <div class="flex items-center group cursor-pointer" @click="contactSupport('facebook')">
+      <div class="flex items-center group cursor-pointer relative" @click="showSupportPanel = true">
         <div class="mr-4 text-right overflow-hidden italic uppercase hidden md:block whitespace-nowrap">
           <p class="text-[9px] text-red-400 font-black tracking-[2px] mb-1 opacity-80 animate-jump-delay">GIẢI ĐÁP THẮC MẮC</p>
           <p class="text-white text-sm font-black italic uppercase tracking-tighter">LIÊN HỆ FANPAGE</p>
         </div>
-        <div class="w-16 h-16 bg-[#1877F2] rounded-full shadow-lg flex items-center justify-center text-white flex-shrink-0">
+        <div class="relative w-16 h-16 bg-[#1877F2] rounded-full shadow-lg flex items-center justify-center text-white flex-shrink-0">
           <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          <span v-if="supportBadge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-[#0e0a09] animate-pulse"></span>
         </div>
       </div>
-      <div class="flex items-center group cursor-pointer" @click="contactSupport('zalo')">
+      <div class="flex items-center group cursor-pointer" @click="showSupportPanel = true">
         <div class="mr-4 text-right overflow-hidden italic uppercase hidden md:block whitespace-nowrap">
           <p class="text-[9px] text-red-500 font-black tracking-[2px] mb-1 opacity-80 animate-jump-delay">CỘNG ĐỒNG RẠP JOB</p>
           <p class="text-white text-sm font-black italic uppercase tracking-tighter">THAM GIA NHÓM</p>
@@ -1552,6 +1648,8 @@ watch(activePopup, (val) => {
       </div>
     </Transition>
   </Teleport>
+
+  <SupportPanel v-model="showSupportPanel" :config="supportConfig" @close="handleSupportClose" />
 </template>
 
 <style>
