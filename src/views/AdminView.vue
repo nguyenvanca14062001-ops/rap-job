@@ -260,9 +260,10 @@ let unsubAdminNotes: any = null
 const loadData = (newStatus: string) => {
   if (searchQuery.value.trim() !== '') return
   isLoading.value = true
-  if (unsubReports) unsubReports()
+  if (unsubReports) { if (import.meta.env.DEV) console.log('[Firestore] STOP reports/withdrawals/admin_notes listeners'); unsubReports() }
   if (unsubWithdrawals) unsubWithdrawals()
   if (unsubAdminNotes) unsubAdminNotes()
+  if (import.meta.env.DEV) console.log(`[Firestore] START admin listeners — reports limit(${newStatus === 'all' ? 200 : 300}), withdrawals limit(${newStatus === 'all' ? 100 : 150}), status: ${newStatus}`)
   const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : (t ? new Date(t).getTime() : Date.now() + 15000)
   let qReports = newStatus === 'all'
     ? query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(200))
@@ -608,10 +609,7 @@ onMounted(() => {
       }
       isLoggedIn.value = true
       isCheckingAuth.value = false
-      const usersSnap = await getDocs(query(collection(db, "users"), limit(500)))
-      const map: Record<string, any> = {}
-      usersSnap.docs.forEach(d => { map[d.id] = d.data() })
-      usersMap.value = map
+      if (import.meta.env.DEV) console.log('[Firestore] Admin auth OK — bắt đầu load dữ liệu, usersMap lazy-load qua snapshot callbacks')
       loadData(statusFilter.value)
       loadDashboardStats()
       loadVipJobs()
@@ -655,13 +653,11 @@ const fixUserWallet = async (uid: string) => {
 const approveReport = async (report: any) => {
   const reward = Number(String(report.reward || '0').replace(/\D/g, '')) || 0
   try {
-    const userSnap = await getDoc(doc(db, "users", report.uid))
-    const cur = userSnap.exists() ? (Number(String(userSnap.data().balance).replace(/\D/g, '')) || 0) : 0
+    const cur = Number(String(usersMap.value[report.uid]?.balance || '0').replace(/\D/g, '')) || 0
     if (!confirm(`DUYỆT ĐƠN?\n+${reward.toLocaleString()} XU\nVí cũ: ${cur.toLocaleString()} XU\nTổng mới: ${(cur + reward).toLocaleString()} XU`)) return
-    await setDoc(doc(db, "users", report.uid), { balance: cur + reward }, { merge: true })
+    await updateDoc(doc(db, "users", report.uid), { balance: increment(reward) })
     await updateDoc(doc(db, "reports", report.id), { status: 'approved', approvedAt: serverTimestamp() })
-    const refreshed = await getDoc(doc(db, "users", report.uid))
-    if (refreshed.exists()) usersMap.value = { ...usersMap.value, [report.uid]: refreshed.data() }
+    usersMap.value = { ...usersMap.value, [report.uid]: { ...usersMap.value[report.uid], balance: cur + reward } }
     alert("ĐÃ DUYỆT!"); updateLocalStatsOnApprove(report.jobName)
   } catch (e) { alert("LỖI: " + e) }
 }

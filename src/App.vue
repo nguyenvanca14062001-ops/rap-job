@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { onAuthStateChanged, signOut } from "firebase/auth"
-import { doc, onSnapshot, collection, query, where, updateDoc, increment, arrayUnion } from "firebase/firestore"
+import { doc, onSnapshot, collection, query, where, orderBy, limit, updateDoc, increment, arrayUnion } from "firebase/firestore"
 import { useVipJobs } from '@/composables/useVipJobs'
 import { startAppConfigListener } from '@/composables/useAppConfig'
 import { startSupportListener, supportConfig, supportBadge, shouldAutoPopup, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
@@ -456,12 +456,13 @@ async function confirmClaim() {
 
 // === LOGIC ĐỒNG BỘ THỜI GIAN THỰC CHỐNG LỖI ===
 const initFirebaseSync = (user: any) => {
-  if (unsubscribeUser) unsubscribeUser()
+  if (unsubscribeUser) { if (import.meta.env.DEV) console.log('[Firestore] STOP user/reports/withdrawals listeners'); unsubscribeUser() }
   if (unsubscribeReports) unsubscribeReports()
   if (unsubscribeWithdrawals) unsubscribeWithdrawals()
 
   if (!user || isAdminRoute.value) return
 
+  if (import.meta.env.DEV) console.log('[Firestore] START listeners uid:', user.uid)
   isLoggedIn.value = true
   setUserContext(user.uid)
 
@@ -495,12 +496,14 @@ const initFirebaseSync = (user: any) => {
     }
   })
   
-  unsubscribeReports = onSnapshot(query(collection(db, "reports"), where("uid", "==", user.uid)), (snapshot) => {
+  if (import.meta.env.DEV) console.log('[Firestore] START reports listener — collection: reports, uid filter, orderBy createdAt desc, limit 50')
+  unsubscribeReports = onSnapshot(query(collection(db, "reports"), where("uid", "==", user.uid), orderBy("createdAt", "desc"), limit(50)), (snapshot) => {
     myReports.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     isDataLoading.value = false
   })
-  
-  unsubscribeWithdrawals = onSnapshot(query(collection(db, "withdrawals"), where("uid", "==", user.uid)), (snapshot) => {
+
+  if (import.meta.env.DEV) console.log('[Firestore] START withdrawals listener — collection: withdrawals, uid filter, orderBy createdAt desc, limit 20')
+  unsubscribeWithdrawals = onSnapshot(query(collection(db, "withdrawals"), where("uid", "==", user.uid), orderBy("createdAt", "desc"), limit(20)), (snapshot) => {
     myWithdrawals.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
   })
 }
