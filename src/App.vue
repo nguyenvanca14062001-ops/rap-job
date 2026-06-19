@@ -25,9 +25,9 @@ const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
-  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦',
+  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦',
 }
-const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan']
+const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -59,6 +59,7 @@ const mergedJobs = computed((): Record<string, any> => {
       badge:   override.badge   ?? staticJob.badge,
       color:   override.color   ?? staticJob.color,
       warning: override.warning ?? staticJob.warning,
+      order:   override.order   ?? staticJob.order,
       paused:  override.status === 'paused',
       soldout: override.status === 'soldout',
       status:  override.status,
@@ -72,8 +73,8 @@ const sortedVipJobIds = computed(() =>
   VIP_IDS
     .filter(id => id in mergedJobs.value)
     .sort((a, b) => {
-      const oA = mergedJobs.value[a]?.order ?? VIP_IDS.indexOf(a)
-      const oB = mergedJobs.value[b]?.order ?? VIP_IDS.indexOf(b)
+      const oA = Number(mergedJobs.value[a]?.order ?? VIP_IDS.indexOf(a))
+      const oB = Number(mergedJobs.value[b]?.order ?? VIP_IDS.indexOf(b))
       return oA - oB
     })
 )

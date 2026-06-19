@@ -20,8 +20,8 @@ const sortedVipJobIds = computed(() =>
   VIP_JOBS
     .filter(id => id in jobList.value)
     .sort((a, b) => {
-      const oA = jobList.value[a]?.order ?? VIP_JOBS.indexOf(a)
-      const oB = jobList.value[b]?.order ?? VIP_JOBS.indexOf(b)
+      const oA = Number(jobList.value[a]?.order ?? VIP_JOBS.indexOf(a))
+      const oB = Number(jobList.value[b]?.order ?? VIP_JOBS.indexOf(b))
       return oA - oB
     })
 )
