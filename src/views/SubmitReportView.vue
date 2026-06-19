@@ -6,6 +6,14 @@ import { onAuthStateChanged } from "firebase/auth"
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore"
 import Swal from 'sweetalert2'
 import exifr from 'exifr'
+import { useVipJobs } from '@/composables/useVipJobs'
+import { jobsData } from '@/data/jobs'
+
+const props = defineProps<{
+  userFullName?: string
+  userPhone?: string
+  userBirthYear?: string
+}>()
 
 const router = useRouter()
 const route = useRoute()
@@ -19,41 +27,72 @@ const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
 
-const jobOptions = [
-  { id: 'follow-cgv',     name: 'FOLLOW FANPAGE RẠP PHIM (30.000 XU)',             reward: '30.000 xu' },
-  { id: 'review-cinema',  name: 'ĐÁNH GIÁ 5 SAO RẠP PHIM (25.000 XU)',             reward: '25.000 xu' },
-  { id: 'checkin-cinema', name: 'CHECK-IN TẠI RẠP + ĐĂNG MXH (30.000 XU)',         reward: '30.000 xu' },
-  { id: 'survey-cinema',  name: 'KHẢO SÁT THÓI QUEN XEM PHIM (30.000 XU)',         reward: '30.000 xu' },
-  { id: 'post-threads',   name: 'ĐĂNG BÀI THREADS (30.000 XU)',                    reward: '30.000 xu' },
-  { id: 'join-zalo',      name: 'THAM GIA NHÓM ZALO (10.000 XU)',                  reward: '10.000 xu' },
-  { id: 'app-chung-khoan-3', name: 'APP CHỨNG KHOÁN SỐ 3 (85.000 XU)',            reward: '85.000 xu' },
-  { id: 'app-chung-khoan-4', name: 'APP CHỨNG KHOÁN SỐ 4 (85.000 XU)',            reward: '85.000 xu' },
-  { id: 'liobank',       name: 'ĐĂNG KÝ NGÂN HÀNG LIOBANK (65.000 XU)',          reward: '65.000 xu' }
-]
+// --- Dynamic job options từ Firestore + jobs.ts ---
+const { vipJobs, ready: vipJobsReady } = useVipJobs()
+
+const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'post-threads', 'join-zalo']
+const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank']
+
+type JobOption = { id: string; name: string; reward: string }
+
+const dynamicJobOptions = computed((): JobOption[] => {
+  if (!vipJobsReady.value) return []
+  const options: JobOption[] = []
+
+  // Basic jobs: luôn open, không có Firestore override
+  for (const id of BASIC_JOB_IDS) {
+    const job = (jobsData as Record<string, any>)[id]
+    if (!job) continue
+    options.push({ id, name: `${job.title} (${String(job.reward).toUpperCase()})`, reward: String(job.reward) })
+  }
+
+  // VIP jobs: merge với Firestore override, chỉ hiện status open
+  const vipMap = new Map(vipJobs.value.map((v: any) => [v.id, v]))
+  for (const id of VIP_JOB_IDS_SUBMIT) {
+    const override = vipMap.get(id)
+    const staticJob = (jobsData as Record<string, any>)[id]
+    if (!staticJob) continue
+    const status = override ? (override.status ?? 'open') : (staticJob.paused ? 'paused' : 'open')
+    if (status !== 'open') continue
+    const title  = override?.title  ?? staticJob.title
+    const reward = override?.reward ?? staticJob.reward
+    options.push({ id, name: `${title} (${String(reward).toUpperCase()})`, reward: String(reward) })
+  }
+  return options
+})
 
 const jobSamples: Record<string, string[]> = {
   'app-chung-khoan-4': ['images/anh-maybank2.jpg', 'images/anh-maybank3.jpg', 'images/anh-maybank4.jpg'],
   'app-chung-khoan': ['images/anh-kafi2.jpg', 'images/anh-kafi3.jpg', 'images/anh-kafi10.jpg'],
   'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg'],
-  'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg']
+  'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg'],
+  'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank3.jpg']
 }
 
-const selectedJob = ref(jobOptions[0])
+const selectedJob = ref<JobOption>({ id: '', name: '', reward: '' })
 const fullName = ref('')
 const phoneNumber = ref('')
 const birthYear = ref('')
 const birthMonth = ref('')
+
+const profileApplied = ref(false)
+watch(
+  () => [props.userFullName, props.userPhone, props.userBirthYear] as const,
+  ([name, phone, year]) => {
+    if (profileApplied.value) return
+    if (!name && !phone && !year) return
+    profileApplied.value = true
+    if (!fullName.value && name) fullName.value = name
+    if (!phoneNumber.value && phone) phoneNumber.value = phone
+    if (!birthYear.value && year) birthYear.value = year
+  },
+  { immediate: true }
+)
 const exifData = ref<any>({ hasExif: false, suspicious: false })
 const images = ref<string[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 
 onMounted(() => {
-  const jobIdFromQuery = route.query.job as string
-  if (jobIdFromQuery) {
-    const foundJob = jobOptions.find(j => j.id === jobIdFromQuery)
-    if (foundJob) selectedJob.value = foundJob
-  }
-
   onAuthStateChanged(auth, (user) => {
     if (user) {
       isLoggedIn.value = true
@@ -64,11 +103,25 @@ onMounted(() => {
   })
 })
 
+// Khi vipJobsReady (hoặc nếu singleton đã ready từ trước), khởi tạo selectedJob
+watch(vipJobsReady, (ready) => {
+  if (!ready || dynamicJobOptions.value.length === 0) return
+  const jobIdFromQuery = route.query.job as string
+  const found = jobIdFromQuery ? dynamicJobOptions.value.find(j => j.id === jobIdFromQuery) : null
+  selectedJob.value = found ?? dynamicJobOptions.value[0] ?? { id: '', name: '', reward: '' }
+}, { immediate: true })
+
 watch(() => route.query.job, (newJobId) => {
-  if (newJobId) {
-    const foundJob = jobOptions.find(j => j.id === newJobId as string)
-    if (foundJob) selectedJob.value = foundJob
-  }
+  if (!newJobId || !vipJobsReady.value) return
+  const found = dynamicJobOptions.value.find(j => j.id === newJobId as string)
+  if (found) selectedJob.value = found
+})
+
+// Nếu admin đổi job hiện tại sang paused/hidden trong khi user đang điền form → reset về job đầu tiên còn open
+watch(dynamicJobOptions, (options) => {
+  if (!selectedJob.value.id) return
+  const stillValid = options.find(j => j.id === selectedJob.value.id)
+  if (!stillValid) selectedJob.value = options[0] ?? { id: '', name: '', reward: '' }
 })
 
 const isFanpageTask = computed(() =>
@@ -76,7 +129,7 @@ const isFanpageTask = computed(() =>
 )
 
 const fourImageJobs: string[] = []
-const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank']
+const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank']
 
 const imageRequirementText = computed(() => {
   const jobId = selectedJob.value.id
@@ -161,6 +214,17 @@ const readExif = async (file: File) => {
 }
 
 const submitReport = async () => {
+  if (!selectedJob.value.id) {
+    alert('⚠️ VUI LÒNG CHỌN CÔNG VIỆC!')
+    return
+  }
+
+  // Kiểm tra realtime: job có thể bị admin đổi sang paused/hidden sau khi user chọn
+  if (!dynamicJobOptions.value.find(j => j.id === selectedJob.value.id)) {
+    alert('⚠️ CÔNG VIỆC NÀY ĐÃ TẠM DỪNG HOẶC ĐÓNG! Vui lòng chọn công việc khác.')
+    return
+  }
+
   if (!fullName.value || !phoneNumber.value || !birthYear.value || !birthMonth.value || images.value.length === 0) {
     alert('⚠️ VUI LÒNG NHẬP ĐỦ THÔNG TIN VÀ TẢI ẢNH XÁC THỰC!')
     return
@@ -245,6 +309,8 @@ const submitReport = async () => {
       jobId: selectedJob.value.id,
       jobName: selectedJob.value.name,
       reward: selectedJob.value.reward,
+      jobTitleSnapshot: selectedJob.value.name.split(' (')[0],
+      rewardSnapshot: selectedJob.value.reward,
       fullName: fullName.value.toUpperCase(),
       phoneRef: phoneNumber.value,
       birthYear: birthYear.value,
@@ -296,7 +362,13 @@ const openFanpage = () => {
         NỘP <span class="text-blue-500">BẰNG CHỨNG</span>
       </h1>
 
-      <div class="space-y-6 bg-[#111726]/50 p-6 md:p-10 rounded-[30px] border border-slate-800/50 shadow-2xl">
+      <!-- Loading khi chưa có config Firestore -->
+      <div v-if="!vipJobsReady" class="flex flex-col items-center justify-center py-20 space-y-4">
+        <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p class="text-xs text-slate-500 tracking-widest uppercase">ĐANG TẢI DANH SÁCH CÔNG VIỆC...</p>
+      </div>
+
+      <div v-else class="space-y-6 bg-[#111726]/50 p-6 md:p-10 rounded-[30px] border border-slate-800/50 shadow-2xl">
 
         <div class="space-y-2 text-left relative z-10">
           <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">CÔNG VIỆC HOÀN THÀNH</label>
@@ -306,7 +378,7 @@ const openFanpage = () => {
               :disabled="!!route.query.job"
               :class="['w-full bg-[#0d121f] border rounded-[20px] py-4 px-5 text-white outline-none appearance-none font-sans font-bold text-[14px] md:text-[15px] not-italic transition-all', !!route.query.job ? 'border-slate-700/80 text-emerald-400 bg-[#0d121f]/80 cursor-not-allowed shadow-inner' : 'border-slate-800 focus:border-blue-500 cursor-pointer']"
             >
-              <option v-for="job in jobOptions" :key="job.id" :value="job">{{ job.name }}</option>
+              <option v-for="job in dynamicJobOptions" :key="job.id" :value="job">{{ job.name }}</option>
             </select>
             <span v-if="!route.query.job" class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs font-sans not-italic">⌄</span>
             <span v-else class="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-500 text-lg font-sans not-italic font-black">✓</span>

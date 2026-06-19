@@ -359,5 +359,44 @@ export const jobsData: Record<string, any> = {
         content: "GỬI 2 ẢNH ĐÓ VÀ CHỜ PHÊ DUYỆT HOA HỒNG."
       }
     ]
+  },
+
+  'abbank': {
+    title: "APP ABBANK",
+    subtitle: "Mở tài khoản ABBANK",
+    reward: "85.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    zaloGuideUrl: "",
+    warning: "Người đăng ký phải từ 18 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký ABBANK trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    steps: [
+      {
+        id: 1,
+        title: "CHỌN NÚT TẢI ỨNG DỤNG VỀ ĐỂ ĐĂNG KÝ",
+        content: "Chọn tải ứng dụng ABBANK để bắt đầu đăng ký.",
+        downloadLink: "https://retail.abbank.vn/universal-link",
+        buttonText: "🚀 TẢI ỨNG DỤNG"
+      },
+      {
+        id: 2,
+        title: "NHẬP MÃ GIỚI THIỆU: 0366045803",
+        content: "Bắt buộc nhập mã giới thiệu 0366045803 và chụp lại ảnh màn hình.",
+        img: "images/anh-abbank1.jpg",
+        note: "NHẬP MÃ GIỚI THIỆU 0366045803 (BẮT BUỘC)",
+        referralCode: "0366045803"
+      },
+      {
+        id: 3,
+        title: "ĐĂNG KÝ TÀI KHOẢN THÀNH CÔNG VÀ CHỤP ẢNH LẠI",
+        content: "Sau khi đăng ký tài khoản ABBANK thành công, chụp lại ảnh màn hình hoàn tất.",
+        img: "images/anh-abbank2.jpg"
+      },
+      {
+        id: 4,
+        title: "ĐĂNG NHẬP VÀO TÀI KHOẢN VÀ CHỤP ẢNH THEO MẪU",
+        content: "Đăng nhập vào tài khoản ABBANK vừa tạo, chụp ảnh theo mẫu bên dưới rồi gửi vào phần bằng chứng.",
+        img: "images/anh-abbank3.jpg"
+      }
+    ]
   }
 };

@@ -1,20 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { jobsData } from '@/data/jobs';
 import Logo from '@/components/Logo.vue';
 
-defineProps<{
+const props = defineProps<{
   username: string;
   isLoggedIn: boolean;
+  jobs?: Record<string, any>;
 }>();
+
+const jobList = computed(() => props.jobs ?? jobsData);
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const VIP_JOBS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2'];
+const VIP_JOBS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank'];
+
+// Lọc hidden + sắp xếp theo order từ Firestore (nếu có); fallback về vị trí gốc trong VIP_JOBS
+const sortedVipJobIds = computed(() =>
+  VIP_JOBS
+    .filter(id => id in jobList.value)
+    .sort((a, b) => {
+      const oA = jobList.value[a]?.order ?? VIP_JOBS.indexOf(a)
+      const oB = jobList.value[b]?.order ?? VIP_JOBS.indexOf(b)
+      return oA - oB
+    })
+)
 
 const handleJobClick = (id: string) => {
-  const job = jobsData[id];
-  if (!job || (job as any).paused) return;
+  const job = jobList.value[id];
+  if (!job || job.paused || job.soldout) return;
   if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
   emit('receiveJob', id);
 };
@@ -40,6 +54,7 @@ const getJobIcon = (id: string) => {
     'msb-bank': { t: 'MSB', c: 'text-white' },
     'vpbank': { t: 'VPB', c: 'text-white' },
     'app-chung-khoan-4': { t: '📈', c: 'text-white' },
+    'abbank': { t: 'ABB', c: 'text-white' },
   };
   const res = config[id] || { t: 'JOB', c: 'text-slate-400' };
   return { type: 'text', content: res.t, colorClass: res.c };
@@ -59,6 +74,7 @@ const getSocialProof = (id: string) => {
     'msb-bank':          '198',
     'vpbank':            '176',
     'app-chung-khoan-4': '163',
+    'abbank':            '204',
   };
   return seeds[id] || '500';
 };
@@ -82,7 +98,8 @@ const getShortDesc = (id: string) => {
     'app-chung-khoan-3': 'Đăng ký tài khoản KIS',
     'vpbank': 'Mở tài khoản số đẹp VPBank',
     'app-chung-khoan-4': 'Đăng ký tài khoản chứng khoán',
-    'msb-bank': 'Nhận quà tặng khi mở thẻ MSB'
+    'msb-bank': 'Nhận quà tặng khi mở thẻ MSB',
+    'abbank': 'Mở tài khoản ABBANK'
   };
   return desc[id] || 'Làm nhiệm vụ ngay';
 }
@@ -276,7 +293,7 @@ const getShortDesc = (id: string) => {
             <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-slate-400 border border-slate-600/60 bg-slate-800/20 px-3 py-1 rounded-full">⚡ CƠ BẢN — NHANH & DỄ</span>
           </div>
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-            <template v-for="(j, id) in jobsData" :key="id">
+            <template v-for="(j, id) in jobList" :key="id">
               <div v-if="!isVip(id as string)"
                 @click="handleJobClick(id as string)"
                 class="relative p-5 md:p-7 rounded-[28px] border-[2px] transition-all duration-500 flex flex-col group cursor-pointer active:scale-95 hover:-translate-y-1 shadow-2xl overflow-hidden"
@@ -394,11 +411,11 @@ const getShortDesc = (id: string) => {
 
         <!-- TIER VIP -->
         <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          <template v-for="id in VIP_JOBS" :key="id">
-            <div v-if="jobsData[id as string]"
+          <template v-for="id in sortedVipJobIds" :key="id">
+            <div
               @click="handleJobClick(id as string)"
               class="relative p-5 md:p-7 rounded-[28px] border-[2px] transition-all duration-500 flex flex-col group overflow-hidden"
-              :class="(jobsData[id as string] as any).paused
+              :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout)
                 ? 'border-slate-600/50 bg-gradient-to-br from-[#1a1a1a] to-[#111111] cursor-not-allowed opacity-70'
                 : 'vip-card border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] cursor-pointer active:scale-95'">
 
@@ -431,7 +448,7 @@ const getShortDesc = (id: string) => {
               </div>
 
               <h4 class="text-[13px] md:text-lg text-amber-300 font-black italic uppercase leading-tight mb-1">
-                {{ (jobsData[id as string] as any).title }}
+                {{ jobList[id as string]?.title }}
               </h4>
 
               <p class="text-[10px] md:text-[13px] text-slate-400 font-medium line-clamp-2 leading-relaxed mb-4 mt-1">
@@ -442,7 +459,7 @@ const getShortDesc = (id: string) => {
                 <p class="text-[9px] md:text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-1">Thưởng ngay:</p>
                 <div class="flex items-center gap-1.5">
                   <p class="font-black text-2xl md:text-4xl tracking-tighter italic leading-none text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">
-                    {{ formatReward((jobsData[id as string] as any).reward).toLocaleString() }}
+                    {{ formatReward(jobList[id as string]?.reward).toLocaleString() }}
                   </p>
                   <div class="flex flex-col items-start translate-y-[-2px]">
                     <svg class="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]" viewBox="0 0 24 24">
@@ -455,17 +472,17 @@ const getShortDesc = (id: string) => {
               </div>
 
               <div class="flex items-center gap-1.5 text-[9px] mt-3 mb-2"
-                   :class="(jobsData[id as string] as any).paused ? 'text-red-400/80' : 'text-amber-500/70'">
+                   :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'text-red-400/80' : 'text-amber-500/70'">
                 <span class="w-1.5 h-1.5 rounded-full"
-                      :class="(jobsData[id as string] as any).paused ? 'bg-red-500' : 'bg-amber-500 animate-pulse'"></span>
-                <span>{{ (jobsData[id as string] as any).paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
+                      :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'bg-red-500' : 'bg-amber-500 animate-pulse'"></span>
+                <span>{{ jobList[id as string]?.soldout ? 'HẾT SLOT — Đang nạp thêm' : jobList[id as string]?.paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
               </div>
               <button @click.stop="handleJobClick(id as string)"
                 class="w-full py-3.5 md:py-4 rounded-xl text-[11px] md:text-[13px] font-black italic uppercase transition-all relative z-10 border"
-                :class="(jobsData[id as string] as any).paused
+                :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout)
                   ? 'bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed'
                   : 'vip-btn border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95'">
-                {{ (jobsData[id as string] as any).paused ? 'TẠM DỪNG ⏸' : 'NHẬN NGAY 💰' }}
+                {{ jobList[id as string]?.soldout ? 'HẾT SLOT ❌' : jobList[id as string]?.paused ? 'TẠM DỪNG ⏸' : 'NHẬN NGAY 💰' }}
               </button>
             </div>
           </template>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { jobsData } from '@/data/jobs'
+import { useVipJobs } from '@/composables/useVipJobs'
 import Swal from 'sweetalert2'
 
 const route = useRoute()
@@ -9,12 +10,22 @@ const router = useRouter()
 const showGuide = ref(true)
 const baseUrl = import.meta.env.BASE_URL
 
-const currentJob = ref(jobsData[route.params.id as string] || jobsData['app-chung-khoan'])
+const { vipJobs } = useVipJobs()
 
-onMounted(() => {
-  const jobId = route.params.id as string
-  if (jobId && jobsData[jobId]) {
-    currentJob.value = jobsData[jobId]
+const jobId = route.params.id as string
+const staticJob = jobsData[jobId] || jobsData['app-chung-khoan']
+
+const currentJob = computed((): any => {
+  const override = vipJobs.value.find((v: any) => v.id === jobId)
+  if (!override) return staticJob
+  return {
+    ...staticJob,
+    title: override.title ?? staticJob.title,
+    reward: override.reward ?? staticJob.reward,
+    warning: override.warning ?? staticJob.warning,
+    badge: override.badge ?? staticJob.badge,
+    color: override.color ?? staticJob.color,
+    zaloGuideUrl: override.zaloGuideUrl ?? staticJob.zaloGuideUrl,
   }
 })
 
@@ -96,13 +107,21 @@ const handleCopy = (text: string) => {
             </p>
           </div>
         </div>
+
+        <div class="mt-4" v-if="currentJob.zaloGuideUrl">
+          <a :href="currentJob.zaloGuideUrl" target="_blank"
+             class="inline-flex items-center gap-2 bg-[#0068FF] hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-5 h-5" />
+            VÀO NHÓM ZALO XEM HƯỚNG DẪN
+          </a>
+        </div>
       </div>
 
       <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative">
         <div class="text-center space-y-5">
 
          <div class="mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700"
-                v-if="['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3'].includes(route.params.id as string)">
+                v-if="['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'abbank'].includes(route.params.id as string)">
 
             <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
 
@@ -265,7 +284,7 @@ const handleCopy = (text: string) => {
                      v-for="(imgSrc, idx) in step.images" :key="idx"
                      @click="openImage(baseUrl + imgSrc)">
                   <img class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" :src="baseUrl + imgSrc" />
-                  <div class="absolute top-1.5 left-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-sm">ẢNH {{ idx + 1 }}</div>
+                  <div class="absolute top-1.5 left-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded shadow-sm">ẢNH {{ Number(idx) + 1 }}</div>
                 </div>
               </div>
 
