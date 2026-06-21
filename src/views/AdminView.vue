@@ -463,6 +463,7 @@ const seedVipJobs = async () => {
       badge: s.badge || 'VIP',
       color: s.color || 'text-amber-400',
       warning: s.warning || '',
+      ageRequirement: s.ageRequirement ?? null,
       status: 'open',
       order: newOrder,
       updatedAt: serverTimestamp()
@@ -470,7 +471,8 @@ const seedVipJobs = async () => {
     editingVipJob.value[id] = {
       title: s.title, reward: s.reward,
       badge: s.badge || 'VIP', color: s.color || 'text-amber-400',
-      warning: s.warning || '', status: 'open', order: newOrder
+      warning: s.warning || '', ageRequirement: s.ageRequirement ?? null,
+      status: 'open', order: newOrder
     }
     created++
   }
@@ -1145,6 +1147,10 @@ const handleAdminLogout = async () => {
               <div>
                 <label class="text-[9px] text-slate-500 tracking-widest block mb-1">WARNING (cảnh báo tuổi)</label>
                 <input v-model="editingVipJob[job.id].warning" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" placeholder="Vd: Yêu cầu đủ 18 tuổi" />
+              </div>
+              <div>
+                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">YÊU CẦU TUỔI (số, vd: 18)</label>
+                <input v-model.number="editingVipJob[job.id].ageRequirement" type="number" min="0" max="99" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" placeholder="Không điền = không hiện badge" />
               </div>
             </div>
             <!-- Actions -->

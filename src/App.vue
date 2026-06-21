@@ -60,6 +60,7 @@ const mergedJobs = computed((): Record<string, any> => {
       color:   override.color   ?? staticJob.color,
       warning: override.warning ?? staticJob.warning,
       order:   override.order   ?? staticJob.order,
+      ageRequirement: override.ageRequirement ?? staticJob.ageRequirement,
       paused:  override.status === 'paused',
       soldout: override.status === 'soldout',
       status:  override.status,
@@ -108,6 +109,12 @@ const jobRewardClass: Record<string, string> = {
   'follow-cgv': 'text-red-400', 'review-cinema': 'text-amber-400',
   'checkin-cinema': 'text-rose-400', 'survey-cinema': 'text-violet-400',
   'post-threads': 'text-fuchsia-400', 'join-zalo': 'text-indigo-400',
+}
+function getAgeBadgeClass(age: number): string {
+  if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+  if (age <= 18) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+  if (age <= 20) return 'bg-orange-500/20 text-orange-300 border-orange-500/30'
+  return 'bg-red-500/20 text-red-300 border-red-500/30'
 }
 const jobBtnClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
@@ -1302,9 +1309,16 @@ watch(activePopup, (val) => {
                   </div>
 
                   <!-- Title -->
-                  <p class="text-amber-200 text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
+                  <p class="text-amber-200 text-[11px] font-black italic uppercase tracking-tight leading-tight mb-1 relative z-10">
                     {{ mergedJobs[id as string]?.title }}
                   </p>
+
+                  <!-- Age badge -->
+                  <div
+                    v-if="mergedJobs[id as string]?.ageRequirement"
+                    class="w-full px-2 py-1 rounded-lg text-[11px] font-black uppercase text-center mb-2 relative z-10 border"
+                    :class="getAgeBadgeClass(mergedJobs[id as string]?.ageRequirement)"
+                  >🪪 YÊU CẦU: TỪ {{ mergedJobs[id as string]?.ageRequirement }} TUỔI</div>
 
                   <!-- Reward -->
                   <div class="flex items-baseline gap-1 mb-3 relative z-10">

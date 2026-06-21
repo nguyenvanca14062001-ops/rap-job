@@ -103,6 +103,13 @@ const getShortDesc = (id: string) => {
   };
   return desc[id] || 'Làm nhiệm vụ ngay';
 }
+
+function getAgeBadgeClass(age: number): string {
+  if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+  if (age <= 18) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+  if (age <= 20) return 'bg-orange-500/20 text-orange-300 border-orange-500/30'
+  return 'bg-red-500/20 text-red-300 border-red-500/30'
+}
 </script>
 
 <template>
@@ -451,9 +458,15 @@ const getShortDesc = (id: string) => {
                 {{ jobList[id as string]?.title }}
               </h4>
 
-              <p class="text-[10px] md:text-[13px] text-slate-400 font-medium line-clamp-2 leading-relaxed mb-4 mt-1">
+              <p class="text-[10px] md:text-[13px] text-slate-400 font-medium line-clamp-2 leading-relaxed mb-1.5 mt-1">
                 {{ getShortDesc(id as string) }}
               </p>
+
+              <span
+                v-if="jobList[id as string]?.ageRequirement"
+                class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-black border mb-3"
+                :class="getAgeBadgeClass(jobList[id as string]?.ageRequirement)"
+              >🪪 TỪ {{ jobList[id as string]?.ageRequirement }} TUỔI</span>
 
               <div class="flex flex-col mt-auto relative z-10">
                 <p class="text-[9px] md:text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-1">Thưởng ngay:</p>

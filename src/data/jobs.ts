@@ -122,6 +122,7 @@ export const jobsData: Record<string, any> = {
     reward: "65.000 xu",
     color: "text-blue-500",
     badge: "HOT",
+    ageRequirement: 22,
     warning: "BẮT BUỘC TỪ 22 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
     steps: [
       {
@@ -192,6 +193,7 @@ export const jobsData: Record<string, any> = {
     reward: "85.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
+    ageRequirement: 20,
     warning: "BẮT BUỘC TỪ 20 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
     steps: [
       {
@@ -229,6 +231,7 @@ export const jobsData: Record<string, any> = {
     reward: "85.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
+    ageRequirement: 18,
     warning: "BẮT BUỘC TỪ 18 TUỔI! (Nếu chưa đủ tuổi, có thể nhờ người thân đăng ký hộ, vẫn nhận 100% tiền thưởng).",
     steps: [
       {
@@ -367,6 +370,7 @@ export const jobsData: Record<string, any> = {
     reward: "85.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
+    ageRequirement: 15,
     zaloGuideUrl: "",
     warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký ABBANK trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
     steps: [
