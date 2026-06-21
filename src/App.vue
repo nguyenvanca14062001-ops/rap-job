@@ -566,7 +566,7 @@ const handleReceiveJob = (jobId: string) => {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
     ageConfirmJobTitle.value = mergedJobs.value[jobId]?.title || jobId
-    ageConfirmAge.value = jobId === 'app-chung-khoan-3' ? 20 : jobId === 'liobank' ? 22 : 18
+    ageConfirmAge.value = jobId === 'app-chung-khoan-3' ? 20 : jobId === 'liobank' ? 22 : jobId === 'abbank' ? 15 : 18
     showAgeConfirmModal.value = true
   } else {
     activePopup.value = ''
