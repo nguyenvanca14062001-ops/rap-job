@@ -402,5 +402,46 @@ export const jobsData: Record<string, any> = {
         img: "images/anh-abbank3.jpg"
       }
     ]
+  },
+
+  'lpbank-plus': {
+    title: "APP LPBank Plus",
+    subtitle: "Mở tài khoản LPBank Plus",
+    reward: "85.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    ageRequirement: 15,
+    zaloGuideUrl: "",
+    warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký LPBank Plus trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    steps: [
+      {
+        id: 1,
+        title: "TẢI ĐÚNG APP LPBANK PLUS - CHÚ Ý CHỮ PLUS",
+        content: "Tên APP: LPBANK Plus hoặc chọn TẢI ỨNG DỤNG.",
+        downloadLink: "https://content.lpbank.com.vn/share/down_app/index.html",
+        buttonText: "🚀 TẢI ỨNG DỤNG",
+        img: "images/anh-lpbank-buoc1.jpg"
+      },
+      {
+        id: 2,
+        title: "NHẬP MÃ GIỚI THIỆU : 0366045803",
+        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU 0366045803 VÀ CHỤP LẠI ẢNH.",
+        img: "images/anh-lpbank1.jpg",
+        note: "NHẬP MÃ GIỚI THIỆU: 0366045803 (BẮT BUỘC)",
+        referralCode: "0366045803"
+      },
+      {
+        id: 3,
+        title: "CHUYỂN VÀO LPBANK 50K VÀ CHUYỂN RA",
+        content: "CHỤP LẠI ẢNH CHUYỂN TIỀN RA VÀ GỬI BẰNG CHỨNG.",
+        img: "images/anh-lpbank2.jpg"
+      },
+      {
+        id: 4,
+        title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
+        content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
+       
+      }
+    ]
   }
 };

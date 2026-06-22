@@ -25,9 +25,9 @@ const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
-  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦',
+  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
 }
-const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank']
+const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -573,7 +573,7 @@ const handleReceiveJob = (jobId: string) => {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
     ageConfirmJobTitle.value = mergedJobs.value[jobId]?.title || jobId
-    ageConfirmAge.value = jobId === 'app-chung-khoan-3' ? 20 : jobId === 'liobank' ? 22 : jobId === 'abbank' ? 15 : 18
+    ageConfirmAge.value = mergedJobs.value[jobId]?.ageRequirement ?? 18
     showAgeConfirmModal.value = true
   } else {
     activePopup.value = ''

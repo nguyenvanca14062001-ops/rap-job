@@ -13,7 +13,7 @@ const jobList = computed(() => props.jobs ?? jobsData);
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const VIP_JOBS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank'];
+const VIP_JOBS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus'];
 
 // Lọc hidden + sắp xếp theo order từ Firestore (nếu có); fallback về vị trí gốc trong VIP_JOBS
 const sortedVipJobIds = computed(() =>

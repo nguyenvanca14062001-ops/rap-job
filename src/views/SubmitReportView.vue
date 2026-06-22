@@ -31,7 +31,7 @@ const closeImage = () => { selectedImage.value = null }
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
 
 const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'post-threads', 'join-zalo']
-const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank']
+const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus']
 
 type JobOption = { id: string; name: string; reward: string }
 
@@ -66,7 +66,8 @@ const jobSamples: Record<string, string[]> = {
   'app-chung-khoan': ['images/anh-kafi2.jpg', 'images/anh-kafi3.jpg', 'images/anh-kafi10.jpg'],
   'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg'],
   'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg'],
-  'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank3.jpg']
+  'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank3.jpg'],
+  'lpbank-plus': ['images/anh-lpbank3.jpg', 'images/anh-lpbank2.jpg']
 }
 
 const selectedJob = ref<JobOption>({ id: '', name: '', reward: '' })
@@ -130,11 +131,13 @@ const isFanpageTask = computed(() =>
 
 const fourImageJobs: string[] = []
 const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank']
+const twoImageJobs = ['lpbank-plus']
 
 const imageRequirementText = computed(() => {
   const jobId = selectedJob.value.id
   if (fourImageJobs.includes(jobId)) return "YÊU CẦU BẮT BUỘC NỘP TỪ 4 ẢNH TRỞ LÊN (XEM MẪU BÊN DƯỚI)"
   if (threeImageJobs.includes(jobId)) return "YÊU CẦU BẮT BUỘC NỘP TỪ 3 ẢNH TRỞ LÊN (XEM MẪU BÊN DƯỚI)"
+  if (twoImageJobs.includes(jobId)) return "YÊU CẦU BẮT BUỘC NỘP TỪ 2 ẢNH TRỞ LÊN (XEM MẪU BÊN DƯỚI)"
   return "TẢI LÊN ẢNH CHỤP MÀN HÌNH BẰNG CHỨNG XÁC THỰC"
 })
 
@@ -242,6 +245,11 @@ const submitReport = async () => {
 
   if (threeImageJobs.includes(selectedJob.value.id) && images.value.length < 3) {
     alert('⚠️ CHIẾN DỊCH NÀY BẮT BUỘC PHẢI TẢI LÊN ÍT NHẤT 3 ẢNH MẪU ĐỂ ĐỐI SOÁT!')
+    return
+  }
+
+  if (twoImageJobs.includes(selectedJob.value.id) && images.value.length < 2) {
+    alert('⚠️ CHIẾN DỊCH NÀY BẮT BUỘC PHẢI TẢI LÊN ÍT NHẤT 2 ẢNH MẪU ĐỂ ĐỐI SOÁT!')
     return
   }
 
@@ -449,7 +457,7 @@ const openFanpage = () => {
             <p class="text-[10px] md:text-[11px] text-yellow-400 font-black tracking-widest mb-3 uppercase italic leading-relaxed">
               ⚠️ Bạn phải gửi đủ {{ jobSamples[selectedJob.id].length }} ảnh mẫu này (Chạm để zoom to):
             </p>
-            <div :class="['grid gap-2', jobSamples[selectedJob.id].length >= 4 ? 'grid-cols-4' : 'grid-cols-3']">
+            <div :class="['grid gap-2', jobSamples[selectedJob.id].length >= 4 ? 'grid-cols-4' : jobSamples[selectedJob.id].length === 2 ? 'grid-cols-2' : 'grid-cols-3']">
               <div v-for="(img, idx) in jobSamples[selectedJob.id]" :key="idx"
                    @click="openImage(baseUrl + img)"
                    class="relative rounded-xl overflow-hidden border border-slate-700/60 bg-slate-900 aspect-[3/4] cursor-zoom-in group hover:border-blue-500 transition-colors">
