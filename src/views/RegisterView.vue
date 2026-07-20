@@ -1,12 +1,3 @@
-Xin lỗi Boss, nãy hệ thống em bị chập cheng tí nên nhả ra toàn chữ chứ không ra code!
-
-Em đã thay luôn **3 ô thông báo mới** cho Boss, chơi hẳn **hiệu ứng đổ bóng phát sáng (Glow) và dải màu Gradient rực rỡ** (Xanh ngọc - Đỏ rực - Vàng cam) bao đập vào mắt khách hàng, nhìn cực kỳ uy tín và kích thích luôn!
-
-Đồng thời em cũng giữ nguyên **logic chuyển về trang chủ (`/`)** chống lỗi trang đen, và đảm bảo bộ thẻ đóng an toàn 100%.
-
-Boss bấm `Ctrl + A` xóa sạch file **`src/views/RegisterView.vue`** cũ đi, rồi dán **FULL CODE** này vào là ngắm thành quả nhức nách luôn:
-
-```html
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -18,7 +9,7 @@ import Swal from 'sweetalert2'
 const router = useRouter()
 const fullName = ref('')
 const email = ref('')
-const phone = ref('') 
+const phone = ref('')
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -68,7 +59,7 @@ const handleRegister = async () => {
         }
       })
       loading.value = false
-      return 
+      return
     }
 
     const currentYear = new Date().getFullYear();
@@ -83,7 +74,7 @@ const handleRegister = async () => {
       },
       background: '#ffffff',
       color: '#1e293b',
-      allowOutsideClick: false, 
+      allowOutsideClick: false,
       showCancelButton: true,
       cancelButtonText: 'HỦY BỎ',
       cancelButtonColor: '#94a3b8',
@@ -123,23 +114,23 @@ const handleRegister = async () => {
     const calculatedAge = currentYear - parseInt(birthYearInput);
 
     const userCredential = await createUserWithEmailAndPassword(
-      auth, 
-      email.value.toLowerCase().trim(), 
+      auth,
+      email.value.toLowerCase().trim(),
       password.value
     )
-    
+
     const user = userCredential.user
 
     await setDoc(doc(db, "users", user.uid), {
       username: username.value,
-      fullName: fullName.value, 
-      phone: phone.value,        
+      fullName: fullName.value,
+      phone: phone.value,
       email: email.value,
       dob: birthYearInput.toString(),
-      age: calculatedAge,              
+      age: calculatedAge,
       balance: 0,
       site: 'rapjob',
-      role: 'user',              
+      role: 'user',
       createdAt: new Date()
     });
 
@@ -158,14 +149,14 @@ const handleRegister = async () => {
         confirmButton: 'font-black uppercase italic rounded-xl px-8 py-3 shadow-lg active:scale-95 transition-all text-sm'
       }
     }).then(() => {
-      router.push('/') 
+      router.push('/')
     })
 
   } catch (error: any) {
     let msg = error.message
     if (error.code === 'auth/email-already-in-use') msg = 'Email này đã được đăng ký trên hệ thống!'
     if (error.code === 'auth/weak-password') msg = 'Mật khẩu quá yếu, phải từ 6 ký tự trở lên!'
-    
+
     Swal.fire({
       title: 'LỖI ĐĂNG KÝ!',
       text: msg,
@@ -278,11 +269,17 @@ const handleRegister = async () => {
               <label class="text-[9px] text-slate-500 tracking-widest ml-1">Tên đăng nhập</label>
               <input v-model="username" type="text" placeholder="USERNAME..."
                      class="w-full bg-[#1a0f0c] border border-slate-700/60 rounded-2xl py-3.5 px-5 text-white placeholder-slate-600 outline-none focus:border-red-600/70 focus:bg-[#200e0b] transition-all text-sm"/>
+              <p class="text-[9px] text-blue-400/80 normal-case not-italic font-bold mt-1 ml-1 leading-relaxed">
+                Tên đăng nhập không viết hoa, không dấu, không khoảng cách.<br/>VD: nguyenvana123
+              </p>
             </div>
             <div class="space-y-1">
               <label class="text-[9px] text-slate-500 tracking-widest ml-1">Địa chỉ Email</label>
               <input v-model="email" type="email" placeholder="EMAIL..."
                      class="w-full bg-[#1a0f0c] border border-slate-700/60 rounded-2xl py-3.5 px-5 text-white placeholder-slate-600 outline-none focus:border-red-600/70 focus:bg-[#200e0b] transition-all text-sm"/>
+              <p class="text-[9px] text-blue-400/80 normal-case not-italic font-bold mt-1 ml-1 leading-relaxed">
+                Không cần dùng email thật. Bạn có thể tự tạo email bất kỳ, chỉ cần đúng dạng email.<br/>Ví dụ: abc123@gmail.com
+              </p>
             </div>
           </div>
 
@@ -342,8 +339,6 @@ const handleRegister = async () => {
 
 <style scoped>
 ::-webkit-scrollbar { width: 0px; display: none; }
-input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 </style>
-
-```

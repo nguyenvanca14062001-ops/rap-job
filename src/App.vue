@@ -19,6 +19,7 @@ import TreasureChest from '@/components/TreasureChest.vue'
 import ProfileCard from '@/components/home/ProfileCard.vue'
 import Logo from '@/components/Logo.vue'
 import { jobsData } from '@/data/jobs'
+import { hasCompletedLpbankPlus } from '@/utils/referralLpbank'
 
 // --- JOB BROWSER (dùng trong CÔNG VIỆC bottom sheet) ---
 const jobIconMap: Record<string, string> = {
@@ -26,8 +27,13 @@ const jobIconMap: Record<string, string> = {
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
+  'referral-hub': '👥', 'daily_threads': '🧵', 'zalo_kokomi': '💬',
 }
-const VIP_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus']
+const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus']
+
+// --- ĐIỀU KIỆN MỞ KHÓA GIỚI THIỆU BẠN BÈ LPBANK: đã có report APP LPBANK PLUS được duyệt/cộng xu ---
+const canAccessReferralLpbank = computed(() => hasCompletedLpbankPlus(myReports.value))
+const showReferralLockedModal = ref(false)
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -94,21 +100,26 @@ const jobCardClass: Record<string, string> = {
   'survey-cinema':  'bg-gradient-to-br from-[#281555] to-[#100820] border-violet-600/70 shadow-[0_0_20px_rgba(124,58,237,0.25)]',
   'post-threads':   'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/70 shadow-[0_0_20px_rgba(217,70,239,0.25)]',
   'join-zalo':      'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.25)]',
+  'daily_threads':  'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/70 shadow-[0_0_20px_rgba(20,184,166,0.25)]',
+  'zalo_kokomi':    'bg-gradient-to-br from-[#0a2540] to-[#051224] border-sky-500/70 shadow-[0_0_20px_rgba(14,165,233,0.25)]',
 }
 const jobBadgeClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
   'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
   'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
+  'daily_threads': 'bg-teal-600', 'zalo_kokomi': 'bg-sky-600',
 }
 const jobIconBgClass: Record<string, string> = {
   'follow-cgv': 'bg-red-600/20', 'review-cinema': 'bg-amber-500/20',
   'checkin-cinema': 'bg-rose-500/20', 'survey-cinema': 'bg-violet-500/20',
   'post-threads': 'bg-fuchsia-500/20', 'join-zalo': 'bg-indigo-500/20',
+  'daily_threads': 'bg-teal-500/20', 'zalo_kokomi': 'bg-sky-500/20',
 }
 const jobRewardClass: Record<string, string> = {
   'follow-cgv': 'text-red-400', 'review-cinema': 'text-amber-400',
   'checkin-cinema': 'text-rose-400', 'survey-cinema': 'text-violet-400',
   'post-threads': 'text-fuchsia-400', 'join-zalo': 'text-indigo-400',
+  'daily_threads': 'text-teal-400', 'zalo_kokomi': 'text-sky-400',
 }
 function getAgeBadgeClass(age: number): string {
   if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -120,6 +131,7 @@ const jobBtnClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
   'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
   'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
+  'daily_threads': 'bg-teal-600', 'zalo_kokomi': 'bg-sky-600',
 }
 
 // --- KHỞI TẠO BIẾN TRẠNG THÁI HỆ THỐNG ---
@@ -510,9 +522,15 @@ const initFirebaseSync = (user: any) => {
   })
 
   if (import.meta.env.DEV) console.log('[Firestore] START withdrawals listener — collection: withdrawals, uid filter, orderBy createdAt desc, limit 20')
-  unsubscribeWithdrawals = onSnapshot(query(collection(db, "withdrawals"), where("uid", "==", user.uid), orderBy("createdAt", "desc"), limit(20)), (snapshot) => {
-    myWithdrawals.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-  })
+  unsubscribeWithdrawals = onSnapshot(
+    query(collection(db, "withdrawals"), where("uid", "==", user.uid), orderBy("createdAt", "desc"), limit(20)),
+    (snapshot) => {
+      myWithdrawals.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    },
+    (error) => {
+      console.error('[Firestore] Lỗi tải lịch sử rút tiền (withdrawals listener):', error)
+    }
+  )
 }
 
 onMounted(() => {
@@ -569,6 +587,19 @@ const handleReceiveJob = (jobId: string) => {
     router.push('/survey-cinema')
   } else if (jobId === 'APP NGÂN HÀNG' || jobId === 'app-ngan-hang') {
     showBankModal.value = true
+  } else if (jobId === 'referral-hub') {
+    activePopup.value = ''
+    if (canAccessReferralLpbank.value) {
+      router.push('/jobs/referral-lpbank')
+    } else {
+      showReferralLockedModal.value = true
+    }
+  } else if (jobId === 'daily_threads') {
+    activePopup.value = ''
+    router.push('/jobs/daily-threads')
+  } else if (jobId === 'zalo_kokomi') {
+    activePopup.value = ''
+    router.push('/jobs/zalo-kokomi')
   } else if (VIP_IDS.includes(jobId)) {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
@@ -618,7 +649,7 @@ const logout = async () => {
 }
 
 const contactSupport = (t: string) => {
-  window.open(t === 'facebook' ? 'https://www.facebook.com/vieclamrapjob' : 'https://zalo.me/g/fambpb151', '_blank')
+  window.open(t === 'facebook' ? 'https://www.facebook.com/rapjobfreelance/' : 'https://zalo.me/g/fambpb151', '_blank')
 }
 
 watch(activePopup, (val) => {
@@ -671,6 +702,22 @@ watch(activePopup, (val) => {
             <h2 class="text-3xl text-white font-black italic uppercase tracking-tighter leading-none">Chào mừng <br/><span class="text-red-500">Tân Thủ!</span></h2>
             <p class="text-slate-400 text-sm font-bold italic leading-relaxed uppercase">Hệ thống đã cộng 10,000 XU vào ví.</p>
             <button @click="showWelcomePopup = false" class="w-full py-5 bg-red-700 text-white rounded-2xl font-black italic uppercase shadow-lg shadow-red-600/30 active:scale-95">Bắt đầu ngay</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- ===== POPUP KHÓA GIỚI THIỆU BẠN BÈ LPBANK ===== -->
+    <Transition name="fade">
+      <div v-if="showReferralLockedModal" class="fixed inset-0 z-[4000] flex items-center justify-center px-6">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showReferralLockedModal = false"></div>
+        <div class="relative bg-[#150f0d] border border-amber-600/30 w-full max-w-md p-8 rounded-[40px] shadow-[0_0_50px_rgba(217,119,6,0.2)] text-center">
+          <div class="relative z-10 space-y-6">
+            <div class="w-20 h-20 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-3xl mx-auto flex items-center justify-center text-4xl">🔒</div>
+            <h2 class="text-2xl text-white font-black italic uppercase tracking-tighter leading-none">Chưa đủ <br/><span class="text-amber-500">Điều kiện</span></h2>
+            <p class="text-slate-400 text-sm font-bold italic leading-relaxed normal-case">Bạn cần hoàn thành Job VIP <span class="text-amber-400">APP LPBANK PLUS</span> trước khi mở khóa công việc Giới thiệu bạn bè.</p>
+            <button @click="showReferralLockedModal = false; router.push('/job/lpbank-plus')" class="w-full py-5 bg-amber-600 text-white rounded-2xl font-black italic uppercase shadow-lg shadow-amber-600/30 active:scale-95">Làm APP LPBANK PLUS</button>
+            <button @click="showReferralLockedModal = false" class="w-full py-2 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-400 transition-colors">Để sau</button>
           </div>
         </div>
       </div>
@@ -998,6 +1045,7 @@ watch(activePopup, (val) => {
              :username="username"
              :isLoggedIn="isLoggedIn"
              :jobs="mergedJobs"
+             :referralLpbankUnlocked="canAccessReferralLpbank"
              @receiveJob="handleReceiveJob"
              @routerPush="handleNav"
              @contactSupport="contactSupport"
@@ -1109,6 +1157,7 @@ watch(activePopup, (val) => {
             :userFullName="userFullName"
             :userPhone="userPhone"
             :userBirthYear="userBirthYear"
+            :isDataLoading="isDataLoading"
           />
         </Transition>
       </main>
@@ -1260,11 +1309,18 @@ watch(activePopup, (val) => {
 
                   <!-- Reward -->
                   <div class="flex items-baseline gap-1 mb-3 relative z-10">
-                    <span class="text-lg font-black italic tracking-tighter"
-                          :class="jobRewardClass[id as string] || 'text-yellow-400'">
-                      +{{ String(j.reward).replace(/\D/g,'') }}
-                    </span>
-                    <span class="text-[9px] font-black text-slate-400">XU</span>
+                    <template v-if="j.rewardText">
+                      <span class="text-[13px] font-black italic tracking-tighter" :class="jobRewardClass[id as string] || 'text-yellow-400'">
+                        {{ j.rewardText }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span class="text-lg font-black italic tracking-tighter"
+                            :class="jobRewardClass[id as string] || 'text-yellow-400'">
+                        +{{ String(j.reward).replace(/\D/g,'') }}
+                      </span>
+                      <span class="text-[9px] font-black text-slate-400">XU</span>
+                    </template>
                   </div>
 
                   <!-- CTA button -->
@@ -1285,7 +1341,7 @@ watch(activePopup, (val) => {
                 <button
                   @click="handleReceiveJob(id as string)"
                   class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left bg-gradient-to-br from-[#2A1C00] to-[#1a1000] border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-                  :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'opacity-50 grayscale' : ''">
+                  :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout || (id === 'referral-hub' && !canAccessReferralLpbank)) ? 'opacity-50 grayscale' : ''">
 
                   <!-- Highlight layer -->
                   <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
@@ -1296,6 +1352,9 @@ watch(activePopup, (val) => {
                   </div>
                   <div v-else-if="mergedJobs[id as string]?.paused" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                     <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">⏸ TẠM DỪNG</span>
+                  </div>
+                  <div v-else-if="id === 'referral-hub' && !canAccessReferralLpbank" class="absolute inset-0 flex flex-col items-center justify-center gap-1 z-20 pointer-events-none px-3 text-center">
+                    <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">🔒 ĐANG KHÓA</span>
                   </div>
 
                   <!-- Badge top-right -->
@@ -1321,7 +1380,12 @@ watch(activePopup, (val) => {
                   >🪪 YÊU CẦU: TỪ {{ mergedJobs[id as string]?.ageRequirement }} TUỔI</div>
 
                   <!-- Reward -->
-                  <div class="flex items-baseline gap-1 mb-3 relative z-10">
+                  <div v-if="mergedJobs[id as string]?.rewardText" class="flex items-baseline gap-1 mb-3 relative z-10">
+                    <span class="text-sm font-black italic tracking-tighter text-amber-400">
+                      {{ mergedJobs[id as string]?.rewardText }}
+                    </span>
+                  </div>
+                  <div v-else class="flex items-baseline gap-1 mb-3 relative z-10">
                     <span class="text-lg font-black italic tracking-tighter text-amber-400">
                       +{{ String(mergedJobs[id as string]?.reward || '0').replace(/\D/g,'') }}
                     </span>
@@ -1330,7 +1394,7 @@ watch(activePopup, (val) => {
 
                   <!-- CTA button -->
                   <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10 bg-amber-600">
-                    ĐĂNG KÝ 👑
+                    {{ id === 'referral-hub' && !canAccessReferralLpbank ? 'ĐANG KHÓA 🔒' : 'ĐĂNG KÝ 👑' }}
                   </div>
                 </button>
               </template>

@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   // Boss dán cái API Key chuẩn (mã AIzaSy...) của project có khách cũ vào đây nhé
@@ -18,3 +19,4 @@ const app = initializeApp(firebaseConfig);
 // Xuất các dịch vụ để sử dụng ở các file khác
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app);

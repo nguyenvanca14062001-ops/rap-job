@@ -194,7 +194,7 @@ const handleCopy = (text: string) => {
               <h4 class="text-[#3b82f6] text-base md:text-lg italic font-black mb-2 uppercase tracking-tight">
                 {{ step.title }}
               </h4>
-              <p class="text-slate-400 text-xs italic normal-case opacity-80 leading-relaxed mb-5">
+              <p class="text-slate-400 text-xs italic normal-case opacity-80 leading-relaxed mb-5 whitespace-pre-line">
                 {{ step.content }}
               </p>
 

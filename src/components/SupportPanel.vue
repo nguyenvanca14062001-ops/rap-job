@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const SUPPORT_FANPAGE_URL = 'https://www.facebook.com/vieclamrapjob'
+const SUPPORT_FANPAGE_URL = 'https://www.facebook.com/rapjobfreelance/'
 
 defineProps<{
   modelValue: boolean

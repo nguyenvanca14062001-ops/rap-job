@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { auth, db } from '@/firebase'
+import { auth, db, storage } from '@/firebase'
 import { onAuthStateChanged } from "firebase/auth"
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore"
+import { collection, doc, setDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore"
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from 'sweetalert2'
 import exifr from 'exifr'
 import { useVipJobs } from '@/composables/useVipJobs'
 import { jobsData } from '@/data/jobs'
+import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
 
 const props = defineProps<{
   userFullName?: string
@@ -66,7 +68,7 @@ const jobSamples: Record<string, string[]> = {
   'app-chung-khoan': ['images/anh-kafi2.jpg', 'images/anh-kafi3.jpg', 'images/anh-kafi10.jpg'],
   'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg'],
   'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg'],
-  'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank3.jpg'],
+  'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank4.jpg'],
   'lpbank-plus': ['images/anh-lpbank3.jpg', 'images/anh-lpbank2.jpg']
 }
 
@@ -90,8 +92,12 @@ watch(
   { immediate: true }
 )
 const exifData = ref<any>({ hasExif: false, suspicious: false })
-const images = ref<string[]>([])
+const MAX_PROOF_IMAGES = 5
+const images = ref<string[]>([]) // base64 preview only, không lưu vào Firestore
+const imageBlobs = ref<Blob[]>([]) // song song với `images`, dùng để upload lên Storage
+const imageError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const submitStage = ref<'idle' | 'uploading' | 'saving'>('idle')
 
 onMounted(() => {
   onAuthStateChanged(auth, (user) => {
@@ -143,48 +149,17 @@ const imageRequirementText = computed(() => {
 
 const triggerFileInput = () => { fileInput.value?.click() }
 
-const compressImage = (file: File): Promise<string> => {
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.readAsDataURL(file)
-    reader.onload = (e) => {
-      const img = new Image()
-      img.src = e.target?.result as string
-      img.onload = () => {
-        const canvas = document.createElement('canvas')
-        const MAX_WIDTH = 800
-        let width = img.width
-        let height = img.height
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width)
-          width = MAX_WIDTH
-        }
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.fillStyle = '#FFFFFF'
-          ctx.fillRect(0, 0, canvas.width, canvas.height)
-          ctx.drawImage(img, 0, 0, width, height)
-          resolve(canvas.toDataURL('image/jpeg', 0.6))
-        } else {
-          resolve(e.target?.result as string)
-        }
-      }
-      img.onerror = () => { resolve(e.target?.result as string) }
-    }
-  })
-}
-
 const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
   if (!target.files?.length) return
   const files = Array.from(target.files)
 
-  if (images.value.length + files.length > 5) {
-    alert('⚠️ CHỈ ĐƯỢC UPLOAD TỐI ĐA 5 ẢNH!')
+  if (images.value.length + files.length > MAX_PROOF_IMAGES) {
+    imageError.value = `Bạn chỉ được gửi tối đa ${MAX_PROOF_IMAGES} ảnh bằng chứng.`
+    target.value = ''
     return
   }
+  imageError.value = ''
 
   for (const file of files) {
     if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
@@ -192,14 +167,32 @@ const handleFileUpload = async (event: Event) => {
       continue
     }
     if (!file.type.startsWith('image/')) continue
-    const compressedImage = await compressImage(file)
-    if (images.value.length === 0) await readExif(file)
-    images.value.push(compressedImage)
+    try {
+      const compressed = await compressImage(file)
+      console.log("Image compressed:", {
+        originalSizeKB: Math.round(file.size / 1024),
+        compressedSizeKB: Math.round(compressed.blob.size / 1024),
+        type: compressed.blob.type
+      })
+      if (compressed.blob.size > MAX_UPLOAD_BYTES) {
+        alert('⚠️ Ảnh quá lớn, vui lòng chọn ảnh khác hoặc chụp lại rõ hơn.')
+        continue
+      }
+      if (images.value.length === 0) await readExif(file)
+      images.value.push(compressed.dataUrl)
+      imageBlobs.value.push(compressed.blob)
+    } catch (err: any) {
+      alert('⚠️ LỖI XỬ LÝ ẢNH: ' + (err?.message || 'Vui lòng thử ảnh khác.'))
+    }
   }
   target.value = ''
 }
 
-const removeImage = (index: number) => { images.value.splice(index, 1) }
+const removeImage = (index: number) => {
+  images.value.splice(index, 1)
+  imageBlobs.value.splice(index, 1)
+  imageError.value = ''
+}
 
 const readExif = async (file: File) => {
   try {
@@ -230,6 +223,12 @@ const submitReport = async () => {
 
   if (!fullName.value || !phoneNumber.value || !birthYear.value || !birthMonth.value || images.value.length === 0) {
     alert('⚠️ VUI LÒNG NHẬP ĐỦ THÔNG TIN VÀ TẢI ẢNH XÁC THỰC!')
+    return
+  }
+
+  // Chặn lại lần nữa trước khi upload Storage, phòng trường hợp state bị lệch với UI
+  if (images.value.length > MAX_PROOF_IMAGES || imageBlobs.value.length > MAX_PROOF_IMAGES) {
+    imageError.value = `Bạn chỉ được gửi tối đa ${MAX_PROOF_IMAGES} ảnh bằng chứng.`
     return
   }
 
@@ -312,7 +311,47 @@ const submitReport = async () => {
       }
     }
 
-    await addDoc(collection(db, "reports"), {
+    // Tạo trước reportId để dùng làm path Storage
+    const reportRef = doc(collection(db, "reports"))
+    const reportId = reportRef.id
+
+    // Chặn cứng lần cuối trước khi upload Storage — không upload nếu vượt giới hạn
+    if (imageBlobs.value.length > MAX_PROOF_IMAGES) {
+      throw new Error(`Bạn chỉ được gửi tối đa ${MAX_PROOF_IMAGES} ảnh bằng chứng.`)
+    }
+
+    submitStage.value = 'uploading'
+    console.log("Uploading proof images to Storage:", {
+      uid: userUid.value,
+      reportId,
+      fileCount: imageBlobs.value.length
+    })
+
+    let proofImages: { url: string; path: string }[] = []
+    try {
+      proofImages = await Promise.all(imageBlobs.value.map(async (blob, index) => {
+        const path = `proofs/${userUid.value}/${reportId}/image_${index}.jpg`
+        const imgRef = storageRef(storage, path)
+        await uploadBytes(imgRef, blob, { contentType: 'image/jpeg' })
+        const url = await getDownloadURL(imgRef)
+        return { url, path: imgRef.fullPath }
+      }))
+    } catch (uploadError: any) {
+      alert('❌ LỖI TẢI ẢNH LÊN: ' + (uploadError?.message || 'Vui lòng thử lại.'))
+      isLoading.value = false
+      submitStage.value = 'idle'
+      return
+    }
+    console.log("Uploaded proof images:", proofImages)
+
+    // Không tạo report nếu vì lý do gì đó vượt giới hạn ảnh sau upload
+    if (proofImages.length > MAX_PROOF_IMAGES) {
+      throw new Error(`Bạn chỉ được gửi tối đa ${MAX_PROOF_IMAGES} ảnh bằng chứng.`)
+    }
+
+    submitStage.value = 'saving'
+
+    const reportData = {
       uid: userUid.value,
       jobId: selectedJob.value.id,
       jobName: selectedJob.value.name,
@@ -324,16 +363,27 @@ const submitReport = async () => {
       birthYear: birthYear.value,
       birthMonth: birthMonth.value,
       exif: exifData.value,
-      images: images.value,
+      proofImages,
+      imageCount: proofImages.length,
+      storageCleaned: false,
       status: 'pending',
       createdAt: serverTimestamp()
+    }
+
+    console.log("Creating report without base64:", {
+      reportId,
+      imageCount: proofImages.length,
+      hasBase64Images: Boolean((reportData as any).images?.some?.((x: any) => String(x).startsWith('data:image')))
     })
+
+    await setDoc(reportRef, reportData)
 
     showSuccessModal.value = true
   } catch (error: any) {
     alert('❌ LỖI HỆ THỐNG: ' + error.message)
   } finally {
     isLoading.value = false
+    submitStage.value = 'idle'
   }
 }
 
@@ -343,7 +393,7 @@ const closeAndGoHome = () => {
 }
 
 const openFanpage = () => {
-  window.open('https://www.facebook.com/vieclamrapjob', '_blank')
+  window.open('https://www.facebook.com/rapjobfreelance/', '_blank')
   closeAndGoHome()
 }
 </script>
@@ -436,7 +486,12 @@ const openFanpage = () => {
         </div>
 
         <div class="space-y-2 text-left mt-2">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">HÌNH ẢNH XÁC THỰC VÀ ĐỐI CHIẾU MẪU</label>
+          <div class="flex items-center justify-between gap-2 ml-1">
+            <label class="text-blue-400 text-[11px] tracking-widest font-black">ẢNH BẰNG CHỨNG * (TỐI ĐA {{ MAX_PROOF_IMAGES }} ẢNH)</label>
+            <span :class="['text-[10px] font-sans not-italic font-bold whitespace-nowrap', images.length >= MAX_PROOF_IMAGES ? 'text-rose-400' : 'text-slate-500']">
+              Đã chọn {{ images.length }}/{{ MAX_PROOF_IMAGES }} ảnh
+            </span>
+          </div>
           <div
             @click="triggerFileInput"
             class="w-full border-2 border-dashed border-slate-700/60 hover:border-blue-500/50 bg-[#0d121f]/30 rounded-[30px] py-12 px-6 flex flex-col items-center justify-center cursor-pointer transition-all group"
@@ -452,6 +507,10 @@ const openFanpage = () => {
             </p>
           </div>
           <input type="file" ref="fileInput" @change="handleFileUpload" multiple accept="image/jpeg, image/png, image/jpg" class="hidden" />
+
+          <p v-if="imageError" class="text-rose-400 text-[11px] font-sans not-italic font-bold normal-case leading-relaxed">
+            ⚠️ {{ imageError }}
+          </p>
 
           <div v-if="jobSamples[selectedJob.id]" class="mt-4 p-4 bg-[#0d121f] border border-slate-800/80 rounded-2xl shadow-inner">
             <p class="text-[10px] md:text-[11px] text-yellow-400 font-black tracking-widest mb-3 uppercase italic leading-relaxed">
@@ -482,7 +541,7 @@ const openFanpage = () => {
           :disabled="isLoading"
           class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-[20px] text-xl font-black italic shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all active:scale-95 disabled:opacity-50"
         >
-          {{ isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN GỬI ĐƠN' }}
+          {{ submitStage === 'uploading' ? 'ĐANG TẢI ẢNH LÊN...' : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN GỬI ĐƠN' }}
         </button>
 
       </div>

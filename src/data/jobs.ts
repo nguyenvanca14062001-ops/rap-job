@@ -1,6 +1,39 @@
 // src/data/jobs.ts
 export const jobsData: Record<string, any> = {
-  
+
+  'referral-hub': {
+    title: "GIỚI THIỆU BẠN BÈ",
+    subtitle: "Mời bạn bè đăng ký app nhận thưởng tăng dần",
+    reward: "100.000",
+    rewardText: "100.000 - 150.000 xu",
+    color: "text-orange-500",
+    badge: "VIP 💎",
+    type: "friend_referral",
+    route: "/jobs/referral-lpbank"
+  },
+
+  'daily_threads': {
+    title: "ĐĂNG BÀI THREAD HẰNG NGÀY",
+    subtitle: "Đăng bài mỗi ngày, nhập link nhận xu",
+    reward: "20.000",
+    rewardText: "20.000 - 100.000 xu",
+    color: "text-teal-400",
+    badge: "HẰNG NGÀY",
+    type: "daily_thread_post",
+    route: "/jobs/daily-threads"
+  },
+
+  'zalo_kokomi': {
+    title: "ZALO x KOKOMI",
+    subtitle: "Gửi link giới thiệu cho bạn bè",
+    reward: "35.000",
+    rewardText: "35K - 115K",
+    color: "text-sky-400",
+    badge: "CƠ BẢN",
+    type: "friend_referral_link",
+    route: "/jobs/zalo-kokomi"
+  },
+
   // ==============================================
   // NHÓM JOB CINEMA RẠP PHIM
   // ==============================================
@@ -111,8 +144,11 @@ export const jobsData: Record<string, any> = {
       },
       {
         id: 2,
-        title: "CHỤP LẠI ẢNH TRONG NHÓM ZALO",
-        content: "Tải ảnh vừa chụp lên hệ thống để xác nhận hoàn thành nhiệm vụ và nhận xu."
+        title: "THAM GIA SỰ KIỆN ZALO X KOKOMI",
+        content: "Bạn chọn nút THAM GIA SỰ KIỆN bên dưới và gửi ảnh bằng chứng bên dưới.",
+        downloadLink: "#/jobs/zalo-kokomi",
+        buttonText: "🎯 THAM GIA SỰ KIỆN",
+        images: ["images/anh-kokomi6.jpg"]
       }
     ]
   },
@@ -397,9 +433,10 @@ export const jobsData: Record<string, any> = {
       },
       {
         id: 4,
-        title: "ĐĂNG NHẬP VÀO TÀI KHOẢN VÀ CHỤP ẢNH THEO MẪU",
-        content: "Đăng nhập vào tài khoản ABBANK vừa tạo, chụp ảnh theo mẫu bên dưới rồi gửi vào phần bằng chứng.",
-        img: "images/anh-abbank3.jpg"
+        title: "THỰC HIỆN GIAO DỊCH TỔNG 30K",
+        content: "Sau khi đăng nhập APP ABBANK, bạn cần phát sinh giao dịch 30k theo hướng dẫn dưới đây:\n✅ Chuyển vào tài khoản ABBANK: 30k\n✅ Chuyển ra ngoài 2 lần 10k: 10k (lần 1) + chuyển ra ngoài 10k (lần 2)\n✅ Nạp điện thoại: 10k\n\nLàm đủ các bước trên rồi chụp ảnh màn hình theo ảnh mẫu để gửi bằng chứng.",
+        note: "TỔNG CẦN LÀM: 30K",
+        img: "images/anh-abbank4.jpg"
       }
     ]
   },
@@ -432,9 +469,9 @@ export const jobsData: Record<string, any> = {
       },
       {
         id: 3,
-        title: "CHUYỂN VÀO LPBANK 50K VÀ CHUYỂN RA",
+        title: "CHUYỂN VÀO LPBANK PLUS 50K VÀ CHUYỂN RA",
         content: "CHỤP LẠI ẢNH CHUYỂN TIỀN RA VÀ GỬI BẰNG CHỨNG.",
-        img: "images/anh-lpbank2.jpg"
+        img: "images/anh-lpbank4.jpg"
       },
       {
         id: 4,

@@ -3,9 +3,17 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword } from "firebase/auth"
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, increment, limit, where, getDocs, addDoc, serverTimestamp, Timestamp, getCountFromServer } from "firebase/firestore"
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, increment, limit, where, getDocs, addDoc, serverTimestamp, Timestamp, getCountFromServer, runTransaction } from "firebase/firestore"
 import Swal from 'sweetalert2'
 import { jobsData } from '@/data/jobs'
+import { getReportImages } from '@/utils/reportImages'
+import { normalizePhone } from '@/utils/phone'
+import { LPBANK_REFERRAL_JOB_ID, getLpbankReferralRewardByCount } from '@/utils/referralLpbank'
+import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
+import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
+import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
+
+const dailyThreadReportsCount = ref(0)
 
 const reports = ref<any[]>([])
 const withdrawals = ref<any[]>([])
@@ -151,6 +159,7 @@ const handleSearch = () => {
   isLoading.value = true
   if (unsubReports) unsubReports()
   if (unsubWithdrawals) unsubWithdrawals()
+  if (unsubFriendSearch) { unsubFriendSearch(); unsubFriendSearch = null }
   let matchedUids: string[] = []
   const lowerText = text.toLowerCase()
   for (const uid in usersMap.value) {
@@ -177,7 +186,7 @@ const handleSearch = () => {
       })
     } else { withdrawals.value = [] }
     isLoading.value = false
-    const missingUids = [...new Set(data.map((r: any) => r.uid).filter((uid: string) => uid && !usersMap.value[uid]))]
+    const missingUids = [...new Set(data.flatMap((r: any) => [r.uid, r.repairedUserUid]).filter((uid: string) => uid && !usersMap.value[uid]))]
     if (missingUids.length > 0) {
       const results = await Promise.all(missingUids.map((uid: string) => getDoc(doc(db, "users", uid))))
       const updated = { ...usersMap.value }
@@ -185,6 +194,25 @@ const handleSearch = () => {
       usersMap.value = updated
     }
   }, (error) => { alert("LỖI TÌM KIẾM: " + error.message); isLoading.value = false })
+
+  // Tìm thêm đơn giới thiệu bạn bè LPBank theo SĐT bạn bè được giới thiệu
+  const normalizedPhone = normalizePhone(text)
+  if (normalizedPhone.length >= 6) {
+    unsubFriendSearch = onSnapshot(
+      query(collection(db, "reports"), where("friendPhoneNormalized", "==", normalizedPhone), limit(50)),
+      (snap) => {
+        const extra = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
+        if (!extra.length) return
+        const existingIds = new Set(reports.value.map(r => r.id))
+        const toAdd = extra.filter(r => !existingIds.has(r.id))
+        if (!toAdd.length) return
+        const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()
+        const merged = [...reports.value, ...toAdd]
+        merged.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
+        reports.value = merged
+      }
+    )
+  }
 }
 
 // ============================================================================
@@ -256,6 +284,7 @@ const bulkApproveOtherJobs = async () => {
 let unsubReports: any = null
 let unsubWithdrawals: any = null
 let unsubAdminNotes: any = null
+let unsubFriendSearch: any = null
 
 const loadData = (newStatus: string) => {
   if (searchQuery.value.trim() !== '') return
@@ -263,6 +292,7 @@ const loadData = (newStatus: string) => {
   if (unsubReports) { if (import.meta.env.DEV) console.log('[Firestore] STOP reports/withdrawals/admin_notes listeners'); unsubReports() }
   if (unsubWithdrawals) unsubWithdrawals()
   if (unsubAdminNotes) unsubAdminNotes()
+  if (unsubFriendSearch) { unsubFriendSearch(); unsubFriendSearch = null }
   if (import.meta.env.DEV) console.log(`[Firestore] START admin listeners — reports limit(${newStatus === 'all' ? 200 : 300}), withdrawals limit(${newStatus === 'all' ? 100 : 150}), status: ${newStatus}`)
   const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : (t ? new Date(t).getTime() : Date.now() + 15000)
   let qReports = newStatus === 'all'
@@ -274,7 +304,7 @@ const loadData = (newStatus: string) => {
     let data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
     data.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
     reports.value = data; isLoading.value = false
-    const missingUids = [...new Set(data.map((r: any) => r.uid).filter((uid: string) => uid && !usersMap.value[uid]))]
+    const missingUids = [...new Set(data.flatMap((r: any) => [r.uid, r.repairedUserUid]).filter((uid: string) => uid && !usersMap.value[uid]))]
     if (missingUids.length > 0) {
       const results = await Promise.all(missingUids.map((uid: string) => getDoc(doc(db, "users", uid))))
       const updated = { ...usersMap.value }
@@ -581,9 +611,19 @@ const hasOldPhoto = (arr: any[], createdAt: any) => Array.isArray(arr) && arr.so
 
 const openRejectPopup = (id: string) => { selectedReportId.value = id; rejectReason.value = ''; showRejectPopup.value = true }
 const closeRejectPopup = () => { showRejectPopup.value = false; selectedReportId.value = null; rejectReason.value = '' }
+const selectedReportForReject = computed(() => reports.value.find(r => r.id === selectedReportId.value))
+const lpbankRejectReasons = ['Ảnh không hợp lệ', 'Không thấy mã giới thiệu', 'Không đủ 2 ảnh', 'Thông tin không đúng', 'Bạn nhắn tin Fanpage đi ạ', 'Khác']
 const confirmReject = async () => {
   if (!selectedReportId.value) return
-  try { await updateDoc(doc(db, "reports", selectedReportId.value), { status: 'rejected', note: rejectReason.value || "Thông tin không chính xác" }); closeRejectPopup() }
+  try {
+    await updateDoc(doc(db, "reports", selectedReportId.value), {
+      status: 'rejected',
+      note: rejectReason.value || "Thông tin không chính xác",
+      rejectedAt: serverTimestamp(),
+      rejectedBy: auth.currentUser?.uid || null
+    })
+    closeRejectPopup()
+  }
   catch (e) { alert("LỖI: " + e) }
 }
 
@@ -595,6 +635,86 @@ const confirmMessage = async () => {
   if (!selectedReportId.value) return
   try { await updateDoc(doc(db, "reports", selectedReportId.value), { note: messageText.value || "Vui lòng liên hệ Admin" }); closeMessagePopup() }
   catch (e) { alert("LỖI: " + e) }
+}
+
+// ============================================================================
+// GẮN HỒ SƠ VÍ THỦ CÔNG — dùng khi report.uid không khớp hồ sơ users/{uid} nào
+// (VD: user cài lại app / đổi máy trước khi có hệ thống liên kết). Admin tìm hồ sơ
+// thật theo UID / SĐT / tên đăng nhập / họ tên — KHÔNG BAO GIỜ dùng friendName/friendPhone
+// vì đó là bạn bè được giới thiệu, không phải chủ ví nhận xu.
+// ============================================================================
+const walletLinkModal = ref<{ open: boolean; report: any | null }>({ open: false, report: null })
+const walletLinkQuery = ref('')
+const walletLinkResults = ref<Array<{ uid: string; data: any }>>([])
+const walletLinkLoading = ref(false)
+const walletLinkError = ref('')
+
+const openWalletLinkModal = (rp: any) => {
+  walletLinkModal.value = { open: true, report: rp }
+  walletLinkQuery.value = ''
+  walletLinkResults.value = []
+  walletLinkError.value = ''
+}
+const closeWalletLinkModal = () => { walletLinkModal.value = { open: false, report: null } }
+
+const searchUsersToLink = async () => {
+  const text = walletLinkQuery.value.trim()
+  if (!text) return
+  walletLinkLoading.value = true
+  walletLinkError.value = ''
+  const found: Record<string, { uid: string; data: any }> = {}
+  try {
+    try {
+      const directSnap = await getDoc(doc(db, 'users', text))
+      if (directSnap.exists()) found[directSnap.id] = { uid: directSnap.id, data: directSnap.data() }
+    } catch {}
+
+    const normalized = normalizePhone(text)
+    if (normalized.length >= 6) {
+      try {
+        const snap = await getDocs(query(collection(db, 'users'), where('phone', '==', normalized), limit(5)))
+        snap.docs.forEach(d => { found[d.id] = { uid: d.id, data: d.data() } })
+      } catch {}
+      if (normalized !== text) {
+        try {
+          const snap = await getDocs(query(collection(db, 'users'), where('phone', '==', text), limit(5)))
+          snap.docs.forEach(d => { found[d.id] = { uid: d.id, data: d.data() } })
+        } catch {}
+      }
+    }
+
+    for (const field of ['username', 'fullName']) {
+      try {
+        const snap = await getDocs(query(collection(db, 'users'), where(field, '==', text), limit(5)))
+        snap.docs.forEach(d => { found[d.id] = { uid: d.id, data: d.data() } })
+      } catch {}
+    }
+
+    walletLinkResults.value = Object.values(found)
+    if (walletLinkResults.value.length === 0) walletLinkError.value = 'Không tìm thấy user nào khớp SĐT/tên/UID.'
+  } catch (e) {
+    walletLinkError.value = 'Lỗi tìm kiếm: ' + e
+  } finally {
+    walletLinkLoading.value = false
+  }
+}
+
+const confirmWalletLink = async (candidate: { uid: string; data: any }) => {
+  const rp = walletLinkModal.value.report
+  if (!rp) return
+  const candidateName = candidate.data?.fullName || candidate.data?.username || 'Chưa cập nhật'
+  if (!confirm(`Gắn đơn này (UID gốc: ${rp.uid}) vào hồ sơ ví UID: ${candidate.uid} (${candidateName})?`)) return
+  try {
+    await updateDoc(doc(db, 'reports', rp.id), {
+      repairedUserUid: candidate.uid,
+      originalReportUid: rp.uid,
+      repairedByAdmin: true,
+      repairedAt: serverTimestamp(),
+    })
+    usersMap.value = { ...usersMap.value, [candidate.uid]: candidate.data }
+    alert('🎉 Đã gắn hồ sơ ví thành công!')
+    closeWalletLinkModal()
+  } catch (e) { alert('Lỗi gắn hồ sơ ví: ' + e) }
 }
 
 onMounted(() => {
@@ -630,6 +750,11 @@ const isAppJob = (jobName: string) => {
   return ['app', 'ngân hàng', 'chứng khoán', 'vpbank', 'tpbank', 'mbbank', 'msb', 'cake', 'tnex', 'kafi', 'dnse', 'kis'].some(kw => n.includes(kw))
 }
 
+// Ví thật để cộng/trừ xu — ưu tiên repairedUserUid (gắn thủ công bởi admin khi report.uid
+// không khớp hồ sơ user nào). KHÔNG bao giờ dùng friendPhone/friendName (đó là bạn bè được
+// giới thiệu, không phải chủ ví).
+const effUid = (rp: any) => rp?.repairedUserUid || rp?.uid
+
 const checkReportStatus = (status: string) => {
   if (statusFilter.value === 'all') return true
   if (statusFilter.value === 'approved') return status === 'approved' || status === 'collected'
@@ -654,12 +779,13 @@ const fixUserWallet = async (uid: string) => {
 
 const approveReport = async (report: any) => {
   const reward = Number(String(report.reward || '0').replace(/\D/g, '')) || 0
+  const targetUid = effUid(report)
   try {
-    const cur = Number(String(usersMap.value[report.uid]?.balance || '0').replace(/\D/g, '')) || 0
+    const cur = Number(String(usersMap.value[targetUid]?.balance || '0').replace(/\D/g, '')) || 0
     if (!confirm(`DUYỆT ĐƠN?\n+${reward.toLocaleString()} XU\nVí cũ: ${cur.toLocaleString()} XU\nTổng mới: ${(cur + reward).toLocaleString()} XU`)) return
-    await updateDoc(doc(db, "users", report.uid), { balance: increment(reward) })
+    await updateDoc(doc(db, "users", targetUid), { balance: increment(reward) })
     await updateDoc(doc(db, "reports", report.id), { status: 'approved', approvedAt: serverTimestamp() })
-    usersMap.value = { ...usersMap.value, [report.uid]: { ...usersMap.value[report.uid], balance: cur + reward } }
+    usersMap.value = { ...usersMap.value, [targetUid]: { ...usersMap.value[targetUid], balance: cur + reward } }
     alert("ĐÃ DUYỆT!"); updateLocalStatsOnApprove(report.jobName)
   } catch (e) { alert("LỖI: " + e) }
 }
@@ -668,11 +794,74 @@ const deleteReport = async (id: string) => {
   if (confirm("XÓA VĨNH VIỄN?")) try { await deleteDoc(doc(db, "reports", id)) } catch (e) { alert("LỖI: " + e) }
 }
 
+// ============================================================================
+// DUYỆT ĐƠN GIỚI THIỆU BẠN BÈ LPBANK — thưởng tăng dần theo lần giới thiệu thành công
+// ============================================================================
+const approveLpbankReferral = async (report: any) => {
+  if (!confirm(`DUYỆT ĐƠN GIỚI THIỆU BẠN BÈ LPBANK?\nBạn bè: ${report.friendName || '—'}\nSĐT: ${report.friendPhone || '—'}`)) return
+  const targetUid = effUid(report)
+  try {
+    const reportRef = doc(db, "reports", report.id)
+    const userRef = doc(db, "users", targetUid)
+
+    // Ước tính fallback ngoài transaction — chỉ dùng khi user chưa có counter lpbankReferralPaidCount
+    const preUserSnap = await getDoc(userRef)
+    const preRaw = preUserSnap.exists() ? Number(preUserSnap.data()?.lpbankReferralPaidCount) : NaN
+    let fallbackCount = 0
+    if (!Number.isFinite(preRaw) || preRaw < 0) {
+      const fallbackSnap = await getDocs(query(
+        collection(db, "reports"),
+        where("uid", "==", targetUid),
+        where("jobId", "==", LPBANK_REFERRAL_JOB_ID),
+        where("status", "in", ["approved", "paid", "collected", "completed"])
+      ))
+      fallbackCount = fallbackSnap.size
+    }
+
+    let actualReward = 0
+    let nextNumber = 0
+    await runTransaction(db, async (tx) => {
+      const reportSnap = await tx.get(reportRef)
+      if (!reportSnap.exists() || reportSnap.data().status !== 'pending') {
+        throw new Error('Đơn đã được xử lý hoặc không còn tồn tại.')
+      }
+      const userSnap = await tx.get(userRef)
+      const rawCount = userSnap.exists() ? Number(userSnap.data()?.lpbankReferralPaidCount) : NaN
+      const successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : fallbackCount
+
+      nextNumber = successCountBefore + 1
+      actualReward = getLpbankReferralRewardByCount(successCountBefore)
+
+      tx.set(userRef, {
+        balance: increment(actualReward),
+        lpbankReferralPaidCount: successCountBefore + 1
+      }, { merge: true })
+
+      tx.update(reportRef, {
+        status: 'approved',
+        approvedAt: serverTimestamp(),
+        approvedBy: auth.currentUser?.uid || null,
+        reward: actualReward,
+        actualReward,
+        referralSuccessNumber: nextNumber,
+        referralProgram: 'lpbank'
+      })
+    })
+
+    const curBal = Number(usersMap.value[targetUid]?.balance) || 0
+    usersMap.value = { ...usersMap.value, [targetUid]: { ...usersMap.value[targetUid], balance: curBal + actualReward, lpbankReferralPaidCount: nextNumber } }
+    Swal.fire('ĐÃ DUYỆT!', `Cộng ${actualReward.toLocaleString()} XU — Lần giới thiệu #${nextNumber}`, 'success')
+    updateLocalStatsOnApprove(report.jobName)
+  } catch (e: any) {
+    Swal.fire('LỖI!', e.message || String(e), 'error')
+  }
+}
+
 const approveWithdrawal = async (item: any) => {
   const { isConfirmed } = await Swal.fire({ title: 'XÁC NHẬN ĐÃ CHUYỂN KHOẢN?', text: `${getVndAmount(item).toLocaleString('vi-VN')} VNĐ`, icon: 'warning', showCancelButton: true, confirmButtonText: 'ĐÃ CHUYỂN', confirmButtonColor: '#10b981', cancelButtonText: 'HỦY' })
   if (isConfirmed) {
     try {
-      await updateDoc(doc(db, "withdrawals", item.id), { status: 'approved' })
+      await updateDoc(doc(db, "withdrawals", item.id), { status: 'approved', paidAt: serverTimestamp() })
       await updateDoc(doc(db, "users", item.uid), { hasPendingWithdraw: false })
       Swal.fire('HOÀN TẤT! 🎉', 'Duyệt rút tiền thành công!', 'success')
     } catch (e: any) { Swal.fire('Lỗi!', e.message, 'error') }
@@ -774,6 +963,11 @@ const handleAdminLogout = async () => {
         <div class="relative bg-[#111726] border border-red-500/30 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center">
           <h3 class="text-xl text-red-500 mb-4">TỪ CHỐI BẰNG CHỨNG</h3>
           <p class="text-slate-400 text-xs normal-case not-italic font-bold mb-4">Vui lòng nhập lý do từ chối để khách hàng biết.</p>
+          <div class="flex flex-wrap gap-2 mb-4 justify-center" v-if="selectedReportForReject?.jobId === LPBANK_REFERRAL_JOB_ID">
+            <button v-for="r in lpbankRejectReasons" :key="r"
+                    class="px-3 py-1.5 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
+                    @click="rejectReason = r">{{ r }}</button>
+          </div>
           <textarea class="w-full bg-[#0d121f] text-white border border-slate-700 rounded-xl p-3 mb-6 font-sans normal-case not-italic text-sm outline-none focus:border-red-500" v-model="rejectReason" rows="3" placeholder="Ví dụ: Ảnh mờ, Sai thông tin..."></textarea>
           <div class="flex gap-3 justify-end">
             <button class="px-5 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs" @click="closeRejectPopup">HỦY BỎ</button>
@@ -794,6 +988,41 @@ const handleAdminLogout = async () => {
           <div class="flex gap-3 justify-end">
             <button class="px-5 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs" @click="closeMessagePopup">HỦY BỎ</button>
             <button class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs shadow-lg" @click="confirmMessage">GỬI LỜI NHẮN</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- GẮN HỒ SƠ VÍ THỦ CÔNG -->
+    <Transition name="fade">
+      <div class="fixed inset-0 z-[5000] flex items-center justify-center px-4" v-if="walletLinkModal.open">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeWalletLinkModal"></div>
+        <div class="relative bg-[#111726] border border-blue-500/30 w-full max-w-md p-6 rounded-2xl shadow-2xl">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-blue-400 text-base font-black tracking-widest">GẮN HỒ SƠ VÍ THỦ CÔNG</h3>
+            <button class="text-slate-400 hover:text-white text-lg leading-none" @click="closeWalletLinkModal">✕</button>
+          </div>
+          <p class="text-slate-500 text-[11px] mb-3 font-sans not-italic normal-case">Đơn UID gốc: {{ walletLinkModal.report?.uid }}</p>
+          <div class="flex gap-2 mb-2">
+            <input v-model="walletLinkQuery" @keyup.enter="searchUsersToLink" type="text" placeholder="SĐT / Tên đăng nhập / Họ tên / UID"
+                   class="flex-1 bg-[#0d121f] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500 font-sans not-italic normal-case" />
+            <button @click="searchUsersToLink" :disabled="walletLinkLoading"
+                    class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-black uppercase transition-all active:scale-95">
+              {{ walletLinkLoading ? '...' : 'Tìm' }}
+            </button>
+          </div>
+          <p v-if="walletLinkError" class="text-red-400 text-[11px] mb-2 font-sans not-italic normal-case">{{ walletLinkError }}</p>
+          <div class="max-h-64 overflow-y-auto space-y-2">
+            <div v-for="r in walletLinkResults" :key="r.uid" class="bg-[#0d121f] border border-slate-700 rounded-lg p-3 flex justify-between items-center gap-2">
+              <div class="text-xs min-w-0 font-sans not-italic normal-case">
+                <div class="text-white font-bold truncate">{{ r.data?.fullName || r.data?.username || 'Chưa cập nhật' }}</div>
+                <div class="text-slate-500 text-[10px] truncate">UID: {{ r.uid?.slice(0, 8) }}… · SĐT: {{ r.data?.phone || '—' }} · Ví: {{ (r.data?.balance || 0).toLocaleString('vi-VN') }} XU</div>
+              </div>
+              <button @click="confirmWalletLink(r)"
+                      class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all active:scale-95 shrink-0">
+                Chọn
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -907,6 +1136,9 @@ const handleAdminLogout = async () => {
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'withdrawals' ? 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'withdrawals'">
         RÚT TIỀN ({{ filteredWithdrawals.length }})
       </button>
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'daily_threads' ? 'bg-teal-600 text-white shadow-[0_0_20px_rgba(20,184,166,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'daily_threads'">
+        🧵 THREAD HẰNG NGÀY ({{ dailyThreadReportsCount }})
+      </button>
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'vip_jobs' ? 'bg-yellow-600 text-white shadow-[0_0_20px_rgba(234,179,8,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'vip_jobs'">
         ⚙️ CẤU HÌNH JOB VIP ({{ vipJobs.length }})
       </button>
@@ -916,11 +1148,14 @@ const handleAdminLogout = async () => {
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'support_config' ? 'bg-rose-600 text-white shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'support_config'">
         💬 HỖ TRỢ
       </button>
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'storage_clean' ? 'bg-rose-700 text-white shadow-[0_0_20px_rgba(190,18,60,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'storage_clean'">
+        🧹 DỌN ẢNH STORAGE
+      </button>
     </div>
 
     <!-- BẢNG CHÍNH -->
     <div class="bg-[#111726] border border-slate-800 rounded-[30px] overflow-hidden shadow-2xl">
-      <div class="p-20 text-center text-blue-500 animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config'">ĐANG TẢI...</div>
+      <div class="p-20 text-center text-blue-500 animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean'">ĐANG TẢI...</div>
 
       <!-- APP JOBS & OTHER JOBS -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'app_jobs' || activeTab === 'other_jobs'">
@@ -960,15 +1195,16 @@ const handleAdminLogout = async () => {
                 <div class="mb-2 pb-2 border-b border-slate-700/50 flex justify-between items-start">
                   <div>
                     <span class="text-[9px] text-emerald-400 tracking-widest block mb-0.5">TÀI KHOẢN GỐC:</span>
-                    <div class="text-white text-sm font-black truncate max-w-[200px]">{{ usersMap[rp.uid]?.username || usersMap[rp.uid]?.fullName || 'CHƯA CẬP NHẬT' }}</div>
-                    <div class="text-slate-400 text-[10px] font-sans not-italic">Ví: <span class="text-yellow-400 font-black">{{ usersMap[rp.uid]?.balance }} XU</span></div>
-                    <div class="text-slate-400 text-[10px] font-sans not-italic">Ngày sinh: <span class="text-emerald-400 font-bold">{{ usersMap[rp.uid]?.dateOfBirth || usersMap[rp.uid]?.dob || usersMap[rp.uid]?.ngaysinh || '—' }}</span></div>
+                    <div class="text-white text-sm font-black truncate max-w-[200px]">{{ usersMap[effUid(rp)]?.username || usersMap[effUid(rp)]?.fullName || 'CHƯA CẬP NHẬT' }}</div>
+                    <div class="text-slate-400 text-[10px] font-sans not-italic">Ví: <span class="text-yellow-400 font-black">{{ usersMap[effUid(rp)]?.balance }} XU</span></div>
+                    <div class="text-slate-400 text-[10px] font-sans not-italic">Ngày sinh: <span class="text-emerald-400 font-bold">{{ usersMap[effUid(rp)]?.dateOfBirth || usersMap[effUid(rp)]?.dob || usersMap[effUid(rp)]?.ngaysinh || '—' }}</span></div>
+                    <div class="text-[9px] text-slate-600 font-sans not-italic" v-if="rp.repairedUserUid">UID gốc: {{ rp.uid?.slice(0, 8) }}… · Ví gắn: {{ rp.repairedUserUid?.slice(0, 8) }}…</div>
                   </div>
                   <div class="flex flex-col items-end gap-1">
                     <span class="bg-pink-500/20 text-pink-400 border border-pink-500/30 text-[8px] px-2 py-0.5 rounded" v-if="rp.site === 'freelance'">FREELANCE</span>
                     <span class="bg-violet-500/20 text-violet-400 border border-violet-500/30 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site === 'rapjob'">RAP JOB</span>
                     <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
-                    <button class="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-500 hover:text-white border border-yellow-600/50 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(rp.uid)">SỬA VÍ</button>
+                    <button class="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-500 hover:text-white border border-yellow-600/50 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(effUid(rp))">SỬA VÍ</button>
                   </div>
                 </div>
                 <div>
@@ -979,22 +1215,41 @@ const handleAdminLogout = async () => {
                     Năm sinh: <span class="text-yellow-400 font-bold" v-if="rp.birthYear"><span v-if="rp.birthMonth">T{{ rp.birthMonth }}/</span>{{ rp.birthYear }}</span>
                     <span class="text-slate-600" v-else>Đơn cũ</span>
                   </div>
+                  <div class="mt-1" v-if="!usersMap[effUid(rp)]">
+                    <span class="inline-block bg-red-500/10 text-red-400 border border-red-500/30 text-[9px] px-2 py-0.5 rounded-full font-sans not-italic normal-case font-bold">⚠️ Chưa có hồ sơ ví</span>
+                    <button class="ml-1 bg-blue-600/20 text-blue-400 hover:bg-blue-500 hover:text-white border border-blue-600/50 px-2 py-0.5 rounded-lg text-[9px] font-sans not-italic normal-case font-bold" @click="openWalletLinkModal(rp)">Gắn hồ sơ ví</button>
+                  </div>
                 </div>
               </td>
               <td class="p-6">
                 <div class="text-slate-300 text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
-                <div class="text-emerald-400 text-sm font-black">+{{ String(rp.reward).replace(/\D/g, '') }} XU</div>
+                <template v-if="rp.jobId === LPBANK_REFERRAL_JOB_ID">
+                  <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
+                    <div class="text-[10px] text-amber-400">Bạn bè: <span class="text-white font-bold">{{ rp.friendName || '—' }}</span></div>
+                    <div class="text-[10px] text-amber-400">SĐT bạn bè: <span class="text-white font-bold">{{ rp.friendPhone || '—' }}</span></div>
+                    <div class="text-[10px] text-amber-400">Mã đơn: <span class="text-white font-bold break-all">{{ rp.referralOrderCode || '—' }}</span></div>
+                    <div class="text-[10px] text-amber-400" v-if="rp.status === 'pending'">Lần dự kiến: #{{ (usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0) + 1 }}</div>
+                  </div>
+                  <div class="text-emerald-400 text-sm font-black" v-if="rp.status === 'pending'">
+                    Dự kiến: {{ getLpbankReferralRewardByCount(usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0).toLocaleString() }} XU
+                  </div>
+                  <div class="text-emerald-400 text-sm font-black" v-else>
+                    +{{ (rp.actualReward || rp.reward || 0).toLocaleString() }} XU
+                    <span class="text-slate-500 text-[10px]" v-if="rp.referralSuccessNumber">(Lần #{{ rp.referralSuccessNumber }})</span>
+                  </div>
+                </template>
+                <div class="text-emerald-400 text-sm font-black" v-else>+{{ String(rp.reward).replace(/\D/g, '') }} XU</div>
               </td>
               <td class="p-6">
                 <div class="flex flex-col items-center gap-2">
                   <div class="flex justify-center gap-2 flex-wrap">
                     <a class="bg-blue-600 text-[8px] text-white p-2 rounded" v-if="rp.taskLink" :href="rp.taskLink" target="_blank">LINK BÀI</a>
-                    <div class="cursor-pointer" v-for="(img, idx) in rp.images" :key="idx" @click="openImage(img)">
+                    <div class="cursor-pointer" v-for="(img, idx) in getReportImages(rp)" :key="idx" @click="openImage(img.url)">
                       <div class="w-12 h-12 rounded-lg border border-slate-700 overflow-hidden hover:scale-110 hover:border-blue-500 transition-all">
-                        <img class="w-full h-full object-cover" :src="img" />
+                        <img class="w-full h-full object-cover" :src="img.url" />
                       </div>
                     </div>
-                    <div class="text-slate-700 text-[9px]" v-if="!rp.images?.length && !rp.taskLink">KHÔNG CÓ ẢNH</div>
+                    <div class="text-slate-700 text-[9px]" v-if="!getReportImages(rp).length && !rp.taskLink">KHÔNG CÓ ẢNH</div>
                   </div>
                   <!-- EXIF BADGE -->
                   <template v-if="rp.exif && Array.isArray(rp.exif) && rp.exif.length">
@@ -1030,7 +1285,7 @@ const handleAdminLogout = async () => {
               <td class="p-6 text-right">
                 <div class="flex flex-col md:flex-row justify-end gap-2">
                   <template v-if="rp.status === 'pending'">
-                    <button class="bg-emerald-500 hover:bg-emerald-400 text-white text-[9px] px-4 py-2 rounded-lg" @click="approveReport(rp)">DUYỆT</button>
+                    <button class="bg-emerald-500 hover:bg-emerald-400 text-white text-[9px] px-4 py-2 rounded-lg" @click="rp.jobId === LPBANK_REFERRAL_JOB_ID ? approveLpbankReferral(rp) : approveReport(rp)">DUYỆT</button>
                     <button class="bg-blue-600 hover:bg-blue-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="openMessagePopup(rp.id)">NHẮN</button>
                     <button class="bg-red-600 hover:bg-red-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="openRejectPopup(rp.id)">HỦY</button>
                   </template>
@@ -1050,6 +1305,7 @@ const handleAdminLogout = async () => {
             <tr class="bg-[#0d121f] text-emerald-500 text-[10px] tracking-[2px] border-b border-slate-800">
               <th class="p-6 min-w-[200px]">NGƯỜI RÚT</th>
               <th class="p-6 min-w-[250px]">THÔNG TIN NGÂN HÀNG</th>
+              <th class="p-6 text-center min-w-[110px]">QR NGÂN HÀNG</th>
               <th class="p-6 text-center min-w-[150px]">SỐ TIỀN</th>
               <th class="p-6 text-center min-w-[120px]">TRẠNG THÁI</th>
               <th class="p-6 text-right min-w-[200px]">HÀNH ĐỘNG</th>
@@ -1064,11 +1320,19 @@ const handleAdminLogout = async () => {
                   <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
                 </div>
                 <div class="text-white text-sm font-black">{{ usersMap[wd.uid]?.username || 'CHƯA CẬP NHẬT' }}</div>
+                <div class="text-slate-500 text-[9px] font-sans not-italic">UID: {{ wd.uid?.slice(0, 8) }}…</div>
+                <div class="text-slate-400 text-[10px] font-sans not-italic">Ví hiện tại: <span class="text-yellow-400 font-bold">{{ usersMap[wd.uid]?.balance ?? '—' }} XU</span></div>
                 <div class="text-slate-400 text-[10px] font-sans not-italic">Ngày sinh: <span class="text-emerald-400 font-bold">{{ usersMap[wd.uid]?.dateOfBirth || usersMap[wd.uid]?.dob || '—' }}</span></div>
                 <div class="text-slate-500 text-[10px] font-sans not-italic">{{ formatDate(wd.createdAt) }}</div>
               </td>
               <td class="p-6">
                 <div class="text-slate-300 text-[11px] font-sans not-italic leading-relaxed max-w-[250px] bg-[#0d121f] p-3 rounded-xl border border-slate-700">{{ wd.bankInfo }}</div>
+              </td>
+              <td class="p-6 text-center">
+                <div v-if="wd.qrImage?.url" @click="openImage(wd.qrImage.url)" class="w-16 h-16 mx-auto rounded-lg overflow-hidden border border-slate-700 bg-white cursor-zoom-in hover:border-emerald-500 hover:scale-105 transition-all">
+                  <img :src="wd.qrImage.url" class="w-full h-full object-contain" />
+                </div>
+                <div v-else class="text-slate-700 text-[9px] normal-case font-sans not-italic">Chưa có QR</div>
               </td>
               <td class="p-6 text-center">
                 <div class="text-emerald-400 text-lg font-black">{{ getVndAmount(wd).toLocaleString('vi-VN') }} VNĐ</div>
@@ -1094,6 +1358,13 @@ const handleAdminLogout = async () => {
         <div class="p-20 text-center text-slate-700 text-xs" v-if="!filteredWithdrawals.length">KHÔNG CÓ DỮ LIỆU.</div>
       </div>
 
+      <!-- THREAD HẰNG NGÀY — collection riêng daily_thread_reports, tách biệt hoàn toàn khỏi reports -->
+      <div v-else-if="activeTab === 'daily_threads'">
+        <DailyThreadsGuideConfigTab />
+        <DailyThreadReportsTab :users-map="usersMap" :search-query="searchQuery" @count-change="dailyThreadReportsCount = $event" />
+      </div>
+
+      <StorageCleanupTab v-else-if="activeTab === 'storage_clean'" />
 
       <!-- VIP JOBS TAB -->
       <div v-else-if="activeTab === 'vip_jobs'" class="p-6">

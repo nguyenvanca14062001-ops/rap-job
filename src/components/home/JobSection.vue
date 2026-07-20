@@ -7,13 +7,16 @@ const props = defineProps<{
   username: string;
   isLoggedIn: boolean;
   jobs?: Record<string, any>;
+  referralLpbankUnlocked?: boolean;
 }>();
 
 const jobList = computed(() => props.jobs ?? jobsData);
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const VIP_JOBS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus'];
+const VIP_JOBS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus'];
+
+const isReferralLocked = (id: string) => id === 'referral-hub' && !props.referralLpbankUnlocked;
 
 // Lọc hidden + sắp xếp theo order từ Firestore (nếu có); fallback về vị trí gốc trong VIP_JOBS
 const sortedVipJobIds = computed(() =>
@@ -47,6 +50,7 @@ const getJobIcon = (id: string) => {
     'checkin-cinema': { t: '📸', c: 'text-white' },
     'survey-cinema':  { t: '📋', c: 'text-white' },
     'post-threads': { t: '🧵', c: 'text-white' },
+    'daily_threads': { t: '🧵', c: 'text-white' },
     'join-zalo': { t: 'ZALO', c: 'text-white' },
     'app-chung-khoan': { t: '📈', c: 'text-white' },
     'app-chung-khoan-2': { t: '📈', c: 'text-white' },
@@ -55,6 +59,8 @@ const getJobIcon = (id: string) => {
     'vpbank': { t: 'VPB', c: 'text-white' },
     'app-chung-khoan-4': { t: '📈', c: 'text-white' },
     'abbank': { t: 'ABB', c: 'text-white' },
+    'referral-hub': { t: '👥', c: 'text-white' },
+    'zalo_kokomi': { t: 'ZALO', c: 'text-white' },
   };
   const res = config[id] || { t: 'JOB', c: 'text-slate-400' };
   return { type: 'text', content: res.t, colorClass: res.c };
@@ -67,6 +73,7 @@ const getSocialProof = (id: string) => {
     'checkin-cinema':    '654',
     'survey-cinema':     '2.103',
     'post-threads':      '812',
+    'daily_threads':     '1.126',
     'join-zalo':         '1.432',
     'app-chung-khoan':   '312',
     'app-chung-khoan-2': '287',
@@ -75,6 +82,8 @@ const getSocialProof = (id: string) => {
     'vpbank':            '176',
     'app-chung-khoan-4': '163',
     'abbank':            '204',
+    'referral-hub':      '89',
+    'zalo_kokomi':       '347',
   };
   return seeds[id] || '500';
 };
@@ -92,6 +101,7 @@ const getShortDesc = (id: string) => {
     'checkin-cinema': 'Check-in tại rạp, đăng Facebook/Instagram',
     'survey-cinema':  'Trả lời 5 câu hỏi, xu vào ví ngay lập tức',
     'post-threads': 'Đăng bài tuyển CTV lên Threads nhận thưởng',
+    'daily_threads': 'Đăng bài mỗi ngày, nhập link nhận xu',
     'join-zalo': 'Vào nhóm cộng đồng nhận thông báo',
     'app-chung-khoan': 'Đăng ký tài khoản Kafi X',
     'app-chung-khoan-2': 'Đăng ký tài khoản DNSE',
@@ -99,7 +109,9 @@ const getShortDesc = (id: string) => {
     'vpbank': 'Mở tài khoản số đẹp VPBank',
     'app-chung-khoan-4': 'Đăng ký tài khoản chứng khoán',
     'msb-bank': 'Nhận quà tặng khi mở thẻ MSB',
-    'abbank': 'Mở tài khoản ABBANK'
+    'abbank': 'Mở tài khoản ABBANK',
+    'referral-hub': 'Mời bạn bè đăng ký app nhận thưởng tăng dần',
+    'zalo_kokomi': 'Gửi link giới thiệu cho bạn bè'
   };
   return desc[id] || 'Làm nhiệm vụ ngay';
 }
@@ -311,6 +323,8 @@ function getAgeBadgeClass(age: number): string {
                   : id === 'survey-cinema'  ? 'bg-gradient-to-br from-[#281555] to-[#100820] border-violet-600/80 shadow-[0_0_30px_rgba(124,58,237,0.45)]'
                   : id === 'google-map'   ? 'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/80 shadow-[0_0_30px_rgba(217,70,239,0.45)]'
                   : id === 'join-zalo'    ? 'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/80 shadow-[0_0_30px_rgba(99,102,241,0.45)]'
+                  : id === 'daily_threads'? 'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/80 shadow-[0_0_30px_rgba(20,184,166,0.45)]'
+                  : id === 'zalo_kokomi' ? 'bg-gradient-to-br from-[#0a2540] to-[#051224] border-sky-500/80 shadow-[0_0_30px_rgba(14,165,233,0.45)]'
                   : 'bg-[#120b0a] border-slate-800'
                 ]">
                 <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[26px]"></div>
@@ -323,6 +337,8 @@ function getAgeBadgeClass(age: number): string {
                        id === 'checkin-cinema'? 'bg-rose-600 text-white' :
                        id === 'survey-cinema' ? 'bg-violet-700 text-white' :
                        id === 'google-map'    ? 'bg-fuchsia-600 text-white' :
+                       id === 'daily_threads' ? 'bg-teal-600 text-white' :
+                       id === 'zalo_kokomi'   ? 'bg-sky-600 text-white' :
                        'bg-indigo-600 text-white'
                      ]">
                   {{ j.badge || 'CƠ BẢN' }}
@@ -337,6 +353,8 @@ function getAgeBadgeClass(age: number): string {
                          id === 'survey-cinema' ? 'bg-violet-500/20 text-violet-400' :
                          id === 'google-map'    ? 'bg-fuchsia-500/20 text-fuchsia-400' :
                          id === 'join-zalo'     ? 'bg-indigo-500/20 text-indigo-400' :
+                         id === 'daily_threads' ? 'bg-teal-500/20 text-teal-400' :
+                         id === 'zalo_kokomi'   ? 'bg-sky-500/20 text-sky-400' :
                          'bg-[#150f0d]'
                        ]">
                     <template v-if="getJobIcon(id as string).content === '📈'">
@@ -358,7 +376,9 @@ function getAgeBadgeClass(age: number): string {
                       'text-rose-400':   id === 'checkin-cinema',
                       'text-violet-400': id === 'survey-cinema',
                       'text-fuchsia-400': id === 'google-map',
-                      'text-indigo-400': id === 'join-zalo'
+                      'text-indigo-400': id === 'join-zalo',
+                      'text-teal-400': id === 'daily_threads',
+                      'text-sky-400': id === 'zalo_kokomi'
                     }">
                   {{ j.title }}
                 </h4>
@@ -369,7 +389,12 @@ function getAgeBadgeClass(age: number): string {
 
                 <div class="flex flex-col mt-auto relative z-10">
                   <p class="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Thưởng ngay:</p>
-                  <div class="flex items-center gap-1.5">
+                  <div v-if="j.rewardText" class="flex items-center gap-1.5">
+                    <p class="font-black text-lg md:text-2xl tracking-tighter italic leading-none" :class="j.color">
+                      {{ j.rewardText }}
+                    </p>
+                  </div>
+                  <div v-else class="flex items-center gap-1.5">
                     <p class="font-black text-xl md:text-3xl tracking-tighter italic leading-none" :class="j.color">
                       {{ formatReward(j.reward).toLocaleString() }}
                     </p>
@@ -396,6 +421,8 @@ function getAgeBadgeClass(age: number): string {
                     id === 'survey-cinema' ? 'bg-gradient-to-r from-violet-700 to-purple-600 text-white' :
                     id === 'google-map'    ? 'bg-gradient-to-r from-fuchsia-600 to-pink-500 text-white' :
                     id === 'join-zalo'     ? 'bg-gradient-to-r from-indigo-600 to-blue-500 text-white' :
+                    id === 'daily_threads' ? 'bg-gradient-to-r from-teal-600 to-cyan-500 text-white' :
+                    id === 'zalo_kokomi'   ? 'bg-gradient-to-r from-sky-600 to-blue-500 text-white' :
                     'bg-[#1a0f0d] text-white'
                   ]">
                   BẮT ĐẦU ⚡
@@ -424,11 +451,20 @@ function getAgeBadgeClass(age: number): string {
               class="relative p-5 md:p-7 rounded-[28px] border-[2px] transition-all duration-500 flex flex-col group overflow-hidden"
               :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout)
                 ? 'border-slate-600/50 bg-gradient-to-br from-[#1a1a1a] to-[#111111] cursor-not-allowed opacity-70'
-                : 'vip-card border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] cursor-pointer active:scale-95'">
+                : isReferralLocked(id as string)
+                  ? 'border-slate-600/50 bg-gradient-to-br from-[#1a1a1a] to-[#111111] cursor-pointer opacity-80'
+                  : 'vip-card border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] cursor-pointer active:scale-95'">
 
               <!-- Glow nền VIP -->
               <div class="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-yellow-300/5 pointer-events-none rounded-[26px]"></div>
               <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/10 rounded-full blur-[60px] pointer-events-none"></div>
+
+              <!-- Overlay khóa: chưa hoàn thành APP LPBANK PLUS -->
+              <div v-if="isReferralLocked(id as string)" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/65 backdrop-blur-[1px] rounded-[26px] pointer-events-none px-4 text-center gap-1">
+                <span class="text-3xl">🔒</span>
+                <span class="text-white text-[11px] font-black uppercase tracking-widest">ĐANG KHÓA</span>
+                <span class="text-slate-300 text-[9px] font-bold normal-case leading-tight">Cần hoàn thành APP LPBANK PLUS trước</span>
+              </div>
 
               <!-- Watermark số thứ tự mờ -->
               <div class="absolute bottom-3 right-4 text-[60px] md:text-[80px] font-black text-amber-400/5 pointer-events-none select-none leading-none">
@@ -470,7 +506,12 @@ function getAgeBadgeClass(age: number): string {
 
               <div class="flex flex-col mt-auto relative z-10">
                 <p class="text-[9px] md:text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-1">Thưởng ngay:</p>
-                <div class="flex items-center gap-1.5">
+                <div v-if="jobList[id as string]?.rewardText" class="flex items-center gap-1.5">
+                  <p class="font-black text-lg md:text-2xl tracking-tighter italic leading-none text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">
+                    {{ jobList[id as string]?.rewardText }}
+                  </p>
+                </div>
+                <div v-else class="flex items-center gap-1.5">
                   <p class="font-black text-2xl md:text-4xl tracking-tighter italic leading-none text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">
                     {{ formatReward(jobList[id as string]?.reward).toLocaleString() }}
                   </p>
@@ -485,17 +526,19 @@ function getAgeBadgeClass(age: number): string {
               </div>
 
               <div class="flex items-center gap-1.5 text-[9px] mt-3 mb-2"
-                   :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'text-red-400/80' : 'text-amber-500/70'">
+                   :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'text-red-400/80' : isReferralLocked(id as string) ? 'text-slate-400' : 'text-amber-500/70'">
                 <span class="w-1.5 h-1.5 rounded-full"
-                      :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'bg-red-500' : 'bg-amber-500 animate-pulse'"></span>
-                <span>{{ jobList[id as string]?.soldout ? 'HẾT SLOT — Đang nạp thêm' : jobList[id as string]?.paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
+                      :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'bg-red-500' : isReferralLocked(id as string) ? 'bg-slate-500' : 'bg-amber-500 animate-pulse'"></span>
+                <span>{{ jobList[id as string]?.soldout ? 'HẾT SLOT — Đang nạp thêm' : jobList[id as string]?.paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : isReferralLocked(id as string) ? 'Cần hoàn thành APP LPBANK PLUS trước' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
               </div>
               <button @click.stop="handleJobClick(id as string)"
                 class="w-full py-3.5 md:py-4 rounded-xl text-[11px] md:text-[13px] font-black italic uppercase transition-all relative z-10 border"
                 :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout)
                   ? 'bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed'
-                  : 'vip-btn border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95'">
-                {{ jobList[id as string]?.soldout ? 'HẾT SLOT ❌' : jobList[id as string]?.paused ? 'TẠM DỪNG ⏸' : 'NHẬN NGAY 💰' }}
+                  : isReferralLocked(id as string)
+                    ? 'bg-slate-700 text-slate-300 border-slate-600'
+                    : 'vip-btn border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95'">
+                {{ jobList[id as string]?.soldout ? 'HẾT SLOT ❌' : jobList[id as string]?.paused ? 'TẠM DỪNG ⏸' : isReferralLocked(id as string) ? 'ĐANG KHÓA 🔒' : 'NHẬN NGAY 💰' }}
               </button>
             </div>
           </template>

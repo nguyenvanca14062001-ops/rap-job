@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { auth, db } from '@/firebase'
-import { collection, addDoc, doc, updateDoc } from "firebase/firestore"
+import { auth, db, storage } from '@/firebase'
+import { collection, doc, runTransaction, serverTimestamp } from "firebase/firestore"
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from 'sweetalert2'
+import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
 
 const router = useRouter()
 
@@ -11,11 +13,24 @@ const props = defineProps<{
   userBalance: number
   myReports: any[]
   myWithdrawals: any[]
+  username?: string
+  userFullName?: string
+  userPhone?: string
 }>()
 
 const amount = ref<number | null>(null)
-const bankInfo = ref('')
 const isLoading = ref(false)
+
+const qrPreview = ref<string | null>(null)
+const qrBlob = ref<Blob | null>(null)
+const qrError = ref('')
+const qrFileInput = ref<HTMLInputElement | null>(null)
+
+const selectedImage = ref<string | null>(null)
+const openImage = (img: string) => { selectedImage.value = img }
+const closeImage = () => { selectedImage.value = null }
+
+const historySectionRef = ref<HTMLElement | null>(null)
 
 const hasPendingWithdraw = computed(() => props.myWithdrawals.some(w => w.status === 'pending'))
 const approvedJobsCount = computed(() =>
@@ -27,58 +42,96 @@ const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuố
 const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
 
 const requiredJobs = computed(() => 9)
+const tasksUnlocked = computed(() => approvedJobsCount.value >= requiredJobs.value)
+const taskError = ref('')
 
 const formatNumber = (num: number) => {
   return Math.floor(num).toLocaleString('vi-VN')
 }
 
 const selectAmount = (val: number) => {
-  amount.value = val
-}
-
-const fakeWithdrawals = ref<any[]>([])
-let intervalId: any = null
-
-const hoHo = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi']
-const tenTen = ['Thành', 'Hoa', 'Linh', 'Tùng', 'Hùng', 'Oanh', 'Trang', 'Nam', 'Việt', 'Đức']
-
-const generateFakeWithdraw = () => {
-  const ho = hoHo[Math.floor(Math.random() * hoHo.length)]
-  const ten = tenTen[Math.floor(Math.random() * tenTen.length)]
-  const name = `${ho} *** ${ten}`
-  const mocs = [250000, 500000, 650000, 800000, 1000000]
-  const randomAmount = mocs[Math.floor(Math.random() * mocs.length)]
-  const times = ['Vừa xong', '1 phút trước', '3 phút trước', '5 phút trước', '10 phút trước']
-  const randomTime = times[Math.floor(Math.random() * times.length)]
-  return { id: Date.now() + Math.random(), name, amount: randomAmount, time: randomTime }
-}
-
-const initFakeList = () => {
-  for (let i = 0; i < 4; i++) {
-    fakeWithdrawals.value.push(generateFakeWithdraw())
+  if (!tasksUnlocked.value) {
+    taskError.value = 'Bạn cần hoàn thành đủ 9 nhiệm vụ trước khi rút tiền.'
+    return
   }
-}
-
-const startFakeLoop = () => {
-  intervalId = setInterval(() => {
-    fakeWithdrawals.value.unshift(generateFakeWithdraw())
-    if (fakeWithdrawals.value.length > 4) {
-      fakeWithdrawals.value.pop()
-    }
-  }, 4000)
+  taskError.value = ''
+  amount.value = val
 }
 
 onMounted(() => {
   if (!auth.currentUser) { router.push('/login'); return }
-  initFakeList()
-  startFakeLoop()
 })
 
-onUnmounted(() => {
-  if (intervalId) clearInterval(intervalId)
-})
+const formatDate = (ts: any) => {
+  if (!ts) return ''
+  const d = ts.toDate ? ts.toDate() : new Date(ts)
+  return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')} - ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
+}
+
+const statusLabel = (status: string) => {
+  if (status === 'approved' || status === 'paid') return 'Đã thanh toán'
+  if (status === 'rejected') return 'Bị từ chối'
+  return 'Đang chờ xử lý'
+}
+
+const statusBadgeClass = (status: string) => {
+  if (status === 'approved' || status === 'paid') return 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+  if (status === 'rejected') return 'bg-red-500/10 text-red-500 border border-red-500/20'
+  return 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
+}
+
+const scrollToHistory = () => {
+  nextTick(() => historySectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+}
+
+const triggerQrFileInput = () => { qrFileInput.value?.click() }
+
+const handleQrFileChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    qrError.value = 'Vui lòng chọn ảnh QR ngân hàng hợp lệ.'
+    target.value = ''
+    return
+  }
+
+  try {
+    const compressed = await compressImage(file)
+    console.log("Image compressed:", {
+      originalSizeKB: Math.round(file.size / 1024),
+      compressedSizeKB: Math.round(compressed.blob.size / 1024),
+      type: compressed.blob.type
+    })
+    if (compressed.blob.size >= MAX_UPLOAD_BYTES) {
+      qrError.value = 'Ảnh QR quá lớn, vui lòng chọn ảnh khác.'
+      target.value = ''
+      return
+    }
+    qrPreview.value = compressed.dataUrl
+    qrBlob.value = compressed.blob
+    qrError.value = ''
+  } catch (err: any) {
+    qrError.value = err?.message || 'Vui lòng chọn ảnh QR ngân hàng hợp lệ.'
+  }
+  target.value = ''
+}
+
+const removeQr = () => {
+  qrPreview.value = null
+  qrBlob.value = null
+  qrError.value = ''
+  if (qrFileInput.value) qrFileInput.value.value = ''
+}
 
 const triggerWithdraw = () => {
+  if (!tasksUnlocked.value) {
+    taskError.value = 'Bạn cần hoàn thành đủ 9 nhiệm vụ trước khi rút tiền.'
+    return
+  }
+  taskError.value = ''
+
   if (hasPendingWithdraw.value) {
     Swal.fire({
       title: 'LỆNH ĐANG CHỜ XỬ LÝ!',
@@ -93,31 +146,26 @@ const triggerWithdraw = () => {
   if (!amount.value) {
     Swal.fire({
       title: 'CHƯA CHỌN SỐ TIỀN!',
-      text: 'Vui lòng chọn số XU muốn rút!',
+      text: 'Vui lòng chọn số xu muốn rút.',
       icon: 'warning',
       confirmButtonColor: '#eab308',
       customClass: { popup: 'rounded-[30px]' }
     })
     return
   }
+
+  if (!qrBlob.value) {
+    qrError.value = 'Vui lòng tải ảnh QR ngân hàng.'
+    return
+  }
+  qrError.value = ''
 
   if (amount.value > props.userBalance) {
     Swal.fire({
       title: 'SỐ DƯ KHÔNG ĐỦ!',
-      text: 'Số dư ví XU của bạn không đủ để thực hiện giao dịch này!',
+      text: 'Số dư của bạn không đủ để rút mốc này.',
       icon: 'error',
       confirmButtonColor: '#ef4444',
-      customClass: { popup: 'rounded-[30px]' }
-    })
-    return
-  }
-
-  if (!bankInfo.value.trim() || bankInfo.value.length < 10) {
-    Swal.fire({
-      title: 'THIẾU THÔNG TIN NHẬN TIỀN!',
-      text: 'Vui lòng nhập chính xác thông tin nhận tiền (Tên Ngân hàng - STK - Tên Chủ Thẻ)!',
-      icon: 'warning',
-      confirmButtonColor: '#eab308',
       customClass: { popup: 'rounded-[30px]' }
     })
     return
@@ -131,60 +179,129 @@ const handleConfirmWithdraw = async () => {
   const user = auth.currentUser
   if (isLoading.value || !user || !amount.value) return
 
+  if (!qrBlob.value) {
+    qrError.value = 'Vui lòng tải ảnh QR ngân hàng.'
+    showConfirmModal.value = false
+    return
+  }
+
+  // Chặn cứng lần cuối trước khi tạo withdrawal, phòng trường hợp state bị lệch với UI
   if (approvedJobsCount.value < requiredJobs.value) {
-    Swal.fire({
-      title: 'CHƯA ĐỦ ĐIỀU KIỆN!',
-      text: `Bạn cần hoàn thành ít nhất ${requiredJobs.value} nhiệm vụ để rút mốc này!`,
-      icon: 'error',
-      confirmButtonColor: '#ef4444',
-      customClass: { popup: 'rounded-[30px]' }
-    })
+    taskError.value = 'Bạn cần hoàn thành đủ 9 nhiệm vụ trước khi rút tiền.'
+    showConfirmModal.value = false
     return
   }
 
   isLoading.value = true
 
+  // Tạo trước withdrawalId để dùng làm path Storage
+  const withdrawalRef = doc(collection(db, "withdrawals"))
+  const withdrawalId = withdrawalRef.id
+  const withdrawAmount = amount.value
+
+  let qrImage: { url: string; path: string }
   try {
-    const withdrawalRef = collection(db, "withdrawals")
-    const realMoneyVND = Math.floor(amount.value / 12)
-
-    await addDoc(withdrawalRef, {
-      uid: user.uid,
-      amount: amount.value,
-      realMoney: realMoneyVND,
-      bankInfo: bankInfo.value,
-      status: 'pending',
-      createdAt: new Date()
+    const path = `withdrawal_qr/${user.uid}/${withdrawalId}/qr.jpg`
+    console.log("Withdrawal QR upload debug:", {
+      authUid: auth.currentUser?.uid,
+      path,
+      fileSize: qrBlob.value.size,
+      fileType: qrBlob.value.type
     })
-
-    const userRef = doc(db, "users", user.uid)
-    await updateDoc(userRef, {
-      balance: props.userBalance - amount.value,
-      hasPendingWithdraw: true
-    })
-
+    const imgRef = storageRef(storage, path)
+    await uploadBytes(imgRef, qrBlob.value, { contentType: 'image/jpeg' })
+    const url = await getDownloadURL(imgRef)
+    qrImage = { url, path: imgRef.fullPath }
+  } catch (uploadError) {
+    console.error("Lỗi upload QR: ", uploadError)
     Swal.fire({
-      title: 'GỬI ĐƠN THÀNH CÔNG!',
-      text: 'Lệnh rút tiền của bạn đã được gửi. Vui lòng chờ hệ thống kiểm tra và giải ngân.',
-      icon: 'success',
-      confirmButtonColor: '#2563eb',
-      customClass: { popup: 'rounded-[30px]' }
-    }).then(() => {
-      router.push('/')
-    })
-  } catch (error) {
-    console.error("Lỗi khi rút tiền: ", error)
-    Swal.fire({
-      title: 'LỖI HỆ THỐNG!',
-      text: 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.',
+      title: 'LỖI TẢI ẢNH QR!',
+      text: 'Không thể tải ảnh QR lên, vui lòng thử lại.',
       icon: 'error',
       confirmButtonColor: '#ef4444',
       customClass: { popup: 'rounded-[30px]' }
     })
-  } finally {
+    isLoading.value = false
+    return
+  }
+  console.log("Uploaded withdrawal QR:", qrImage)
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const userRef = doc(db, "users", user.uid)
+      const userSnap = await transaction.get(userRef)
+      const currentBalance = Number(userSnap.data()?.balance || 0)
+
+      if (currentBalance < withdrawAmount) {
+        throw new Error('INSUFFICIENT_BALANCE')
+      }
+
+      transaction.update(userRef, {
+        balance: currentBalance - withdrawAmount,
+        hasPendingWithdraw: true
+      })
+
+      transaction.set(withdrawalRef, {
+        uid: user.uid,
+        username: props.username || '',
+        fullName: props.userFullName || '',
+        phoneRef: props.userPhone || '',
+        amount: withdrawAmount,
+        realMoney: Math.floor(withdrawAmount / 12),
+        bankInfo: '',
+        status: 'pending',
+        qrImage,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        note: '',
+        rejectReason: '',
+        paidAt: null,
+        paidBy: null
+      })
+    })
+  } catch (txError: any) {
+    if (txError?.message === 'INSUFFICIENT_BALANCE') {
+      Swal.fire({
+        title: 'SỐ DƯ KHÔNG ĐỦ!',
+        text: 'Số dư của bạn không đủ để rút mốc này.',
+        icon: 'error',
+        confirmButtonColor: '#ef4444',
+        customClass: { popup: 'rounded-[30px]' }
+      })
+    } else {
+      console.error("Lỗi khi rút tiền: ", txError)
+      Swal.fire({
+        title: 'LỖI HỆ THỐNG!',
+        text: 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.',
+        icon: 'error',
+        confirmButtonColor: '#ef4444',
+        customClass: { popup: 'rounded-[30px]' }
+      })
+    }
     isLoading.value = false
     showConfirmModal.value = false
+    return
   }
+
+  amount.value = null
+  qrPreview.value = null
+  qrBlob.value = null
+  isLoading.value = false
+  showConfirmModal.value = false
+
+  Swal.fire({
+    title: '✅ Đã gửi yêu cầu rút tiền',
+    html: `Yêu cầu rút <b>${formatNumber(withdrawAmount)} XU</b> của bạn đã được gửi.<br/>Vui lòng chờ admin kiểm tra và chuyển khoản.`,
+    icon: 'success',
+    showCancelButton: true,
+    confirmButtonText: 'XEM LỊCH SỬ RÚT TIỀN',
+    cancelButtonText: 'ĐÓNG',
+    confirmButtonColor: '#2563eb',
+    cancelButtonColor: '#334155',
+    customClass: { popup: 'rounded-[30px]' }
+  }).then((result) => {
+    if (result.isConfirmed) scrollToHistory()
+  })
 }
 </script>
 
@@ -222,6 +339,22 @@ const handleConfirmWithdraw = async () => {
           <p class="text-yellow-500 mt-2 text-xs tracking-widest">SỐ DƯ KHẢ DỤNG: {{ formatNumber(userBalance) }} XU</p>
         </div>
 
+        <div v-if="!tasksUnlocked" class="mb-6 relative z-10 bg-[#090e17] border border-amber-500/20 rounded-2xl p-5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-lg">🔒</span>
+            <p class="text-amber-400 text-[11px] tracking-wide normal-case leading-relaxed font-bold">
+              Bạn cần hoàn thành tối thiểu {{ requiredJobs }} nhiệm vụ để mở khóa chức năng rút tiền.
+            </p>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800/80 rounded-full overflow-hidden mb-2 border border-slate-700/30">
+            <div class="h-full bg-gradient-to-r from-amber-600 to-yellow-400 rounded-full transition-all duration-500"
+                 :style="{ width: `${Math.min((approvedJobsCount / requiredJobs) * 100, 100)}%` }"></div>
+          </div>
+          <p class="text-slate-400 text-[10px] normal-case font-sans not-italic font-bold">
+            Đã hoàn thành: {{ approvedJobsCount }}/{{ requiredJobs }} nhiệm vụ. Hãy hoàn thành thêm {{ Math.max(requiredJobs - approvedJobsCount, 0) }} nhiệm vụ nữa để rút tiền.
+          </p>
+        </div>
+
         <div class="space-y-6 relative z-10">
           <div>
             <label class="block text-blue-500 text-[10px] tracking-widest mb-3">CHỌN SỐ XU MUỐN RÚT</label>
@@ -230,79 +363,116 @@ const handleConfirmWithdraw = async () => {
                 <div v-if="opt === 500000" class="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 text-[7px] px-2 py-0.5 bg-emerald-500 text-white rounded-full font-black uppercase tracking-wider whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.4)]">
                   PHỔ BIẾN
                 </div>
+                <span v-if="!tasksUnlocked" class="absolute top-1.5 right-2 z-10 text-xs">🔒</span>
                 <button
                   @click="selectAmount(opt)"
                   :class="[
                     'w-full py-3 rounded-[14px] border-2 transition-all text-xs md:text-sm active:scale-95',
-                    amount === opt
-                      ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500 text-yellow-400 shadow-[0_0_25px_rgba(234,179,8,0.35)] ring-1 ring-yellow-500/30'
-                      : 'bg-[#0d121f] border-slate-800 text-slate-500 hover:border-slate-600'
+                    !tasksUnlocked
+                      ? 'bg-[#0d121f]/50 border-slate-800/60 text-slate-600 opacity-50 grayscale cursor-not-allowed active:scale-100'
+                      : amount === opt
+                        ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500 text-yellow-400 shadow-[0_0_25px_rgba(234,179,8,0.35)] ring-1 ring-yellow-500/30'
+                        : 'bg-[#0d121f] border-slate-800 text-slate-500 hover:border-slate-600'
                   ]"
                 >
                   {{ formatNumber(opt) }} XU
                 </button>
               </div>
             </div>
+            <p v-if="taskError" class="text-rose-400 text-[11px] font-sans not-italic font-bold normal-case leading-relaxed mt-2">
+              ⚠️ {{ taskError }}
+            </p>
           </div>
 
           <div>
-            <label class="block text-blue-500 text-[10px] tracking-widest mb-3">THÔNG TIN NHẬN TIỀN (VNĐ)</label>
-            <textarea
-              v-model="bankInfo"
-              rows="3"
-              placeholder="VD: MB BANK - 123456789 - NGUYEN VAN A"
-              class="w-full bg-[#0d121f] border border-slate-800 rounded-2xl px-5 py-4 text-white placeholder-slate-600 focus:outline-none focus:border-yellow-500 transition-all resize-none normal-case font-medium not-italic text-sm"
-            ></textarea>
+            <label class="block text-blue-500 text-[10px] tracking-widest mb-2">TẢI ẢNH QR NGÂN HÀNG</label>
+            <p class="text-slate-500 text-[10px] normal-case font-medium not-italic leading-relaxed mb-3">
+              Vui lòng tải ảnh mã QR ngân hàng chính chủ để nhận tiền. Ảnh QR cần rõ số tài khoản, ngân hàng và tên người nhận.
+            </p>
+
+            <div
+              v-if="!qrPreview"
+              @click="triggerQrFileInput"
+              class="w-full border-2 border-dashed border-slate-700/60 hover:border-yellow-500/50 bg-[#0d121f]/30 rounded-[20px] py-10 px-6 flex flex-col items-center justify-center cursor-pointer transition-all group"
+            >
+              <div class="text-3xl group-hover:scale-110 transition-transform mb-2">🔳</div>
+              <p class="text-[11px] tracking-widest uppercase text-slate-400 group-hover:text-white font-black">CHỌN ẢNH QR</p>
+            </div>
+
+            <div v-else class="relative w-40 mx-auto">
+              <div @click="openImage(qrPreview)" class="rounded-2xl overflow-hidden border-2 border-yellow-500/50 aspect-square bg-white cursor-zoom-in">
+                <img :src="qrPreview" class="w-full h-full object-contain" />
+              </div>
+              <button @click.stop="removeQr" class="absolute -top-2 -right-2 w-7 h-7 bg-red-500/90 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[11px] font-sans not-italic shadow-lg">✕</button>
+            </div>
+
+            <input type="file" ref="qrFileInput" @change="handleQrFileChange" accept="image/jpeg, image/png, image/jpg, image/webp" class="hidden" />
+
+            <p v-if="qrError" class="text-rose-400 text-[11px] font-sans not-italic font-bold normal-case leading-relaxed mt-2">
+              ⚠️ {{ qrError }}
+            </p>
           </div>
 
           <button
             @click="triggerWithdraw"
-            :disabled="isLoading || hasPendingWithdraw"
+            :disabled="isLoading || hasPendingWithdraw || !tasksUnlocked"
             :class="[
               'w-full py-4 rounded-2xl text-[13px] tracking-widest transition-all mt-2',
-              hasPendingWithdraw
+              hasPendingWithdraw || !tasksUnlocked
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 : 'bg-yellow-500 hover:bg-yellow-400 text-[#090e17] active:scale-95 confirm-glow'
             ]"
           >
-            {{ isLoading ? 'ĐANG XỬ LÝ...' : (hasPendingWithdraw ? 'ĐANG CÓ LỆNH CHỜ DUYỆT' : 'XÁC NHẬN RÚT TIỀN') }}
+            {{ isLoading ? 'ĐANG GỬI YÊU CẦU...' : (hasPendingWithdraw ? 'ĐANG CÓ LỆNH CHỜ DUYỆT' : (!tasksUnlocked ? 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN' : 'XÁC NHẬN RÚT TIỀN')) }}
           </button>
         </div>
       </div>
 
-      <div class="bg-[#111726] border border-slate-800 rounded-[30px] p-6 shadow-xl">
+      <div ref="historySectionRef" class="bg-[#111726] border border-slate-800 rounded-[30px] p-6 shadow-xl">
         <div class="flex items-center gap-2 mb-6">
           <div class="w-1 h-5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
-          <h2 class="text-white text-lg tracking-tighter">LỊCH SỬ RÚT TIỀN</h2>
-          <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse ml-1"></div>
+          <h2 class="text-white text-lg tracking-tighter">LỊCH SỬ RÚT TIỀN CỦA BẠN</h2>
         </div>
 
-        <div class="space-y-3 relative overflow-hidden h-[300px]">
-          <TransitionGroup name="list" tag="div" class="space-y-3">
-            <div v-for="(item, index) in fakeWithdrawals" :key="item.id" class="flex items-center justify-between p-4 bg-[#0d121f] border border-slate-800/80 rounded-2xl">
+        <div v-if="!myWithdrawals.length" class="py-10 text-center text-slate-600 text-[11px] normal-case font-medium not-italic">
+          Bạn chưa có yêu cầu rút tiền nào.
+        </div>
+
+        <div v-else class="space-y-3">
+          <div v-for="w in myWithdrawals" :key="w.id" class="p-4 bg-[#0d121f] border border-slate-800/80 rounded-2xl">
+            <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
-                <div :class="[
-                  'w-10 h-10 rounded-full flex items-center justify-center text-xs font-black',
-                  ['bg-blue-900/70 text-blue-400', 'bg-emerald-900/70 text-emerald-400', 'bg-purple-900/70 text-purple-400', 'bg-rose-900/70 text-rose-400'][index % 4]
-                ]">
-                  {{ item.name.charAt(0) }}
+                <div v-if="w.qrImage?.url" @click="openImage(w.qrImage.url)" class="w-12 h-12 rounded-lg overflow-hidden border border-slate-700 bg-white cursor-zoom-in flex-shrink-0">
+                  <img :src="w.qrImage.url" class="w-full h-full object-contain" />
+                </div>
+                <div v-else class="w-12 h-12 rounded-lg border border-slate-800 flex items-center justify-center text-slate-700 text-[7px] text-center leading-tight normal-case flex-shrink-0 p-1">
+                  Chưa có QR
                 </div>
                 <div>
-                  <p class="text-white text-xs">{{ item.name }}</p>
-                  <p class="text-slate-500 text-[9px] mt-0.5">{{ item.time }}</p>
+                  <p class="text-white text-sm tracking-tighter">{{ formatNumber(w.amount || 0) }} XU</p>
+                  <p class="text-slate-500 text-[9px] mt-0.5 font-sans not-italic normal-case">{{ formatDate(w.createdAt) }}</p>
                 </div>
               </div>
-              <div class="text-right">
-                <p class="text-emerald-400 font-black text-sm tracking-tighter">+{{ formatNumber(item.amount) }}</p>
-                <p class="text-emerald-500 text-[8px] mt-0.5 tracking-widest">• THÀNH CÔNG</p>
-              </div>
+              <span :class="['text-[9px] px-2.5 py-1 rounded-full whitespace-nowrap font-sans not-italic normal-case', statusBadgeClass(w.status)]">{{ statusLabel(w.status) }}</span>
             </div>
-          </TransitionGroup>
-          <div class="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#111726] to-transparent pointer-events-none"></div>
+            <p v-if="w.status === 'rejected' && (w.adminNote || w.rejectReason)" class="mt-3 text-rose-400 text-[10px] normal-case font-sans not-italic font-bold leading-relaxed">
+              Lý do từ chối: {{ w.adminNote || w.rejectReason }}
+            </p>
+            <p v-if="(w.status === 'approved' || w.status === 'paid') && w.paidAt" class="mt-3 text-emerald-400 text-[10px] normal-case font-sans not-italic font-bold">
+              Đã thanh toán lúc: {{ formatDate(w.paidAt) }}
+            </p>
+          </div>
         </div>
       </div>
 
     </div>
+
+    <Transition name="fade">
+      <div v-if="selectedImage" class="fixed inset-0 z-[6000] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md cursor-zoom-out" @click="closeImage">
+        <button class="absolute top-6 right-6 w-12 h-12 bg-slate-800 border border-slate-700 hover:bg-red-600 rounded-full flex items-center justify-center text-white z-[6010]" @click.stop="closeImage">✕</button>
+        <img class="max-w-full max-h-[90vh] rounded-2xl object-contain z-[6005] cursor-default bg-white" :src="selectedImage" @click.stop />
+      </div>
+    </Transition>
 
     <Transition name="fade">
       <div v-if="showConfirmModal" class="fixed inset-0 z-[6000] flex items-center justify-center px-4">
@@ -310,72 +480,8 @@ const handleConfirmWithdraw = async () => {
 
         <div class="relative w-full max-w-md bg-gradient-to-b from-[#1a2333] to-[#111726] border border-slate-700 rounded-[30px] p-8 md:p-10 text-center shadow-2xl">
 
-          <template v-if="approvedJobsCount < requiredJobs">
-            <!-- Amber top accent line -->
-            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500 to-transparent rounded-t-[30px]"></div>
-            <!-- Ambient glow -->
-            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-amber-500/10 rounded-full blur-[50px] pointer-events-none"></div>
-
-            <!-- Lock icon -->
-            <div class="absolute -top-10 left-1/2 -translate-x-1/2">
-              <div class="w-20 h-20 bg-[#090e17] rounded-full p-2 border-2 border-amber-500/30 shadow-[0_0_30px_rgba(234,179,8,0.35)]">
-                <div class="w-full h-full bg-gradient-to-tr from-amber-500 to-yellow-400 rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.5)]">
-                  <svg class="w-8 h-8 text-[#1c1100]" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 1C8.676 1 6 3.676 6 7v1H4v15h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
-            <!-- Content -->
-            <div class="mt-12 relative z-10">
-              <div class="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-black tracking-[2px] px-3 py-1 rounded-full mb-3 uppercase">
-                🔒 Mở Khóa Rút Tiền
-              </div>
-              <h3 class="text-xl md:text-2xl text-white font-black tracking-tighter mb-2 uppercase italic">CẦN THÊM NHIỆM VỤ</h3>
-              <p class="text-slate-400 text-[11px] normal-case font-medium not-italic mb-5 px-2 leading-relaxed">
-                Hoàn thành đủ <span class="text-amber-400 font-bold">{{ requiredJobs }} nhiệm vụ</span> được duyệt để mở khóa rút tiền mốc <span class="text-amber-400 font-bold">{{ formatNumber(amount || 0) }} XU</span>
-              </p>
-
-              <!-- Progress card -->
-              <div class="bg-[#090e17] rounded-2xl py-5 px-5 border border-amber-500/10 mb-5 shadow-inner relative overflow-hidden">
-                <div class="absolute inset-0 bg-amber-500/[0.025]"></div>
-                <p class="text-slate-500 text-[9px] tracking-[3px] mb-3 font-black uppercase">Tiến Độ Nhiệm Vụ</p>
-
-                <!-- Big numbers -->
-                <p class="font-black text-3xl md:text-4xl flex items-baseline justify-center gap-1 mb-3">
-                  <span class="text-amber-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{{ approvedJobsCount }}</span>
-                  <span class="text-slate-600 text-xl">/</span>
-                  <span class="text-slate-400 text-xl">{{ requiredJobs }}</span>
-                </p>
-
-                <!-- Progress bar -->
-                <div class="w-full h-3 bg-slate-800/80 rounded-full overflow-hidden mb-2 border border-slate-700/30">
-                  <div class="h-full bg-gradient-to-r from-amber-600 to-yellow-400 rounded-full transition-all duration-1000 relative overflow-hidden"
-                       :style="{ width: `${Math.min((approvedJobsCount / requiredJobs) * 100, 100)}%` }">
-                    <div class="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
-                  </div>
-                </div>
-
-                <p class="text-rose-400 text-[10px] font-black tracking-wide italic">
-                  ⚡ Còn thiếu {{ requiredJobs - approvedJobsCount }} nhiệm vụ nữa
-                </p>
-              </div>
-
-              <!-- Buttons -->
-              <button @click="() => { showConfirmModal = false; router.push('/') }"
-                      class="w-full py-4 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-[#1c1100] rounded-xl active:scale-95 transition-all text-[11px] md:text-xs tracking-widest font-black italic uppercase shadow-[0_0_20px_rgba(234,179,8,0.4)] mb-2 border-t border-white/20">
-                ĐI LÀM NGAY 🚀
-              </button>
-              <button @click="showConfirmModal = false"
-                      class="w-full py-2.5 bg-transparent text-slate-600 hover:text-slate-400 rounded-xl active:scale-95 transition-all text-[10px] tracking-widest font-black uppercase">
-                ĐÓNG
-              </button>
-            </div>
-          </template>
-
           <!-- STEP 1: Thông tin quy đổi -->
-          <template v-else-if="confirmStep === 1">
+          <template v-if="confirmStep === 1">
             <div class="absolute -top-10 left-1/2 -translate-x-1/2">
               <div class="w-20 h-20 bg-[#090e17] rounded-full p-2 border-2 border-slate-800">
                 <div class="w-full h-full bg-gradient-to-tr from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-2xl shadow-[0_0_20px_rgba(234,179,8,0.5)]">
@@ -438,10 +544,12 @@ const handleConfirmWithdraw = async () => {
                 <span class="text-slate-500 text-[10px] uppercase tracking-widest font-black">Nhận về</span>
                 <span class="text-emerald-400 font-black text-sm">+{{ formatNumber((amount || 0) / 12) }} VNĐ</span>
               </div>
-              <div class="border-t border-slate-800"></div>
-              <div class="flex items-start justify-between gap-2">
-                <span class="text-slate-500 text-[10px] uppercase tracking-widest font-black flex-shrink-0">Ngân hàng</span>
-                <span class="text-white text-[10px] font-bold normal-case not-italic text-right leading-tight">{{ bankInfo }}</span>
+              <div class="border-t border-slate-800" v-if="qrPreview"></div>
+              <div class="flex items-center justify-between gap-2" v-if="qrPreview">
+                <span class="text-slate-500 text-[10px] uppercase tracking-widest font-black flex-shrink-0">Mã QR</span>
+                <div class="w-12 h-12 rounded-lg overflow-hidden border border-slate-700 bg-white">
+                  <img :src="qrPreview" class="w-full h-full object-contain" />
+                </div>
               </div>
             </div>
 
@@ -452,7 +560,7 @@ const handleConfirmWithdraw = async () => {
               </button>
               <button @click="handleConfirmWithdraw" :disabled="isLoading"
                       class="flex-1 py-3.5 bg-gradient-to-r from-rose-600 to-red-500 text-white rounded-xl hover:from-rose-500 hover:to-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)] active:scale-95 transition-all text-xs tracking-widest disabled:opacity-60">
-                {{ isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN RÚT TIỀN 🔐' }}
+                {{ isLoading ? 'ĐANG GỬI YÊU CẦU...' : 'XÁC NHẬN RÚT TIỀN 🔐' }}
               </button>
             </div>
           </template>
@@ -467,20 +575,6 @@ const handleConfirmWithdraw = async () => {
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
-.list-move,
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.5s ease;
-}
-.list-enter-from {
-  opacity: 0;
-  transform: translateY(-30px);
-}
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(30px);
-}
 
 @keyframes shimmer {
   100% { transform: translateX(100%); }
