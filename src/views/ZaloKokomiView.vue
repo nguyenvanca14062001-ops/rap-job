@@ -8,7 +8,7 @@ import Swal from 'sweetalert2'
 const router = useRouter()
 const baseUrl = import.meta.env.BASE_URL
 const FANPAGE_URL = 'https://www.facebook.com/rapjobfreelance/'
-const REFERRAL_LINK = 'https://shorten.asia/Jxg72pms'
+const REFERRAL_LINK = 'https://shorten.asia/jxg72pms'
 const sampleImage = 'images/anh-kokomi1.jpg'
 
 const isAuthChecking = ref(true)

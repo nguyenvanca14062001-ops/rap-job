@@ -146,7 +146,7 @@ export const jobsData: Record<string, any> = {
         id: 2,
         title: "THAM GIA SỰ KIỆN ZALO X KOKOMI",
         content: "Bạn chọn nút THAM GIA SỰ KIỆN bên dưới và gửi ảnh bằng chứng bên dưới.",
-        downloadLink: "#/jobs/zalo-kokomi",
+        downloadLink: "https://shorten.asia/jxg72pms",
         buttonText: "🎯 THAM GIA SỰ KIỆN",
         images: ["images/anh-kokomi6.jpg"]
       }
