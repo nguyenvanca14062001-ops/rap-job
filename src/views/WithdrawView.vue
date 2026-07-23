@@ -6,6 +6,7 @@ import { collection, doc, runTransaction, serverTimestamp } from "firebase/fires
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from 'sweetalert2'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
+import { VIP_JOB_IDS } from '@/utils/vipJobs'
 
 const router = useRouter()
 
@@ -33,28 +34,24 @@ const closeImage = () => { selectedImage.value = null }
 const historySectionRef = ref<HTMLElement | null>(null)
 
 const hasPendingWithdraw = computed(() => props.myWithdrawals.some(w => w.status === 'pending'))
+// Điều kiện rút tiền: cần đủ số nhiệm vụ VIP (bank/chứng khoán/giới thiệu) đã được admin duyệt.
 const approvedJobsCount = computed(() =>
-  props.myReports.filter(r => r.status === 'approved' || r.status === 'collected').length
+  props.myReports.filter(r => (r.status === 'approved' || r.status === 'collected') && VIP_JOB_IDS.includes(r.jobId)).length
 )
 const showConfirmModal = ref(false)
 const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuối cùng
 
 const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
 
-const requiredJobs = computed(() => 9)
+const requiredJobs = computed(() => 3)
 const tasksUnlocked = computed(() => approvedJobsCount.value >= requiredJobs.value)
-const taskError = ref('')
+const taskErrorMessage = computed(() => `Bạn cần hoàn thành đủ ${requiredJobs.value} nhiệm vụ VIP để rút tiền. Hiện tại bạn đã hoàn thành: ${approvedJobsCount.value}/${requiredJobs.value} nhiệm vụ VIP.`)
 
 const formatNumber = (num: number) => {
   return Math.floor(num).toLocaleString('vi-VN')
 }
 
 const selectAmount = (val: number) => {
-  if (!tasksUnlocked.value) {
-    taskError.value = 'Bạn cần hoàn thành đủ 9 nhiệm vụ trước khi rút tiền.'
-    return
-  }
-  taskError.value = ''
   amount.value = val
 }
 
@@ -127,10 +124,15 @@ const removeQr = () => {
 
 const triggerWithdraw = () => {
   if (!tasksUnlocked.value) {
-    taskError.value = 'Bạn cần hoàn thành đủ 9 nhiệm vụ trước khi rút tiền.'
+    Swal.fire({
+      title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
+      text: taskErrorMessage.value,
+      icon: 'warning',
+      confirmButtonColor: '#eab308',
+      customClass: { popup: 'rounded-[30px]' }
+    })
     return
   }
-  taskError.value = ''
 
   if (hasPendingWithdraw.value) {
     Swal.fire({
@@ -187,8 +189,14 @@ const handleConfirmWithdraw = async () => {
 
   // Chặn cứng lần cuối trước khi tạo withdrawal, phòng trường hợp state bị lệch với UI
   if (approvedJobsCount.value < requiredJobs.value) {
-    taskError.value = 'Bạn cần hoàn thành đủ 9 nhiệm vụ trước khi rút tiền.'
     showConfirmModal.value = false
+    Swal.fire({
+      title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
+      text: taskErrorMessage.value,
+      icon: 'warning',
+      confirmButtonColor: '#eab308',
+      customClass: { popup: 'rounded-[30px]' }
+    })
     return
   }
 
@@ -339,22 +347,6 @@ const handleConfirmWithdraw = async () => {
           <p class="text-yellow-500 mt-2 text-xs tracking-widest">SỐ DƯ KHẢ DỤNG: {{ formatNumber(userBalance) }} XU</p>
         </div>
 
-        <div v-if="!tasksUnlocked" class="mb-6 relative z-10 bg-[#090e17] border border-amber-500/20 rounded-2xl p-5">
-          <div class="flex items-center gap-2 mb-2">
-            <span class="text-lg">🔒</span>
-            <p class="text-amber-400 text-[11px] tracking-wide normal-case leading-relaxed font-bold">
-              Bạn cần hoàn thành tối thiểu {{ requiredJobs }} nhiệm vụ để mở khóa chức năng rút tiền.
-            </p>
-          </div>
-          <div class="w-full h-2.5 bg-slate-800/80 rounded-full overflow-hidden mb-2 border border-slate-700/30">
-            <div class="h-full bg-gradient-to-r from-amber-600 to-yellow-400 rounded-full transition-all duration-500"
-                 :style="{ width: `${Math.min((approvedJobsCount / requiredJobs) * 100, 100)}%` }"></div>
-          </div>
-          <p class="text-slate-400 text-[10px] normal-case font-sans not-italic font-bold">
-            Đã hoàn thành: {{ approvedJobsCount }}/{{ requiredJobs }} nhiệm vụ. Hãy hoàn thành thêm {{ Math.max(requiredJobs - approvedJobsCount, 0) }} nhiệm vụ nữa để rút tiền.
-          </p>
-        </div>
-
         <div class="space-y-6 relative z-10">
           <div>
             <label class="block text-blue-500 text-[10px] tracking-widest mb-3">CHỌN SỐ XU MUỐN RÚT</label>
@@ -363,25 +355,19 @@ const handleConfirmWithdraw = async () => {
                 <div v-if="opt === 500000" class="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 text-[7px] px-2 py-0.5 bg-emerald-500 text-white rounded-full font-black uppercase tracking-wider whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.4)]">
                   PHỔ BIẾN
                 </div>
-                <span v-if="!tasksUnlocked" class="absolute top-1.5 right-2 z-10 text-xs">🔒</span>
                 <button
                   @click="selectAmount(opt)"
                   :class="[
                     'w-full py-3 rounded-[14px] border-2 transition-all text-xs md:text-sm active:scale-95',
-                    !tasksUnlocked
-                      ? 'bg-[#0d121f]/50 border-slate-800/60 text-slate-600 opacity-50 grayscale cursor-not-allowed active:scale-100'
-                      : amount === opt
-                        ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500 text-yellow-400 shadow-[0_0_25px_rgba(234,179,8,0.35)] ring-1 ring-yellow-500/30'
-                        : 'bg-[#0d121f] border-slate-800 text-slate-500 hover:border-slate-600'
+                    amount === opt
+                      ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500 text-yellow-400 shadow-[0_0_25px_rgba(234,179,8,0.35)] ring-1 ring-yellow-500/30'
+                      : 'bg-[#0d121f] border-slate-800 text-slate-500 hover:border-slate-600'
                   ]"
                 >
                   {{ formatNumber(opt) }} XU
                 </button>
               </div>
             </div>
-            <p v-if="taskError" class="text-rose-400 text-[11px] font-sans not-italic font-bold normal-case leading-relaxed mt-2">
-              ⚠️ {{ taskError }}
-            </p>
           </div>
 
           <div>
@@ -415,15 +401,15 @@ const handleConfirmWithdraw = async () => {
 
           <button
             @click="triggerWithdraw"
-            :disabled="isLoading || hasPendingWithdraw || !tasksUnlocked"
+            :disabled="isLoading || hasPendingWithdraw"
             :class="[
               'w-full py-4 rounded-2xl text-[13px] tracking-widest transition-all mt-2',
-              hasPendingWithdraw || !tasksUnlocked
+              hasPendingWithdraw
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 : 'bg-yellow-500 hover:bg-yellow-400 text-[#090e17] active:scale-95 confirm-glow'
             ]"
           >
-            {{ isLoading ? 'ĐANG GỬI YÊU CẦU...' : (hasPendingWithdraw ? 'ĐANG CÓ LỆNH CHỜ DUYỆT' : (!tasksUnlocked ? 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN' : 'XÁC NHẬN RÚT TIỀN')) }}
+            {{ isLoading ? 'ĐANG GỬI YÊU CẦU...' : (hasPendingWithdraw ? 'ĐANG CÓ LỆNH CHỜ DUYỆT' : 'XÁC NHẬN RÚT TIỀN') }}
           </button>
         </div>
       </div>

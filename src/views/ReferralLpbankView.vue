@@ -8,7 +8,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import Swal from 'sweetalert2'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
 import { normalizePhone } from '@/utils/phone'
-import { hasCompletedLpbankPlus, LPBANK_REFERRAL_JOB_ID, LPBANK_REFERRAL_CODE } from '@/utils/referralLpbank'
+import { LPBANK_REFERRAL_JOB_ID, LPBANK_REFERRAL_CODE } from '@/utils/referralLpbank'
 
 const props = defineProps<{
   myReports?: any[]
@@ -35,9 +35,6 @@ onMounted(() => {
     }
   })
 })
-
-// Chỉ mở khóa khi đã có report APP LPBANK PLUS được duyệt/cộng xu thành công
-const canAccess = computed(() => hasCompletedLpbankPlus(props.myReports || []))
 
 // --- Ảnh mẫu / zoom ---
 const selectedImage = ref<string | null>(null)
@@ -254,23 +251,6 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
     <div v-if="isAuthChecking || props.isDataLoading" class="flex flex-col items-center justify-center py-24 gap-4">
       <div class="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       <p class="text-xs text-slate-500 tracking-widest uppercase">Đang tải dữ liệu...</p>
-    </div>
-
-    <!-- Màn hình khóa: chưa hoàn thành APP LPBANK PLUS -->
-    <div v-else-if="!canAccess" class="max-w-lg mx-auto text-center py-16 space-y-6">
-      <div class="w-24 h-24 bg-gradient-to-tr from-amber-500 to-orange-600 rounded-3xl mx-auto flex items-center justify-center text-5xl">🔒</div>
-      <h1 class="text-2xl md:text-3xl text-white tracking-tighter leading-tight">CHƯA ĐỦ <span class="text-amber-500">ĐIỀU KIỆN</span></h1>
-      <p class="text-slate-400 text-sm font-bold italic leading-relaxed normal-case max-w-sm mx-auto">
-        Bạn cần hoàn thành Job VIP <span class="text-amber-400">APP LPBANK PLUS</span> trước khi mở khóa công việc Giới thiệu bạn bè.
-      </p>
-      <div class="flex flex-col gap-3 max-w-xs mx-auto pt-2">
-        <button @click="router.push('/job/lpbank-plus')" class="w-full py-4 bg-amber-600 hover:bg-amber-500 text-white rounded-2xl shadow-lg shadow-amber-600/30 active:scale-95 transition-all text-sm">
-          LÀM APP LPBANK PLUS
-        </button>
-        <button @click="router.push('/')" class="w-full py-2 text-slate-500 text-[11px] tracking-widest hover:text-slate-400 transition-colors">
-          ✕ QUAY LẠI TRANG CHỦ
-        </button>
-      </div>
     </div>
 
     <!-- Nội dung chính -->

@@ -1,22 +1,20 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { jobsData } from '@/data/jobs';
+import { VIP_JOB_IDS } from '@/utils/vipJobs';
 import Logo from '@/components/Logo.vue';
 
 const props = defineProps<{
   username: string;
   isLoggedIn: boolean;
   jobs?: Record<string, any>;
-  referralLpbankUnlocked?: boolean;
 }>();
 
 const jobList = computed(() => props.jobs ?? jobsData);
 
 const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 
-const VIP_JOBS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus'];
-
-const isReferralLocked = (id: string) => id === 'referral-hub' && !props.referralLpbankUnlocked;
+const VIP_JOBS = VIP_JOB_IDS;
 
 // Lọc hidden + sắp xếp theo order từ Firestore (nếu có); fallback về vị trí gốc trong VIP_JOBS
 const sortedVipJobIds = computed(() =>
@@ -451,20 +449,11 @@ function getAgeBadgeClass(age: number): string {
               class="relative p-5 md:p-7 rounded-[28px] border-[2px] transition-all duration-500 flex flex-col group overflow-hidden"
               :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout)
                 ? 'border-slate-600/50 bg-gradient-to-br from-[#1a1a1a] to-[#111111] cursor-not-allowed opacity-70'
-                : isReferralLocked(id as string)
-                  ? 'border-slate-600/50 bg-gradient-to-br from-[#1a1a1a] to-[#111111] cursor-pointer opacity-80'
-                  : 'vip-card border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] cursor-pointer active:scale-95'">
+                : 'vip-card border-amber-500/70 bg-gradient-to-br from-[#2A1C00] to-[#160E00] cursor-pointer active:scale-95'">
 
               <!-- Glow nền VIP -->
               <div class="absolute inset-0 bg-gradient-to-t from-amber-500/5 to-yellow-300/5 pointer-events-none rounded-[26px]"></div>
               <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/10 rounded-full blur-[60px] pointer-events-none"></div>
-
-              <!-- Overlay khóa: chưa hoàn thành APP LPBANK PLUS -->
-              <div v-if="isReferralLocked(id as string)" class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/65 backdrop-blur-[1px] rounded-[26px] pointer-events-none px-4 text-center gap-1">
-                <span class="text-3xl">🔒</span>
-                <span class="text-white text-[11px] font-black uppercase tracking-widest">ĐANG KHÓA</span>
-                <span class="text-slate-300 text-[9px] font-bold normal-case leading-tight">Cần hoàn thành APP LPBANK PLUS trước</span>
-              </div>
 
               <!-- Watermark số thứ tự mờ -->
               <div class="absolute bottom-3 right-4 text-[60px] md:text-[80px] font-black text-amber-400/5 pointer-events-none select-none leading-none">
@@ -526,19 +515,17 @@ function getAgeBadgeClass(age: number): string {
               </div>
 
               <div class="flex items-center gap-1.5 text-[9px] mt-3 mb-2"
-                   :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'text-red-400/80' : isReferralLocked(id as string) ? 'text-slate-400' : 'text-amber-500/70'">
+                   :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'text-red-400/80' : 'text-amber-500/70'">
                 <span class="w-1.5 h-1.5 rounded-full"
-                      :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'bg-red-500' : isReferralLocked(id as string) ? 'bg-slate-500' : 'bg-amber-500 animate-pulse'"></span>
-                <span>{{ jobList[id as string]?.soldout ? 'HẾT SLOT — Đang nạp thêm' : jobList[id as string]?.paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : isReferralLocked(id as string) ? 'Cần hoàn thành APP LPBANK PLUS trước' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
+                      :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout) ? 'bg-red-500' : 'bg-amber-500 animate-pulse'"></span>
+                <span>{{ jobList[id as string]?.soldout ? 'HẾT SLOT — Đang nạp thêm' : jobList[id as string]?.paused ? 'TẠM DỪNG — Sẽ mở lại sớm' : `Đang mở đăng ký — ${getSocialProof(id as string)} người đã nhận` }}</span>
               </div>
               <button @click.stop="handleJobClick(id as string)"
                 class="w-full py-3.5 md:py-4 rounded-xl text-[11px] md:text-[13px] font-black italic uppercase transition-all relative z-10 border"
                 :class="(jobList[id as string]?.paused || jobList[id as string]?.soldout)
                   ? 'bg-slate-700 text-slate-400 border-slate-600 cursor-not-allowed'
-                  : isReferralLocked(id as string)
-                    ? 'bg-slate-700 text-slate-300 border-slate-600'
-                    : 'vip-btn border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95'">
-                {{ jobList[id as string]?.soldout ? 'HẾT SLOT ❌' : jobList[id as string]?.paused ? 'TẠM DỪNG ⏸' : isReferralLocked(id as string) ? 'ĐANG KHÓA 🔒' : 'NHẬN NGAY 💰' }}
+                  : 'vip-btn border-amber-400/40 bg-gradient-to-r from-amber-500 to-yellow-500 text-amber-900 shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_35px_rgba(245,158,11,0.7)] hover:from-amber-400 hover:to-yellow-400 active:scale-95'">
+                {{ jobList[id as string]?.soldout ? 'HẾT SLOT ❌' : jobList[id as string]?.paused ? 'TẠM DỪNG ⏸' : 'NHẬN NGAY 💰' }}
               </button>
             </div>
           </template>
