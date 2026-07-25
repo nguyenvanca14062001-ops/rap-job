@@ -777,84 +777,145 @@ const fixUserWallet = async (uid: string) => {
   }
 }
 
+// Cộng xu tự do vào ví user — độc lập với mọi report/job, admin muốn cộng bao nhiêu cũng được.
+// Luôn dùng increment() (không setDoc/ghi đè balance) để không làm mất số xu hiện có của user.
+const addXuToUser = async (uid: string) => {
+  if (!uid) { Swal.fire('LỖI!', 'Không tìm thấy UID user.', 'error'); return }
+  const user = usersMap.value[uid] || {}
+  const curBalance = Number(user?.balance) || 0
+
+  const { value: amountInput, isConfirmed } = await Swal.fire({
+    title: '💰 CỘNG XU CHO VÍ',
+    html: `
+      <div style="text-align:left;font-size:12.5px;line-height:1.8">
+        <b>User:</b> ${user.username || user.fullName || '—'}<br/>
+        <b>UID:</b> ${uid}<br/>
+        <b>Ví hiện tại:</b> ${curBalance.toLocaleString()} XU
+      </div>`,
+    input: 'number',
+    inputLabel: 'Số xu muốn cộng (nhập số âm để trừ)',
+    inputPlaceholder: 'VD: 50000',
+    showCancelButton: true,
+    confirmButtonText: 'Xác nhận cộng xu ✅',
+    confirmButtonColor: '#10b981',
+    cancelButtonText: 'Huỷ',
+    inputValidator: (v) => (v === '' || Number.isNaN(Number(v)) || Number(v) === 0) ? 'Vui lòng nhập số xu hợp lệ (khác 0)' : undefined
+  })
+  if (!isConfirmed) return
+  const amount = Math.round(Number(amountInput))
+
+  try {
+    await updateDoc(doc(db, "users", uid), { balance: increment(amount) })
+    usersMap.value = { ...usersMap.value, [uid]: { ...usersMap.value[uid], balance: curBalance + amount } }
+    Swal.fire('THÀNH CÔNG!', `${amount > 0 ? '+' : ''}${amount.toLocaleString()} XU. Ví mới: ${(curBalance + amount).toLocaleString()} XU`, 'success')
+  } catch (e: any) {
+    Swal.fire('LỖI!', e.message || String(e), 'error')
+  }
+}
+
+// ============================================================================
+// CỘNG XU CHO ĐƠN reports (job thường / VIP / referral LPBANK) — bấm 1 nút duy nhất.
+// Dùng Firestore transaction: đọc lại report + user ngay trước khi ghi, chặn cộng trùng
+// nếu report không còn 'pending', và chỉ update field balance (increment) — không bao giờ
+// setDoc ghi đè toàn bộ user hay ép balance về một số cố định.
+// ============================================================================
 const approveReport = async (report: any) => {
-  const reward = Number(String(report.reward || '0').replace(/\D/g, '')) || 0
   const targetUid = effUid(report)
-  try {
-    const cur = Number(String(usersMap.value[targetUid]?.balance || '0').replace(/\D/g, '')) || 0
-    if (!confirm(`DUYỆT ĐƠN?\n+${reward.toLocaleString()} XU\nVí cũ: ${cur.toLocaleString()} XU\nTổng mới: ${(cur + reward).toLocaleString()} XU`)) return
-    await updateDoc(doc(db, "users", targetUid), { balance: increment(reward) })
-    await updateDoc(doc(db, "reports", report.id), { status: 'approved', approvedAt: serverTimestamp() })
-    usersMap.value = { ...usersMap.value, [targetUid]: { ...usersMap.value[targetUid], balance: cur + reward } }
-    alert("ĐÃ DUYỆT!"); updateLocalStatsOnApprove(report.jobName)
-  } catch (e) { alert("LỖI: " + e) }
-}
+  const isReferral = report.jobId === LPBANK_REFERRAL_JOB_ID
+  const user = usersMap.value[targetUid] || {}
 
-const deleteReport = async (id: string) => {
-  if (confirm("XÓA VĨNH VIỄN?")) try { await deleteDoc(doc(db, "reports", id)) } catch (e) { alert("LỖI: " + e) }
-}
-
-// ============================================================================
-// DUYỆT ĐƠN GIỚI THIỆU BẠN BÈ LPBANK — thưởng tăng dần theo lần giới thiệu thành công
-// ============================================================================
-const approveLpbankReferral = async (report: any) => {
-  if (!confirm(`DUYỆT ĐƠN GIỚI THIỆU BẠN BÈ LPBANK?\nBạn bè: ${report.friendName || '—'}\nSĐT: ${report.friendPhone || '—'}`)) return
-  const targetUid = effUid(report)
-  try {
-    const reportRef = doc(db, "reports", report.id)
-    const userRef = doc(db, "users", targetUid)
-
-    // Ước tính fallback ngoài transaction — chỉ dùng khi user chưa có counter lpbankReferralPaidCount
-    const preUserSnap = await getDoc(userRef)
-    const preRaw = preUserSnap.exists() ? Number(preUserSnap.data()?.lpbankReferralPaidCount) : NaN
-    let fallbackCount = 0
-    if (!Number.isFinite(preRaw) || preRaw < 0) {
+  let suggestedReward = Number(String(report.reward || report.suggestedReward || '0').replace(/\D/g, '')) || 0
+  if (isReferral) {
+    const rawCount = Number(user?.lpbankReferralPaidCount)
+    let successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : NaN
+    if (!Number.isFinite(successCountBefore)) {
+      // Ước tính fallback ngoài transaction — chỉ dùng để hiển thị số đề xuất khi user chưa có counter
       const fallbackSnap = await getDocs(query(
         collection(db, "reports"),
         where("uid", "==", targetUid),
         where("jobId", "==", LPBANK_REFERRAL_JOB_ID),
         where("status", "in", ["approved", "paid", "collected", "completed"])
       ))
-      fallbackCount = fallbackSnap.size
+      successCountBefore = fallbackSnap.size
     }
+    suggestedReward = getLpbankReferralRewardByCount(successCountBefore)
+  }
 
-    let actualReward = 0
-    let nextNumber = 0
+  const { value: rewardInput, isConfirmed } = await Swal.fire({
+    title: '💰 CỘNG XU ĐƠN NÀY',
+    html: `
+      <div style="text-align:left;font-size:12.5px;line-height:1.8">
+        <b>Tên user:</b> ${user.fullName || user.username || report.fullName || '—'}<br/>
+        <b>SĐT:</b> ${report.phoneRef || user.phoneRef || user.phone || '—'}<br/>
+        <b>UID:</b> ${targetUid || '—'}<br/>
+        <b>Tên job:</b> ${report.jobName || '—'}<br/>
+        <b>Mã đơn:</b> ${report.id}<br/>
+        <b>Trạng thái hiện tại:</b> ${report.status}
+      </div>`,
+    input: 'number',
+    inputValue: suggestedReward,
+    inputLabel: `Số xu cộng (đề xuất ${suggestedReward.toLocaleString()} xu)`,
+    showCancelButton: true,
+    confirmButtonText: 'Xác nhận cộng xu ✅',
+    confirmButtonColor: '#10b981',
+    cancelButtonText: 'Huỷ'
+  })
+  if (!isConfirmed) return
+  const amount = Math.max(0, Math.round(Number(rewardInput) || 0))
+
+  try {
+    let newSuccessNumber = 0
     await runTransaction(db, async (tx) => {
+      const reportRef = doc(db, "reports", report.id)
       const reportSnap = await tx.get(reportRef)
-      if (!reportSnap.exists() || reportSnap.data().status !== 'pending') {
-        throw new Error('Đơn đã được xử lý hoặc không còn tồn tại.')
-      }
+      if (!reportSnap.exists()) throw new Error('Đơn không tồn tại.')
+      if (reportSnap.data().status !== 'pending') throw new Error('Đơn này đã được xử lý trước đó.')
+
+      const userRef = doc(db, "users", targetUid)
       const userSnap = await tx.get(userRef)
-      const rawCount = userSnap.exists() ? Number(userSnap.data()?.lpbankReferralPaidCount) : NaN
-      const successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : fallbackCount
+      if (!userSnap.exists()) throw new Error('User chưa có hồ sơ ví.')
 
-      nextNumber = successCountBefore + 1
-      actualReward = getLpbankReferralRewardByCount(successCountBefore)
-
-      tx.set(userRef, {
-        balance: increment(actualReward),
-        lpbankReferralPaidCount: successCountBefore + 1
-      }, { merge: true })
-
-      tx.update(reportRef, {
+      const reportUpdates: any = {
         status: 'approved',
+        actualReward: amount,
+        reward: amount,
         approvedAt: serverTimestamp(),
-        approvedBy: auth.currentUser?.uid || null,
-        reward: actualReward,
-        actualReward,
-        referralSuccessNumber: nextNumber,
-        referralProgram: 'lpbank'
-      })
+        approvedBy: auth.currentUser?.email || auth.currentUser?.uid || null
+      }
+
+      if (isReferral) {
+        const rawCount = Number(userSnap.data()?.lpbankReferralPaidCount)
+        const successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : 0
+        newSuccessNumber = successCountBefore + 1
+        reportUpdates.referralSuccessNumber = newSuccessNumber
+        reportUpdates.referralProgram = 'lpbank'
+        // merge:true — chỉ ghi 2 field này, không đụng tới phần còn lại của user doc
+        tx.set(userRef, { balance: increment(amount), lpbankReferralPaidCount: newSuccessNumber }, { merge: true })
+      } else {
+        tx.update(userRef, { balance: increment(amount) })
+      }
+
+      tx.update(reportRef, reportUpdates)
     })
 
     const curBal = Number(usersMap.value[targetUid]?.balance) || 0
-    usersMap.value = { ...usersMap.value, [targetUid]: { ...usersMap.value[targetUid], balance: curBal + actualReward, lpbankReferralPaidCount: nextNumber } }
-    Swal.fire('ĐÃ DUYỆT!', `Cộng ${actualReward.toLocaleString()} XU — Lần giới thiệu #${nextNumber}`, 'success')
+    usersMap.value = {
+      ...usersMap.value,
+      [targetUid]: {
+        ...usersMap.value[targetUid],
+        balance: curBal + amount,
+        ...(isReferral ? { lpbankReferralPaidCount: newSuccessNumber } : {})
+      }
+    }
+    Swal.fire('ĐÃ CỘNG XU!', `+${amount.toLocaleString()} XU${isReferral ? ` — Lần giới thiệu #${newSuccessNumber}` : ''}`, 'success')
     updateLocalStatsOnApprove(report.jobName)
   } catch (e: any) {
     Swal.fire('LỖI!', e.message || String(e), 'error')
   }
+}
+
+const deleteReport = async (id: string) => {
+  if (confirm("XÓA VĨNH VIỄN?")) try { await deleteDoc(doc(db, "reports", id)) } catch (e) { alert("LỖI: " + e) }
 }
 
 const approveWithdrawal = async (item: any) => {
@@ -1205,6 +1266,7 @@ const handleAdminLogout = async () => {
                     <span class="bg-violet-500/20 text-violet-400 border border-violet-500/30 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site === 'rapjob'">RAP JOB</span>
                     <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
                     <button class="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-500 hover:text-white border border-yellow-600/50 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(effUid(rp))">SỬA VÍ</button>
+                    <button class="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-600/50 px-2 py-1 rounded-lg text-[8px]" @click="addXuToUser(effUid(rp))">💰 CỘNG XU</button>
                   </div>
                 </div>
                 <div>
@@ -1285,10 +1347,11 @@ const handleAdminLogout = async () => {
               <td class="p-6 text-right">
                 <div class="flex flex-col md:flex-row justify-end gap-2">
                   <template v-if="rp.status === 'pending'">
-                    <button class="bg-emerald-500 hover:bg-emerald-400 text-white text-[9px] px-4 py-2 rounded-lg" @click="rp.jobId === LPBANK_REFERRAL_JOB_ID ? approveLpbankReferral(rp) : approveReport(rp)">DUYỆT</button>
+                    <button class="bg-emerald-500 hover:bg-emerald-400 text-white text-[9px] px-4 py-2 rounded-lg" @click="approveReport(rp)">💰 Cộng xu</button>
                     <button class="bg-blue-600 hover:bg-blue-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="openMessagePopup(rp.id)">NHẮN</button>
                     <button class="bg-red-600 hover:bg-red-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="openRejectPopup(rp.id)">HỦY</button>
                   </template>
+                  <button v-else class="bg-slate-800 text-slate-500 text-[9px] px-4 py-2 rounded-lg cursor-not-allowed" disabled>Đã xử lý</button>
                   <button class="bg-slate-800 text-slate-400 hover:text-white text-[9px] px-4 py-2 rounded-lg" @click="deleteReport(rp.id)">XÓA</button>
                 </div>
               </td>

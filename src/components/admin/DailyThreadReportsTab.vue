@@ -180,19 +180,21 @@ const clearSelected = () => { selectedIds.value = [] }
 // ============================================================================
 // CỘNG XU — transaction chống cộng trùng (chỉ xử lý nếu report vẫn còn pending)
 // ============================================================================
-const payOne = async (reportId: string, uid: string, actualReward: number): Promise<'ok' | 'skipped' | 'error'> => {
+const payOne = async (reportId: string, uid: string, actualReward: number): Promise<'ok' | 'skipped' | 'no_wallet' | 'error'> => {
   try {
     return await runTransaction(db, async (tx) => {
       const reportRef = doc(db, DAILY_THREAD_COLLECTION, reportId)
       const snap = await tx.get(reportRef)
       if (!snap.exists() || snap.data().status !== 'pending') return 'skipped'
       const userRef = doc(db, 'users', uid)
+      const userSnap = await tx.get(userRef)
+      if (!userSnap.exists()) return 'no_wallet'
       tx.update(userRef, { balance: increment(actualReward) })
       tx.update(reportRef, {
         status: 'paid',
         actualReward,
         paidAt: serverTimestamp(),
-        paidBy: auth.currentUser?.uid || '',
+        paidBy: auth.currentUser?.email || auth.currentUser?.uid || '',
         updatedAt: serverTimestamp()
       })
       return 'ok'
@@ -205,25 +207,38 @@ const payOne = async (reportId: string, uid: string, actualReward: number): Prom
 
 const approveOne = async (report: any) => {
   const defaultReward = getDisplaySuggestedReward(report)
+  const user = mergedUsersMap.value[report.uid] || {}
   const lowViewWarning = defaultReward === 0
     ? `<p style="color:#fb923c;font-weight:700;margin-top:6px;">⚠️ Đơn này view thấp, vui lòng kiểm tra kỹ trước khi cộng xu.</p>`
     : ''
   const { value: rewardInput, isConfirmed } = await Swal.fire({
-    title: 'CỘNG XU ĐƠN NÀY',
-    html: `Nick: <b>${report.threadNick}</b><br/>View QR: <b>${report.qrViews}</b><br/>Đề xuất: <b>${defaultReward.toLocaleString()} xu</b>${lowViewWarning}`,
+    title: '💰 CỘNG XU ĐƠN NÀY',
+    html: `
+      <div style="text-align:left;font-size:12.5px;line-height:1.8">
+        <b>Tên user:</b> ${user.fullName || user.username || report.fullName || report.username || '—'}<br/>
+        <b>SĐT:</b> ${report.phoneRef || user.phoneRef || user.phone || '—'}<br/>
+        <b>UID:</b> ${report.uid || '—'}<br/>
+        <b>Tên job:</b> ${report.jobName || 'Đăng bài Thread hằng ngày'}<br/>
+        <b>Mã đơn:</b> ${report.id}<br/>
+        <b>Trạng thái hiện tại:</b> ${report.status}<br/>
+        <b>Nick Threads:</b> ${report.threadNick}<br/>
+        <b>View QR:</b> ${report.qrViews}
+        ${lowViewWarning}
+      </div>`,
     input: 'number',
     inputValue: defaultReward,
-    inputLabel: 'Số xu cộng (có thể sửa)',
+    inputLabel: `Số xu cộng (đề xuất ${defaultReward.toLocaleString()} xu)`,
     showCancelButton: true,
-    confirmButtonText: 'CỘNG XU ✅',
+    confirmButtonText: 'Xác nhận cộng xu ✅',
     confirmButtonColor: '#14b8a6',
-    cancelButtonText: 'HỦY'
+    cancelButtonText: 'Huỷ'
   })
   if (!isConfirmed) return
   const actualReward = Math.max(0, Number(rewardInput) || 0)
   const result = await payOne(report.id, report.uid, actualReward)
   if (result === 'ok') Swal.fire({ icon: 'success', title: 'ĐÃ CỘNG XU!', timer: 1200, showConfirmButton: false })
   else if (result === 'skipped') Swal.fire({ icon: 'info', title: 'ĐƠN NÀY ĐÃ ĐƯỢC XỬ LÝ TRƯỚC ĐÓ', timer: 1500, showConfirmButton: false })
+  else if (result === 'no_wallet') Swal.fire('LỖI!', 'User chưa có hồ sơ ví.', 'error')
   else Swal.fire('LỖI!', 'Không thể cộng xu, vui lòng thử lại.', 'error')
 }
 
@@ -396,12 +411,13 @@ const openLink = (url: string) => { if (url) window.open(url, '_blank') }
             </span>
 
             <div class="flex gap-2 shrink-0 w-full md:w-auto" v-if="rp.status === 'pending'">
-              <button class="bg-teal-500 hover:bg-teal-400 text-teal-950 text-[9px] px-3 py-2 rounded-lg font-black" @click="approveOne(rp)">CỘNG XU</button>
+              <button class="bg-teal-500 hover:bg-teal-400 text-teal-950 text-[9px] px-3 py-2 rounded-lg font-black" @click="approveOne(rp)">💰 Cộng xu</button>
               <button class="bg-red-600 hover:bg-red-500 text-white text-[9px] px-3 py-2 rounded-lg font-black" @click="openRejectOne(rp)">TỪ CHỐI</button>
             </div>
             <div v-else-if="rp.status === 'rejected'" class="text-rose-400 text-[9px] font-sans not-italic normal-case max-w-[160px] shrink-0">
               {{ rp.rejectReason }}<span v-if="rp.rejectNote"> — {{ rp.rejectNote }}</span>
             </div>
+            <button v-else class="bg-slate-800 text-slate-500 text-[9px] px-3 py-2 rounded-lg font-black cursor-not-allowed shrink-0" disabled>Đã xử lý</button>
           </div>
         </div>
       </div>
