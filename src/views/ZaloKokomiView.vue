@@ -22,7 +22,7 @@ onMounted(() => {
 
 const rewardTiers = [
   { milestone: 'Mốc 1: 5 người', reward: '35.000 XU' },
-  { milestone: 'Mốc 2: 10 người', reward: '115.000 XU' },
+  { milestone: 'Mốc 2: 10 người', reward: '80.000 XU' },
 ]
 
 const copyReferralLink = () => {
@@ -88,7 +88,7 @@ const closeImage = () => { selectedImage.value = null }
         </h1>
         <div class="bg-[#052e1f] border border-[#005c3c] rounded-full px-6 py-2.5 w-max mx-auto flex items-center gap-2 shadow-inner relative z-10">
           <span class="text-[#f59e0b] text-xl">⚡</span>
-          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: 35.000 - 115.000 XU</span>
+          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: 35.000 - 80.000 XU</span>
         </div>
         <p class="text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed mt-4 max-w-md mx-auto relative z-10">
           Gửi link giới thiệu cho 5 người bạn bất kì, hoàn thành nhiệm vụ nhận thưởng.
