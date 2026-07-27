@@ -23,8 +23,6 @@ import ProfileView from '@/views/Profile.vue'
 import ReferralLpbankView from '@/views/ReferralLpbankView.vue'
 // @ts-ignore
 import DailyThreadsView from '@/views/DailyThreadsView.vue'
-// @ts-ignore
-import ZaloKokomiView from '@/views/ZaloKokomiView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -37,7 +35,6 @@ const routes = [
   { path: '/profile', name: 'profile', component: ProfileView },
   { path: '/jobs/referral-lpbank', name: 'referral-lpbank', component: ReferralLpbankView },
   { path: '/jobs/daily-threads', name: 'daily-threads', component: DailyThreadsView },
-  { path: '/jobs/zalo-kokomi', name: 'zalo-kokomi', component: ZaloKokomiView },
   // @ts-ignore
   { path: '/survey-cinema', name: 'survey-cinema', component: () => import('@/views/SurveyView.vue') }
 ]
@@ -48,7 +45,7 @@ const router = createRouter({
   routes
 })
 
-const requiresAuth = ['/profile', '/withdraw', '/submit-report', '/history', '/jobs/referral-lpbank', '/jobs/daily-threads', '/jobs/zalo-kokomi']
+const requiresAuth = ['/profile', '/withdraw', '/submit-report', '/history', '/jobs/referral-lpbank', '/jobs/daily-threads']
 
 router.beforeEach(async (to, from, next) => {
   await auth.authStateReady()

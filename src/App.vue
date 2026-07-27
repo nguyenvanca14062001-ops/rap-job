@@ -26,7 +26,7 @@ const jobIconMap: Record<string, string> = {
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
-  'referral-hub': '👥', 'daily_threads': '🧵', 'zalo_kokomi': '💬',
+  'referral-hub': '👥', 'daily_threads': '🧵',
 }
 const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus']
 
@@ -96,25 +96,24 @@ const jobCardClass: Record<string, string> = {
   'post-threads':   'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/70 shadow-[0_0_20px_rgba(217,70,239,0.25)]',
   'join-zalo':      'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.25)]',
   'daily_threads':  'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/70 shadow-[0_0_20px_rgba(20,184,166,0.25)]',
-  'zalo_kokomi':    'bg-gradient-to-br from-[#0a2540] to-[#051224] border-sky-500/70 shadow-[0_0_20px_rgba(14,165,233,0.25)]',
 }
 const jobBadgeClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
   'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
   'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
-  'daily_threads': 'bg-teal-600', 'zalo_kokomi': 'bg-sky-600',
+  'daily_threads': 'bg-teal-600',
 }
 const jobIconBgClass: Record<string, string> = {
   'follow-cgv': 'bg-red-600/20', 'review-cinema': 'bg-amber-500/20',
   'checkin-cinema': 'bg-rose-500/20', 'survey-cinema': 'bg-violet-500/20',
   'post-threads': 'bg-fuchsia-500/20', 'join-zalo': 'bg-indigo-500/20',
-  'daily_threads': 'bg-teal-500/20', 'zalo_kokomi': 'bg-sky-500/20',
+  'daily_threads': 'bg-teal-500/20',
 }
 const jobRewardClass: Record<string, string> = {
   'follow-cgv': 'text-red-400', 'review-cinema': 'text-amber-400',
   'checkin-cinema': 'text-rose-400', 'survey-cinema': 'text-violet-400',
   'post-threads': 'text-fuchsia-400', 'join-zalo': 'text-indigo-400',
-  'daily_threads': 'text-teal-400', 'zalo_kokomi': 'text-sky-400',
+  'daily_threads': 'text-teal-400',
 }
 function getAgeBadgeClass(age: number): string {
   if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -126,7 +125,7 @@ const jobBtnClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
   'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
   'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
-  'daily_threads': 'bg-teal-600', 'zalo_kokomi': 'bg-sky-600',
+  'daily_threads': 'bg-teal-600',
 }
 
 // --- KHỞI TẠO BIẾN TRẠNG THÁI HỆ THỐNG ---
@@ -588,9 +587,6 @@ const handleReceiveJob = (jobId: string) => {
   } else if (jobId === 'daily_threads') {
     activePopup.value = ''
     router.push('/jobs/daily-threads')
-  } else if (jobId === 'zalo_kokomi') {
-    activePopup.value = ''
-    router.push('/jobs/zalo-kokomi')
   } else if (VIP_IDS.includes(jobId)) {
     activePopup.value = ''
     ageConfirmJobId.value = jobId

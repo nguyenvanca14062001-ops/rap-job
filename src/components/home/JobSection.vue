@@ -58,7 +58,6 @@ const getJobIcon = (id: string) => {
     'app-chung-khoan-4': { t: '📈', c: 'text-white' },
     'abbank': { t: 'ABB', c: 'text-white' },
     'referral-hub': { t: '👥', c: 'text-white' },
-    'zalo_kokomi': { t: 'ZALO', c: 'text-white' },
   };
   const res = config[id] || { t: 'JOB', c: 'text-slate-400' };
   return { type: 'text', content: res.t, colorClass: res.c };
@@ -81,7 +80,6 @@ const getSocialProof = (id: string) => {
     'app-chung-khoan-4': '163',
     'abbank':            '204',
     'referral-hub':      '89',
-    'zalo_kokomi':       '347',
   };
   return seeds[id] || '500';
 };
@@ -109,7 +107,6 @@ const getShortDesc = (id: string) => {
     'msb-bank': 'Nhận quà tặng khi mở thẻ MSB',
     'abbank': 'Mở tài khoản ABBANK',
     'referral-hub': 'Mời bạn bè đăng ký app nhận thưởng tăng dần',
-    'zalo_kokomi': 'Gửi link giới thiệu cho bạn bè'
   };
   return desc[id] || 'Làm nhiệm vụ ngay';
 }
@@ -322,7 +319,6 @@ function getAgeBadgeClass(age: number): string {
                   : id === 'google-map'   ? 'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/80 shadow-[0_0_30px_rgba(217,70,239,0.45)]'
                   : id === 'join-zalo'    ? 'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/80 shadow-[0_0_30px_rgba(99,102,241,0.45)]'
                   : id === 'daily_threads'? 'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/80 shadow-[0_0_30px_rgba(20,184,166,0.45)]'
-                  : id === 'zalo_kokomi' ? 'bg-gradient-to-br from-[#0a2540] to-[#051224] border-sky-500/80 shadow-[0_0_30px_rgba(14,165,233,0.45)]'
                   : 'bg-[#120b0a] border-slate-800'
                 ]">
                 <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[26px]"></div>
@@ -336,7 +332,6 @@ function getAgeBadgeClass(age: number): string {
                        id === 'survey-cinema' ? 'bg-violet-700 text-white' :
                        id === 'google-map'    ? 'bg-fuchsia-600 text-white' :
                        id === 'daily_threads' ? 'bg-teal-600 text-white' :
-                       id === 'zalo_kokomi'   ? 'bg-sky-600 text-white' :
                        'bg-indigo-600 text-white'
                      ]">
                   {{ j.badge || 'CƠ BẢN' }}
@@ -352,7 +347,6 @@ function getAgeBadgeClass(age: number): string {
                          id === 'google-map'    ? 'bg-fuchsia-500/20 text-fuchsia-400' :
                          id === 'join-zalo'     ? 'bg-indigo-500/20 text-indigo-400' :
                          id === 'daily_threads' ? 'bg-teal-500/20 text-teal-400' :
-                         id === 'zalo_kokomi'   ? 'bg-sky-500/20 text-sky-400' :
                          'bg-[#150f0d]'
                        ]">
                     <template v-if="getJobIcon(id as string).content === '📈'">
@@ -375,8 +369,7 @@ function getAgeBadgeClass(age: number): string {
                       'text-violet-400': id === 'survey-cinema',
                       'text-fuchsia-400': id === 'google-map',
                       'text-indigo-400': id === 'join-zalo',
-                      'text-teal-400': id === 'daily_threads',
-                      'text-sky-400': id === 'zalo_kokomi'
+                      'text-teal-400': id === 'daily_threads'
                     }">
                   {{ j.title }}
                 </h4>
@@ -420,7 +413,6 @@ function getAgeBadgeClass(age: number): string {
                     id === 'google-map'    ? 'bg-gradient-to-r from-fuchsia-600 to-pink-500 text-white' :
                     id === 'join-zalo'     ? 'bg-gradient-to-r from-indigo-600 to-blue-500 text-white' :
                     id === 'daily_threads' ? 'bg-gradient-to-r from-teal-600 to-cyan-500 text-white' :
-                    id === 'zalo_kokomi'   ? 'bg-gradient-to-r from-sky-600 to-blue-500 text-white' :
                     'bg-[#1a0f0d] text-white'
                   ]">
                   BẮT ĐẦU ⚡

@@ -23,17 +23,6 @@ export const jobsData: Record<string, any> = {
     route: "/jobs/daily-threads"
   },
 
-  'zalo_kokomi': {
-    title: "ZALO x KOKOMI",
-    subtitle: "Gửi link giới thiệu cho bạn bè",
-    reward: "35.000",
-    rewardText: "35K - 115K",
-    color: "text-sky-400",
-    badge: "CƠ BẢN",
-    type: "friend_referral_link",
-    route: "/jobs/zalo-kokomi"
-  },
-
   // ==============================================
   // NHÓM JOB CINEMA RẠP PHIM
   // ==============================================
@@ -141,14 +130,6 @@ export const jobsData: Record<string, any> = {
           { text: "THAM GIA NHÓM 2 ➔", url: "https://zalo.me/g/1ucvwyabtkhevegfg0s6" },
           { text: "THAM GIA NHÓM 3 ➔", url: "https://zalo.me/g/feyhu2samzen3gjirnqh" }
         ]
-      },
-      {
-        id: 2,
-        title: "THAM GIA SỰ KIỆN ZALO X KOKOMI",
-        content: "Bạn chọn nút THAM GIA SỰ KIỆN bên dưới và gửi ảnh bằng chứng bên dưới.",
-        downloadLink: "https://shorten.asia/jxg72pms",
-        buttonText: "🎯 THAM GIA SỰ KIỆN",
-        images: ["images/anh-kokomi6.jpg"]
       }
     ]
   },
