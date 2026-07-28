@@ -61,45 +61,45 @@ const saveConfig = async () => {
 </script>
 
 <template>
-  <div class="border-b border-slate-800">
-    <button @click="isOpen = !isOpen" class="w-full flex items-center justify-between p-5 hover:bg-white/[0.02] transition-all">
-      <h2 class="text-sm md:text-base text-teal-400 tracking-widest">⚙️ CẤU HÌNH HƯỚNG DẪN THREADS HẰNG NGÀY</h2>
-      <span class="text-slate-500 text-xs">{{ isOpen ? '▲ THU GỌN' : '▼ MỞ RỘNG' }}</span>
+  <div class="border-b border-[var(--admin-border)]">
+    <button @click="isOpen = !isOpen" class="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-all">
+      <h2 class="text-sm md:text-base text-teal-600 tracking-widest">⚙️ CẤU HÌNH HƯỚNG DẪN THREADS HẰNG NGÀY</h2>
+      <span class="text-[var(--admin-muted)] text-xs">{{ isOpen ? '▲ THU GỌN' : '▼ MỞ RỘNG' }}</span>
     </button>
 
     <div v-if="isOpen" class="p-5 pt-0 space-y-6">
-      <div v-if="isLoading" class="text-center py-10 text-teal-500 text-xs tracking-widest animate-pulse">ĐANG TẢI CẤU HÌNH...</div>
+      <div v-if="isLoading" class="text-center py-10 text-teal-600 text-xs tracking-widest animate-pulse">ĐANG TẢI CẤU HÌNH...</div>
 
       <template v-else>
         <!-- 10 NỘI DUNG BÀI ĐĂNG -->
-        <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3">
-          <label class="text-[10px] text-slate-500 tracking-widest block">10 NỘI DUNG BÀI ĐĂNG (user sẽ được random 1 trong các nội dung không rỗng)</label>
+        <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5 space-y-3">
+          <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block">10 NỘI DUNG BÀI ĐĂNG (user sẽ được random 1 trong các nội dung không rỗng)</label>
           <div v-for="(c, i) in contents" :key="'content-' + i" class="space-y-1">
-            <span class="text-[9px] text-slate-600 font-sans not-italic normal-case font-bold">Content #{{ i + 1 }}</span>
+            <span class="text-[9px] text-slate-400 font-sans not-italic normal-case font-bold">Content #{{ i + 1 }}</span>
             <textarea v-model="contents[i]" rows="2" :placeholder="`Nội dung bài đăng mẫu ${i + 1}...`"
-              class="w-full bg-[#111726] text-white text-[12px] py-2.5 px-3 rounded-xl border border-slate-700 outline-none focus:border-teal-500 font-sans normal-case not-italic resize-none"></textarea>
+              class="w-full bg-white text-[var(--admin-text)] text-[12px] py-2.5 px-3 rounded-xl border border-[var(--admin-border)] outline-none focus:border-teal-500 font-sans normal-case not-italic resize-none"></textarea>
           </div>
         </div>
 
         <!-- 10 ẢNH BÀI ĐĂNG -->
-        <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3">
-          <label class="text-[10px] text-slate-500 tracking-widest block">10 ẢNH BÀI ĐĂNG (link hoặc path ảnh, vd: /images/thread-post-1.jpg)</label>
+        <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5 space-y-3">
+          <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block">10 ẢNH BÀI ĐĂNG (link hoặc path ảnh, vd: /images/thread-post-1.jpg)</label>
           <div v-for="(_, i) in postImages" :key="'image-' + i" class="space-y-1">
-            <span class="text-[9px] text-slate-600 font-sans not-italic normal-case font-bold">Image #{{ i + 1 }}</span>
+            <span class="text-[9px] text-slate-400 font-sans not-italic normal-case font-bold">Image #{{ i + 1 }}</span>
             <input v-model="postImages[i]" type="text" :placeholder="`/images/thread-post-${i + 1}.jpg`"
-              class="w-full bg-[#111726] text-white text-[12px] py-2.5 px-3 rounded-xl border border-slate-700 outline-none focus:border-teal-500 font-sans normal-case not-italic" />
+              class="w-full bg-white text-[var(--admin-text)] text-[12px] py-2.5 px-3 rounded-xl border border-[var(--admin-border)] outline-none focus:border-teal-500 font-sans normal-case not-italic" />
           </div>
         </div>
 
         <!-- ẢNH MÃ QR -->
-        <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-5 space-y-3">
-          <label class="text-[10px] text-slate-500 tracking-widest block">ẢNH MÃ QR (qrImage)</label>
+        <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5 space-y-3">
+          <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block">ẢNH MÃ QR (qrImage)</label>
           <input v-model="qrImage" type="text" placeholder="/images/thread-qr.jpg"
-            class="w-full bg-[#111726] text-white text-[12px] py-2.5 px-3 rounded-xl border border-slate-700 outline-none focus:border-teal-500 font-sans normal-case not-italic" />
+            class="w-full bg-white text-[var(--admin-text)] text-[12px] py-2.5 px-3 rounded-xl border border-[var(--admin-border)] outline-none focus:border-teal-500 font-sans normal-case not-italic" />
         </div>
 
         <button @click="saveConfig" :disabled="isSaving"
-          class="w-full bg-teal-600 hover:bg-teal-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black italic uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 shadow-[0_0_20px_rgba(20,184,166,0.3)] flex items-center justify-center gap-2">
+          class="w-full bg-teal-600 hover:bg-teal-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black italic uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 shadow-md flex items-center justify-center gap-2">
           <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" v-if="isSaving"></div>
           <span>{{ isSaving ? 'ĐANG LƯU...' : '💾 LƯU NỘI DUNG THREADS' }}</span>
         </button>

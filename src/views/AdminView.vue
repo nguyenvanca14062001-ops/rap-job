@@ -956,39 +956,39 @@ const handleAdminLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#090e17] flex flex-col items-center justify-center" v-if="isCheckingAuth">
-    <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    <p class="mt-4 text-blue-500 font-black italic uppercase tracking-widest text-sm">Đang xác minh Admin...</p>
+  <div class="admin-theme min-h-screen bg-[var(--admin-bg)] flex flex-col items-center justify-center" v-if="isCheckingAuth">
+    <div class="w-16 h-16 border-4 border-[var(--admin-primary)] border-t-transparent rounded-full animate-spin"></div>
+    <p class="mt-4 text-[var(--admin-primary)] font-black italic uppercase tracking-widest text-sm">Đang xác minh Admin...</p>
   </div>
 
   <!-- LOGIN FORM -->
-  <div class="min-h-screen bg-[#090e17] flex items-center justify-center p-4" v-else-if="!isLoggedIn">
+  <div class="admin-theme min-h-screen bg-[var(--admin-bg)] flex items-center justify-center p-4" v-else-if="!isLoggedIn">
     <div class="w-full max-w-sm">
       <div class="text-center mb-8">
-        <h1 class="text-4xl font-black italic uppercase text-white tracking-tighter">ADMIN <span class="text-blue-500">LOGIN</span></h1>
-        <p class="text-slate-600 text-[10px] tracking-[3px] mt-2 font-black italic uppercase">MMO PRO · FREELANCE · RAP JOB</p>
+        <h1 class="text-4xl font-black italic uppercase text-[var(--admin-text)] tracking-tighter">ADMIN <span class="text-[var(--admin-primary)]">LOGIN</span></h1>
+        <p class="text-[var(--admin-muted)] text-[10px] tracking-[3px] mt-2 font-black italic uppercase">MMO PRO · FREELANCE · RAP JOB</p>
       </div>
-      <div class="bg-[#111726] border border-slate-800 rounded-3xl p-8 shadow-2xl">
+      <div class="bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-3xl p-8 shadow-lg">
         <div class="space-y-4">
           <div>
-            <label class="text-[10px] text-slate-500 font-black italic uppercase tracking-widest block mb-2">EMAIL</label>
+            <label class="text-[10px] text-[var(--admin-muted)] font-black italic uppercase tracking-widest block mb-2">EMAIL</label>
             <input
-              class="w-full bg-[#0d121f] text-white text-sm py-3 px-4 rounded-xl border border-slate-700 outline-none focus:border-blue-500 transition-colors font-sans not-italic normal-case placeholder:text-slate-700"
+              class="w-full bg-[var(--admin-card-soft)] text-[var(--admin-text)] text-sm py-3 px-4 rounded-xl border border-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] transition-colors font-sans not-italic normal-case placeholder:text-slate-400"
               type="email" v-model="loginEmail" placeholder="admin@example.com" @keyup.enter="loginAdmin"
             />
           </div>
           <div>
-            <label class="text-[10px] text-slate-500 font-black italic uppercase tracking-widest block mb-2">MẬT KHẨU</label>
+            <label class="text-[10px] text-[var(--admin-muted)] font-black italic uppercase tracking-widest block mb-2">MẬT KHẨU</label>
             <input
-              class="w-full bg-[#0d121f] text-white text-sm py-3 px-4 rounded-xl border border-slate-700 outline-none focus:border-blue-500 transition-colors font-sans not-italic normal-case placeholder:text-slate-700"
+              class="w-full bg-[var(--admin-card-soft)] text-[var(--admin-text)] text-sm py-3 px-4 rounded-xl border border-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] transition-colors font-sans not-italic normal-case placeholder:text-slate-400"
               type="password" v-model="loginPassword" placeholder="••••••••" @keyup.enter="loginAdmin"
             />
           </div>
-          <div class="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3" v-if="loginError">
-            <p class="text-red-400 text-xs font-sans not-italic normal-case font-bold">{{ loginError }}</p>
+          <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3" v-if="loginError">
+            <p class="text-[var(--admin-danger)] text-xs font-sans not-italic normal-case font-bold">{{ loginError }}</p>
           </div>
           <button
-            class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black italic uppercase tracking-widest py-3.5 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center justify-center gap-2 mt-2"
+            class="w-full bg-[var(--admin-primary)] hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black italic uppercase tracking-widest py-3.5 rounded-xl transition-all active:scale-95 shadow-md flex items-center justify-center gap-2 mt-2"
             @click="loginAdmin" :disabled="isLoginLoading"
           >
             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" v-if="isLoginLoading"></div>
@@ -999,7 +999,7 @@ const handleAdminLogout = async () => {
     </div>
   </div>
 
-  <div class="min-h-screen bg-[#090e17] p-4 md:p-10 font-black italic uppercase text-left selection:bg-blue-500/30 relative" v-else>
+  <div class="admin-theme min-h-screen bg-[var(--admin-bg)] p-4 md:p-10 font-black italic uppercase text-left selection:bg-blue-200 relative" v-else>
 
     <!-- ZOOM ẢNH -->
     <Transition name="fade">
@@ -1021,18 +1021,18 @@ const handleAdminLogout = async () => {
     <Transition name="fade">
       <div class="fixed inset-0 z-[5000] flex items-center justify-center px-4" v-if="showRejectPopup">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeRejectPopup"></div>
-        <div class="relative bg-[#111726] border border-red-500/30 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center">
-          <h3 class="text-xl text-red-500 mb-4">TỪ CHỐI BẰNG CHỨNG</h3>
-          <p class="text-slate-400 text-xs normal-case not-italic font-bold mb-4">Vui lòng nhập lý do từ chối để khách hàng biết.</p>
+        <div class="admin-theme relative bg-[var(--admin-card)] border border-red-200 w-full max-w-md p-6 rounded-2xl shadow-xl text-center">
+          <h3 class="text-xl text-[var(--admin-danger)] mb-4">TỪ CHỐI BẰNG CHỨNG</h3>
+          <p class="text-[var(--admin-muted)] text-xs normal-case not-italic font-bold mb-4">Vui lòng nhập lý do từ chối để khách hàng biết.</p>
           <div class="flex flex-wrap gap-2 mb-4 justify-center" v-if="selectedReportForReject?.jobId === LPBANK_REFERRAL_JOB_ID">
             <button v-for="r in lpbankRejectReasons" :key="r"
-                    class="px-3 py-1.5 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
+                    class="px-3 py-1.5 bg-[var(--admin-card-soft)] hover:bg-[var(--admin-danger)] text-[var(--admin-muted)] hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
                     @click="rejectReason = r">{{ r }}</button>
           </div>
-          <textarea class="w-full bg-[#0d121f] text-white border border-slate-700 rounded-xl p-3 mb-6 font-sans normal-case not-italic text-sm outline-none focus:border-red-500" v-model="rejectReason" rows="3" placeholder="Ví dụ: Ảnh mờ, Sai thông tin..."></textarea>
+          <textarea class="w-full bg-[var(--admin-card-soft)] text-[var(--admin-text)] border border-[var(--admin-border)] rounded-xl p-3 mb-6 font-sans normal-case not-italic text-sm outline-none focus:border-[var(--admin-danger)]" v-model="rejectReason" rows="3" placeholder="Ví dụ: Ảnh mờ, Sai thông tin..."></textarea>
           <div class="flex gap-3 justify-end">
-            <button class="px-5 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs" @click="closeRejectPopup">HỦY BỎ</button>
-            <button class="px-5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs shadow-lg" @click="confirmReject">XÁC NHẬN TỪ CHỐI</button>
+            <button class="px-5 py-2 bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:bg-slate-200 rounded-xl text-xs" @click="closeRejectPopup">HỦY BỎ</button>
+            <button class="px-5 py-2 bg-[var(--admin-danger)] hover:bg-red-700 text-white rounded-xl text-xs shadow-md" @click="confirmReject">XÁC NHẬN TỪ CHỐI</button>
           </div>
         </div>
       </div>
@@ -1042,13 +1042,13 @@ const handleAdminLogout = async () => {
     <Transition name="fade">
       <div class="fixed inset-0 z-[5000] flex items-center justify-center px-4" v-if="showMessagePopup">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeMessagePopup"></div>
-        <div class="relative bg-[#111726] border border-blue-500/30 w-full max-w-md p-6 rounded-2xl shadow-2xl text-center">
-          <h3 class="text-xl text-blue-500 mb-4">GỬI LỜI NHẮN (ĐƠN VẪN CHỜ)</h3>
-          <p class="text-slate-400 text-xs normal-case not-italic font-bold mb-4">Lời nhắn sẽ hiển thị cho khách nhưng đơn không bị Hủy.</p>
-          <textarea class="w-full bg-[#0d121f] text-white border border-slate-700 rounded-xl p-3 mb-6 font-sans normal-case not-italic text-sm outline-none focus:border-blue-500" v-model="messageText" rows="3" placeholder="Ví dụ: Bạn nhắn tin cho Admin để kiểm tra lại nhé..."></textarea>
+        <div class="admin-theme relative bg-[var(--admin-card)] border border-blue-200 w-full max-w-md p-6 rounded-2xl shadow-xl text-center">
+          <h3 class="text-xl text-[var(--admin-primary)] mb-4">GỬI LỜI NHẮN (ĐƠN VẪN CHỜ)</h3>
+          <p class="text-[var(--admin-muted)] text-xs normal-case not-italic font-bold mb-4">Lời nhắn sẽ hiển thị cho khách nhưng đơn không bị Hủy.</p>
+          <textarea class="w-full bg-[var(--admin-card-soft)] text-[var(--admin-text)] border border-[var(--admin-border)] rounded-xl p-3 mb-6 font-sans normal-case not-italic text-sm outline-none focus:border-[var(--admin-primary)]" v-model="messageText" rows="3" placeholder="Ví dụ: Bạn nhắn tin cho Admin để kiểm tra lại nhé..."></textarea>
           <div class="flex gap-3 justify-end">
-            <button class="px-5 py-2 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs" @click="closeMessagePopup">HỦY BỎ</button>
-            <button class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs shadow-lg" @click="confirmMessage">GỬI LỜI NHẮN</button>
+            <button class="px-5 py-2 bg-[var(--admin-card-soft)] text-[var(--admin-muted)] hover:bg-slate-200 rounded-xl text-xs" @click="closeMessagePopup">HỦY BỎ</button>
+            <button class="px-5 py-2 bg-[var(--admin-primary)] hover:bg-blue-700 text-white rounded-xl text-xs shadow-md" @click="confirmMessage">GỬI LỜI NHẮN</button>
           </div>
         </div>
       </div>
@@ -1058,29 +1058,29 @@ const handleAdminLogout = async () => {
     <Transition name="fade">
       <div class="fixed inset-0 z-[5000] flex items-center justify-center px-4" v-if="walletLinkModal.open">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="closeWalletLinkModal"></div>
-        <div class="relative bg-[#111726] border border-blue-500/30 w-full max-w-md p-6 rounded-2xl shadow-2xl">
+        <div class="admin-theme relative bg-[var(--admin-card)] border border-blue-200 w-full max-w-md p-6 rounded-2xl shadow-xl">
           <div class="flex justify-between items-center mb-3">
-            <h3 class="text-blue-400 text-base font-black tracking-widest">GẮN HỒ SƠ VÍ THỦ CÔNG</h3>
-            <button class="text-slate-400 hover:text-white text-lg leading-none" @click="closeWalletLinkModal">✕</button>
+            <h3 class="text-[var(--admin-primary)] text-base font-black tracking-widest">GẮN HỒ SƠ VÍ THỦ CÔNG</h3>
+            <button class="text-[var(--admin-muted)] hover:text-[var(--admin-danger)] text-lg leading-none" @click="closeWalletLinkModal">✕</button>
           </div>
-          <p class="text-slate-500 text-[11px] mb-3 font-sans not-italic normal-case">Đơn UID gốc: {{ walletLinkModal.report?.uid }}</p>
+          <p class="text-[var(--admin-muted)] text-[11px] mb-3 font-sans not-italic normal-case">Đơn UID gốc: {{ walletLinkModal.report?.uid }}</p>
           <div class="flex gap-2 mb-2">
             <input v-model="walletLinkQuery" @keyup.enter="searchUsersToLink" type="text" placeholder="SĐT / Tên đăng nhập / Họ tên / UID"
-                   class="flex-1 bg-[#0d121f] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-blue-500 font-sans not-italic normal-case" />
+                   class="flex-1 bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-lg px-3 py-2 text-sm text-[var(--admin-text)] placeholder-slate-400 outline-none focus:border-[var(--admin-primary)] font-sans not-italic normal-case" />
             <button @click="searchUsersToLink" :disabled="walletLinkLoading"
-                    class="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-black uppercase transition-all active:scale-95">
+                    class="bg-[var(--admin-primary)] hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-xs font-black uppercase transition-all active:scale-95">
               {{ walletLinkLoading ? '...' : 'Tìm' }}
             </button>
           </div>
-          <p v-if="walletLinkError" class="text-red-400 text-[11px] mb-2 font-sans not-italic normal-case">{{ walletLinkError }}</p>
+          <p v-if="walletLinkError" class="text-[var(--admin-danger)] text-[11px] mb-2 font-sans not-italic normal-case">{{ walletLinkError }}</p>
           <div class="max-h-64 overflow-y-auto space-y-2">
-            <div v-for="r in walletLinkResults" :key="r.uid" class="bg-[#0d121f] border border-slate-700 rounded-lg p-3 flex justify-between items-center gap-2">
+            <div v-for="r in walletLinkResults" :key="r.uid" class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-lg p-3 flex justify-between items-center gap-2">
               <div class="text-xs min-w-0 font-sans not-italic normal-case">
-                <div class="text-white font-bold truncate">{{ r.data?.fullName || r.data?.username || 'Chưa cập nhật' }}</div>
-                <div class="text-slate-500 text-[10px] truncate">UID: {{ r.uid?.slice(0, 8) }}… · SĐT: {{ r.data?.phone || '—' }} · Ví: {{ (r.data?.balance || 0).toLocaleString('vi-VN') }} XU</div>
+                <div class="text-[var(--admin-text)] font-bold truncate">{{ r.data?.fullName || r.data?.username || 'Chưa cập nhật' }}</div>
+                <div class="text-[var(--admin-muted)] text-[10px] truncate">UID: {{ r.uid?.slice(0, 8) }}… · SĐT: {{ r.data?.phone || '—' }} · Ví: {{ (r.data?.balance || 0).toLocaleString('vi-VN') }} XU</div>
               </div>
               <button @click="confirmWalletLink(r)"
-                      class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all active:scale-95 shrink-0">
+                      class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all active:scale-95 shrink-0">
                 Chọn
               </button>
             </div>
@@ -1091,75 +1091,75 @@ const handleAdminLogout = async () => {
 
     <!-- HEADER -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-      <h1 class="text-3xl md:text-5xl text-white tracking-tighter leading-none">HỆ THỐNG <span class="text-blue-500">ADMIN</span></h1>
+      <h1 class="text-3xl md:text-5xl text-[var(--admin-text)] tracking-tighter leading-none">HỆ THỐNG <span class="text-[var(--admin-primary)]">ADMIN</span></h1>
       <div class="flex flex-wrap items-center gap-3">
-        <div class="flex items-center gap-1 bg-[#111726] p-1.5 rounded-xl border border-slate-800">
-          <input class="bg-[#0d121f] text-white text-[10px] py-2 px-3 rounded-lg border border-slate-700 outline-none w-[170px] md:w-[200px] placeholder:text-slate-600 font-sans not-italic normal-case" v-model="searchQuery" @keyup.enter="handleSearch" type="text" placeholder="🔎 Tìm Username hoặc SĐT..." />
-          <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg text-[10px] font-black" @click="handleSearch">TÌM</button>
-          <button class="bg-slate-700 hover:bg-slate-600 text-white px-2 py-2 rounded-lg text-[10px] font-black" v-if="searchQuery" @click="searchQuery = ''; handleSearch()">✕</button>
+        <div class="flex items-center gap-1 bg-[var(--admin-card)] p-1.5 rounded-xl border border-[var(--admin-border)] shadow-sm">
+          <input class="bg-white text-[var(--admin-text)] text-[10px] py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none w-[170px] md:w-[200px] placeholder:text-slate-400 font-sans not-italic normal-case" v-model="searchQuery" @keyup.enter="handleSearch" type="text" placeholder="🔎 Tìm Username hoặc SĐT..." />
+          <button class="bg-[var(--admin-primary)] hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-[10px] font-black" @click="handleSearch">TÌM</button>
+          <button class="bg-slate-200 hover:bg-slate-300 text-[var(--admin-text)] px-2 py-2 rounded-lg text-[10px] font-black" v-if="searchQuery" @click="searchQuery = ''; handleSearch()">✕</button>
         </div>
-        <div class="flex items-center gap-2 bg-[#111726] p-1.5 rounded-xl border border-slate-800">
-          <span class="text-[10px] text-emerald-500 tracking-[2px] ml-2 hidden md:inline">TRẠNG THÁI:</span>
-          <select class="bg-[#0d121f] text-white text-[10px] py-2 px-3 rounded-lg border border-slate-700 outline-none cursor-pointer" v-model="statusFilter">
+        <div class="flex items-center gap-2 bg-[var(--admin-card)] p-1.5 rounded-xl border border-[var(--admin-border)] shadow-sm">
+          <span class="text-[10px] text-[var(--admin-success)] tracking-[2px] ml-2 hidden md:inline">TRẠNG THÁI:</span>
+          <select class="bg-white text-[var(--admin-text)] text-[10px] py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none cursor-pointer" v-model="statusFilter">
             <option value="pending">⏳ ĐANG CHỜ DUYỆT</option>
             <option value="all">📚 TẤT CẢ LỊCH SỬ</option>
             <option value="approved">✅ ĐÃ DUYỆT</option>
             <option value="rejected">❌ BỊ HỦY</option>
           </select>
         </div>
-        <div class="flex items-center gap-2 bg-[#111726] p-1.5 rounded-xl border border-slate-800">
-          <span class="text-[10px] text-slate-500 tracking-[2px] ml-2 hidden md:inline">LỌC SITE:</span>
-          <select class="bg-[#0d121f] text-white text-[10px] py-2 px-3 rounded-lg border border-slate-700 outline-none cursor-pointer" v-model="siteFilter">
+        <div class="flex items-center gap-2 bg-[var(--admin-card)] p-1.5 rounded-xl border border-[var(--admin-border)] shadow-sm">
+          <span class="text-[10px] text-[var(--admin-muted)] tracking-[2px] ml-2 hidden md:inline">LỌC SITE:</span>
+          <select class="bg-white text-[var(--admin-text)] text-[10px] py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none cursor-pointer" v-model="siteFilter">
             <option value="all">TẤT CẢ</option>
             <option value="mmo">MMO PRO</option>
             <option value="freelance">FREELANCE</option>
             <option value="rapjob">RAP JOB</option>
           </select>
         </div>
-        <button class="bg-slate-800 text-white px-6 py-2.5 rounded-xl text-[10px] hover:bg-red-600 transition-colors" @click="handleAdminLogout">THOÁT</button>
+        <button class="bg-slate-200 text-[var(--admin-text)] px-6 py-2.5 rounded-xl text-[10px] hover:bg-[var(--admin-danger)] hover:text-white transition-colors" @click="handleAdminLogout">THOÁT</button>
       </div>
     </div>
 
     <!-- THỐNG KÊ -->
     <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8">
       <div class="md:col-span-4 flex flex-col gap-4">
-        <div class="flex-1 bg-gradient-to-br from-[#111726] to-[#0d121f] border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+        <div class="flex-1 bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-2xl p-5 shadow-sm relative overflow-hidden group">
           <div class="absolute -right-4 -top-4 text-7xl opacity-5 group-hover:scale-110 transition-transform">📊</div>
           <div class="flex justify-between items-start mb-2">
-            <p class="text-slate-500 text-[10px] font-black tracking-widest uppercase">TỔNG DUYỆT HÔM NAY</p>
+            <p class="text-[var(--admin-muted)] text-[10px] font-black tracking-widest uppercase">TỔNG DUYỆT HÔM NAY</p>
             <div class="flex gap-2">
-              <button class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl tracking-widest text-xs font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95" @click="saveDailyNote">📝 CHỐT SỔ</button>
-              <button class="text-slate-400 hover:text-blue-500 active:scale-90 bg-[#090e17] p-2 rounded-xl border border-slate-700/50" @click="loadDashboardStats">
-                <svg :class="['w-5 h-5', isStatsLoading ? 'animate-spin text-blue-500' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              <button class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white px-4 py-2 rounded-xl tracking-widest text-xs font-black shadow-sm active:scale-95" @click="saveDailyNote">📝 CHỐT SỔ</button>
+              <button class="text-[var(--admin-muted)] hover:text-[var(--admin-primary)] active:scale-90 bg-[var(--admin-card-soft)] p-2 rounded-xl border border-[var(--admin-border)]" @click="loadDashboardStats">
+                <svg :class="['w-5 h-5', isStatsLoading ? 'animate-spin text-[var(--admin-primary)]' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
               </button>
             </div>
           </div>
-          <div class="text-4xl text-emerald-400 font-black drop-shadow-[0_0_10px_rgba(16,185,129,0.3)]">
-            {{ isStatsLoading ? '...' : statsTodayTotal }} <span class="text-sm text-slate-600 font-bold uppercase tracking-widest">Đơn</span>
+          <div class="text-4xl text-[var(--admin-success)] font-black">
+            {{ isStatsLoading ? '...' : statsTodayTotal }} <span class="text-sm text-[var(--admin-muted)] font-bold uppercase tracking-widest">Đơn</span>
           </div>
         </div>
-        <div class="flex-1 bg-gradient-to-br from-[#111726] to-[#0d121f] border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+        <div class="flex-1 bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-2xl p-5 shadow-sm relative overflow-hidden group">
           <div class="absolute -right-4 -top-4 text-7xl opacity-5 group-hover:scale-110 transition-transform">📱</div>
-          <p class="text-slate-500 text-[10px] font-black tracking-widest mb-2 uppercase">APP NGÂN HÀNG HÔM NAY</p>
-          <div class="text-4xl text-blue-400 font-black drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
-            {{ isStatsLoading ? '...' : statsTodayAppTotal }} <span class="text-sm text-slate-600 font-bold uppercase tracking-widest">Đơn</span>
+          <p class="text-[var(--admin-muted)] text-[10px] font-black tracking-widest mb-2 uppercase">APP NGÂN HÀNG HÔM NAY</p>
+          <div class="text-4xl text-[var(--admin-primary)] font-black">
+            {{ isStatsLoading ? '...' : statsTodayAppTotal }} <span class="text-sm text-[var(--admin-muted)] font-bold uppercase tracking-widest">Đơn</span>
           </div>
         </div>
       </div>
-      <div class="md:col-span-8 bg-gradient-to-br from-[#111726] to-[#0d121f] border border-slate-800/80 rounded-2xl p-5 shadow-lg">
-        <p class="text-slate-500 text-[10px] font-black tracking-widest mb-4 uppercase flex items-center gap-2">
+      <div class="md:col-span-8 bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-2xl p-5 shadow-sm">
+        <p class="text-[var(--admin-muted)] text-[10px] font-black tracking-widest mb-4 uppercase flex items-center gap-2">
           <span>CHI TIẾT ĐỐI SOÁT</span>
-          <span class="bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded text-[8px] border border-blue-500/30">LIVE</span>
+          <span class="bg-blue-100 text-[var(--admin-primary)] px-2 py-0.5 rounded text-[8px] border border-blue-200">LIVE</span>
         </p>
         <div class="flex justify-center items-center py-6" v-if="isStatsLoading">
-          <div class="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div class="w-6 h-6 border-2 border-[var(--admin-primary)] border-t-transparent rounded-full animate-spin"></div>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3" v-else>
-          <div class="bg-[#090e17] border border-slate-700/50 rounded-xl p-4 flex flex-col gap-2" v-for="(data, name) in statsAppBreakdown" :key="name">
-            <div class="text-[10px] text-blue-400 font-black tracking-widest uppercase border-b border-slate-800 pb-2">{{ name }}</div>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-xl p-4 flex flex-col gap-2" v-for="(data, name) in statsAppBreakdown" :key="name">
+            <div class="text-[10px] text-[var(--admin-primary)] font-black tracking-widest uppercase border-b border-[var(--admin-border)] pb-2">{{ name }}</div>
             <div class="flex justify-between items-center mt-1">
-              <span class="text-slate-500 text-[10px] uppercase font-bold">Hôm nay:</span>
-              <span :class="['text-base font-black', data.today > 0 ? 'text-emerald-400' : 'text-slate-500']">{{ data.today }}</span>
+              <span class="text-[var(--admin-muted)] text-[10px] uppercase font-bold">Hôm nay:</span>
+              <span :class="['text-base font-black', data.today > 0 ? 'text-[var(--admin-success)]' : 'text-[var(--admin-muted)]']">{{ data.today }}</span>
             </div>
           </div>
         </div>
@@ -1168,18 +1168,18 @@ const handleAdminLogout = async () => {
 
     <!-- SỔ TAY -->
     <div class="mb-8">
-      <p class="text-blue-500 text-[10px] font-black tracking-[3px] mb-3 ml-2">📒 SỔ TAY ĐỐI SOÁT LỊCH SỬ</p>
-      <div class="bg-[#111726] border border-slate-800 rounded-3xl p-4 overflow-x-auto shadow-2xl">
+      <p class="text-[var(--admin-primary)] text-[10px] font-black tracking-[3px] mb-3 ml-2">📒 SỔ TAY ĐỐI SOÁT LỊCH SỬ</p>
+      <div class="bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-3xl p-4 overflow-x-auto shadow-sm">
         <table class="w-full text-left">
-          <tbody class="divide-y divide-slate-800/50 italic">
-            <tr class="group hover:bg-white/[0.02]" v-for="note in dailyNotes" :key="note.id">
-              <td class="py-3 px-4 whitespace-nowrap text-emerald-400 text-xs font-black">{{ note.dateLabel }}</td>
-              <td class="py-3 px-4 text-slate-300 text-[11px] normal-case font-bold w-full">{{ note.content }}</td>
-              <td class="py-3 px-4 text-right whitespace-nowrap text-slate-500 text-[10px] font-black uppercase">Tổng: <span class="text-white">{{ note.totalToday }}</span> đơn</td>
-              <td class="py-3 px-4 text-right"><button class="text-red-900 group-hover:text-red-500 transition-colors text-lg" @click="deleteNote(note.id)">✕</button></td>
+          <tbody class="divide-y divide-[var(--admin-border)] italic">
+            <tr class="group hover:bg-slate-50" v-for="note in dailyNotes" :key="note.id">
+              <td class="py-3 px-4 whitespace-nowrap text-[var(--admin-success)] text-xs font-black">{{ note.dateLabel }}</td>
+              <td class="py-3 px-4 text-[var(--admin-text)] text-[11px] normal-case font-bold w-full">{{ note.content }}</td>
+              <td class="py-3 px-4 text-right whitespace-nowrap text-[var(--admin-muted)] text-[10px] font-black uppercase">Tổng: <span class="text-[var(--admin-text)]">{{ note.totalToday }}</span> đơn</td>
+              <td class="py-3 px-4 text-right"><button class="text-slate-300 group-hover:text-[var(--admin-danger)] transition-colors text-lg" @click="deleteNote(note.id)">✕</button></td>
             </tr>
             <tr v-if="dailyNotes.length === 0">
-              <td class="py-10 text-center text-slate-700 text-[10px] tracking-[2px]" colspan="4">CHƯA CÓ LỊCH SỬ ĐỐI SOÁT NÀO.</td>
+              <td class="py-10 text-center text-slate-400 text-[10px] tracking-[2px]" colspan="4">CHƯA CÓ LỊCH SỬ ĐỐI SOÁT NÀO.</td>
             </tr>
           </tbody>
         </table>
@@ -1188,56 +1188,56 @@ const handleAdminLogout = async () => {
 
     <!-- TABS -->
     <div class="flex gap-3 mb-6 flex-wrap">
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'app_jobs' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'app_jobs'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'app_jobs' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'app_jobs'">
         APP NGÂN HÀNG ({{ filteredAppReports.length }})
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'other_jobs' ? 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'other_jobs'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'other_jobs' ? 'bg-[var(--admin-primary)] text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'other_jobs'">
         JOB KHÁC ({{ filteredOtherReports.length }})
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'withdrawals' ? 'bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'withdrawals'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'withdrawals' ? 'bg-[var(--admin-success)] text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'withdrawals'">
         RÚT TIỀN ({{ filteredWithdrawals.length }})
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'daily_threads' ? 'bg-teal-600 text-white shadow-[0_0_20px_rgba(20,184,166,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'daily_threads'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'daily_threads' ? 'bg-teal-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'daily_threads'">
         🧵 THREAD HẰNG NGÀY ({{ dailyThreadReportsCount }})
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'vip_jobs' ? 'bg-yellow-600 text-white shadow-[0_0_20px_rgba(234,179,8,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'vip_jobs'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'vip_jobs' ? 'bg-[var(--admin-warning)] text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'vip_jobs'">
         ⚙️ CẤU HÌNH JOB VIP ({{ vipJobs.length }})
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'app_config' ? 'bg-slate-500 text-white' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'app_config'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'app_config' ? 'bg-slate-500 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'app_config'">
         ⚙️ CẤU HÌNH WEB
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'support_config' ? 'bg-rose-600 text-white shadow-[0_0_20px_rgba(225,29,72,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'support_config'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'support_config' ? 'bg-rose-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'support_config'">
         💬 HỖ TRỢ
       </button>
-      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'storage_clean' ? 'bg-rose-700 text-white shadow-[0_0_20px_rgba(190,18,60,0.3)]' : 'bg-[#111726] text-slate-500 hover:bg-[#1a2335]']" @click="activeTab = 'storage_clean'">
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'storage_clean' ? 'bg-rose-700 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'storage_clean'">
         🧹 DỌN ẢNH STORAGE
       </button>
     </div>
 
     <!-- BẢNG CHÍNH -->
-    <div class="bg-[#111726] border border-slate-800 rounded-[30px] overflow-hidden shadow-2xl">
-      <div class="p-20 text-center text-blue-500 animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean'">ĐANG TẢI...</div>
+    <div class="admin-theme bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-[30px] overflow-hidden shadow-sm">
+      <div class="p-20 text-center text-[var(--admin-primary)] animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean'">ĐANG TẢI...</div>
 
       <!-- APP JOBS & OTHER JOBS -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'app_jobs' || activeTab === 'other_jobs'">
         <Transition name="fade">
-          <div class="bg-blue-900/40 border-b border-blue-500/30 p-4 flex justify-between items-center px-6" v-if="activeTab === 'other_jobs' && selectedOtherJobs.length">
-            <span class="text-blue-400 text-sm tracking-widest">ĐÃ CHỌN: <span class="text-white text-lg">{{ selectedOtherJobs.length }}</span> ĐƠN</span>
-            <button class="bg-blue-500 hover:bg-blue-400 text-white px-6 py-3 rounded-xl text-xs font-black" @click="bulkApproveOtherJobs">DUYỆT TẤT CẢ 🚀</button>
+          <div class="bg-blue-50 border-b border-blue-200 p-4 flex justify-between items-center px-6" v-if="activeTab === 'other_jobs' && selectedOtherJobs.length">
+            <span class="text-[var(--admin-primary)] text-sm tracking-widest">ĐÃ CHỌN: <span class="text-[var(--admin-text)] text-lg">{{ selectedOtherJobs.length }}</span> ĐƠN</span>
+            <button class="bg-[var(--admin-primary)] hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-xs font-black" @click="bulkApproveOtherJobs">DUYỆT TẤT CẢ 🚀</button>
           </div>
         </Transition>
         <Transition name="fade">
-          <div class="bg-red-900/40 border-b border-red-500/30 p-4 flex justify-between items-center px-6" v-if="activeTab === 'app_jobs' && selectedAppJobs.length">
-            <span class="text-red-400 text-sm tracking-widest">ĐÃ CHỌN: <span class="text-white text-lg">{{ selectedAppJobs.length }}</span> ĐƠN</span>
-            <button class="bg-red-500 hover:bg-red-400 text-white px-6 py-3 rounded-xl text-xs font-black" @click="bulkRejectAppJobs">TỪ CHỐI TẤT CẢ ❌</button>
+          <div class="bg-red-50 border-b border-red-200 p-4 flex justify-between items-center px-6" v-if="activeTab === 'app_jobs' && selectedAppJobs.length">
+            <span class="text-[var(--admin-danger)] text-sm tracking-widest">ĐÃ CHỌN: <span class="text-[var(--admin-text)] text-lg">{{ selectedAppJobs.length }}</span> ĐƠN</span>
+            <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white px-6 py-3 rounded-xl text-xs font-black" @click="bulkRejectAppJobs">TỪ CHỐI TẤT CẢ ❌</button>
           </div>
         </Transition>
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="bg-[#0d121f] text-blue-500 text-[10px] tracking-[2px] border-b border-slate-800">
+            <tr class="bg-[var(--admin-card-soft)] text-[var(--admin-primary)] text-[10px] tracking-[2px] border-b border-[var(--admin-border)]">
               <th class="p-6 text-center w-12">
-                <input class="w-5 h-5 cursor-pointer accent-blue-500 rounded" v-if="activeTab === 'other_jobs'" type="checkbox" :checked="isAllOtherJobsSelected" @change="toggleAllOtherJobs" />
-                <input class="w-5 h-5 cursor-pointer accent-red-500 rounded" v-if="activeTab === 'app_jobs'" type="checkbox" :checked="isAllAppJobsSelected" @change="toggleAllAppJobs" />
+                <input class="w-5 h-5 cursor-pointer accent-blue-600 rounded" v-if="activeTab === 'other_jobs'" type="checkbox" :checked="isAllOtherJobsSelected" @change="toggleAllOtherJobs" />
+                <input class="w-5 h-5 cursor-pointer accent-red-600 rounded" v-if="activeTab === 'app_jobs'" type="checkbox" :checked="isAllAppJobsSelected" @change="toggleAllAppJobs" />
               </th>
               <th class="p-6 min-w-[250px]">NGƯỜI NỘP</th>
               <th class="p-6 min-w-[150px]">CÔNG VIỆC</th>
@@ -1246,126 +1246,126 @@ const handleAdminLogout = async () => {
               <th class="p-6 text-right min-w-[200px]">HÀNH ĐỘNG</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-800/50">
-            <tr v-for="rp in (activeTab === 'app_jobs' ? filteredAppReports : filteredOtherReports)" :key="rp.id" :class="['hover:bg-white/[0.02] group', selectedOtherJobs.includes(rp.id) ? 'bg-blue-900/10' : '', selectedAppJobs.includes(rp.id) ? 'bg-red-900/10' : '']">
+          <tbody class="divide-y divide-[var(--admin-border)]">
+            <tr v-for="rp in (activeTab === 'app_jobs' ? filteredAppReports : filteredOtherReports)" :key="rp.id" :class="['hover:bg-slate-50 group', selectedOtherJobs.includes(rp.id) ? 'bg-blue-50' : '', selectedAppJobs.includes(rp.id) ? 'bg-red-50' : '']">
               <td class="p-6 text-center">
-                <input class="w-5 h-5 cursor-pointer accent-blue-500 rounded" v-if="rp.status === 'pending' && activeTab === 'other_jobs'" type="checkbox" :value="rp.id" v-model="selectedOtherJobs" />
-                <input class="w-5 h-5 cursor-pointer accent-red-500 rounded" v-if="rp.status === 'pending' && activeTab === 'app_jobs'" type="checkbox" :value="rp.id" v-model="selectedAppJobs" />
+                <input class="w-5 h-5 cursor-pointer accent-blue-600 rounded" v-if="rp.status === 'pending' && activeTab === 'other_jobs'" type="checkbox" :value="rp.id" v-model="selectedOtherJobs" />
+                <input class="w-5 h-5 cursor-pointer accent-red-600 rounded" v-if="rp.status === 'pending' && activeTab === 'app_jobs'" type="checkbox" :value="rp.id" v-model="selectedAppJobs" />
               </td>
               <td class="p-6">
-                <div class="mb-2 pb-2 border-b border-slate-700/50 flex justify-between items-start">
+                <div class="mb-2 pb-2 border-b border-[var(--admin-border)] flex justify-between items-start">
                   <div>
-                    <span class="text-[9px] text-emerald-400 tracking-widest block mb-0.5">TÀI KHOẢN GỐC:</span>
-                    <div class="text-white text-sm font-black truncate max-w-[200px]">{{ usersMap[effUid(rp)]?.username || usersMap[effUid(rp)]?.fullName || 'CHƯA CẬP NHẬT' }}</div>
-                    <div class="text-slate-400 text-[10px] font-sans not-italic">Ví: <span class="text-yellow-400 font-black">{{ usersMap[effUid(rp)]?.balance }} XU</span></div>
-                    <div class="text-slate-400 text-[10px] font-sans not-italic">Ngày sinh: <span class="text-emerald-400 font-bold">{{ usersMap[effUid(rp)]?.dateOfBirth || usersMap[effUid(rp)]?.dob || usersMap[effUid(rp)]?.ngaysinh || '—' }}</span></div>
-                    <div class="text-[9px] text-slate-600 font-sans not-italic" v-if="rp.repairedUserUid">UID gốc: {{ rp.uid?.slice(0, 8) }}… · Ví gắn: {{ rp.repairedUserUid?.slice(0, 8) }}…</div>
+                    <span class="text-[9px] text-[var(--admin-success)] tracking-widest block mb-0.5">TÀI KHOẢN GỐC:</span>
+                    <div class="text-[var(--admin-text)] text-sm font-black truncate max-w-[200px]">{{ usersMap[effUid(rp)]?.username || usersMap[effUid(rp)]?.fullName || 'CHƯA CẬP NHẬT' }}</div>
+                    <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">Ví: <span class="text-[var(--admin-warning)] font-black">{{ usersMap[effUid(rp)]?.balance }} XU</span></div>
+                    <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">Ngày sinh: <span class="text-[var(--admin-success)] font-bold">{{ usersMap[effUid(rp)]?.dateOfBirth || usersMap[effUid(rp)]?.dob || usersMap[effUid(rp)]?.ngaysinh || '—' }}</span></div>
+                    <div class="text-[9px] text-slate-400 font-sans not-italic" v-if="rp.repairedUserUid">UID gốc: {{ rp.uid?.slice(0, 8) }}… · Ví gắn: {{ rp.repairedUserUid?.slice(0, 8) }}…</div>
                   </div>
                   <div class="flex flex-col items-end gap-1">
-                    <span class="bg-pink-500/20 text-pink-400 border border-pink-500/30 text-[8px] px-2 py-0.5 rounded" v-if="rp.site === 'freelance'">FREELANCE</span>
-                    <span class="bg-violet-500/20 text-violet-400 border border-violet-500/30 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site === 'rapjob'">RAP JOB</span>
-                    <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
-                    <button class="bg-yellow-600/20 text-yellow-500 hover:bg-yellow-500 hover:text-white border border-yellow-600/50 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(effUid(rp))">SỬA VÍ</button>
-                    <button class="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-500 hover:text-white border border-emerald-600/50 px-2 py-1 rounded-lg text-[8px]" @click="addXuToUser(effUid(rp))">💰 CỘNG XU</button>
+                    <span class="bg-pink-100 text-pink-600 border border-pink-200 text-[8px] px-2 py-0.5 rounded" v-if="rp.site === 'freelance'">FREELANCE</span>
+                    <span class="bg-violet-100 text-violet-600 border border-violet-200 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site === 'rapjob'">RAP JOB</span>
+                    <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
+                    <button class="bg-amber-50 text-[var(--admin-warning)] hover:bg-[var(--admin-warning)] hover:text-white border border-amber-200 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(effUid(rp))">SỬA VÍ</button>
+                    <button class="bg-emerald-50 text-[var(--admin-success)] hover:bg-[var(--admin-success)] hover:text-white border border-emerald-200 px-2 py-1 rounded-lg text-[8px]" @click="addXuToUser(effUid(rp))">💰 CỘNG XU</button>
                   </div>
                 </div>
                 <div>
-                  <span class="text-[9px] text-blue-400 tracking-widest block mb-0.5">ĐƠN NỘP ({{ formatDate(rp.createdAt) }}):</span>
-                  <div class="text-slate-300 text-xs font-black truncate max-w-[200px]">{{ rp.fullName || 'N/A' }}</div>
-                  <div class="text-slate-500 text-[10px] font-sans not-italic">SĐT: {{ rp.phoneRef || '—' }}</div>
-                  <div class="text-slate-400 text-[10px] font-sans not-italic">
-                    Năm sinh: <span class="text-yellow-400 font-bold" v-if="rp.birthYear"><span v-if="rp.birthMonth">T{{ rp.birthMonth }}/</span>{{ rp.birthYear }}</span>
-                    <span class="text-slate-600" v-else>Đơn cũ</span>
+                  <span class="text-[9px] text-[var(--admin-primary)] tracking-widest block mb-0.5">ĐƠN NỘP ({{ formatDate(rp.createdAt) }}):</span>
+                  <div class="text-[var(--admin-text)] text-xs font-black truncate max-w-[200px]">{{ rp.fullName || 'N/A' }}</div>
+                  <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">SĐT: {{ rp.phoneRef || '—' }}</div>
+                  <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">
+                    Năm sinh: <span class="text-[var(--admin-warning)] font-bold" v-if="rp.birthYear"><span v-if="rp.birthMonth">T{{ rp.birthMonth }}/</span>{{ rp.birthYear }}</span>
+                    <span class="text-slate-400" v-else>Đơn cũ</span>
                   </div>
                   <div class="mt-1" v-if="!usersMap[effUid(rp)]">
-                    <span class="inline-block bg-red-500/10 text-red-400 border border-red-500/30 text-[9px] px-2 py-0.5 rounded-full font-sans not-italic normal-case font-bold">⚠️ Chưa có hồ sơ ví</span>
-                    <button class="ml-1 bg-blue-600/20 text-blue-400 hover:bg-blue-500 hover:text-white border border-blue-600/50 px-2 py-0.5 rounded-lg text-[9px] font-sans not-italic normal-case font-bold" @click="openWalletLinkModal(rp)">Gắn hồ sơ ví</button>
+                    <span class="inline-block bg-red-50 text-[var(--admin-danger)] border border-red-200 text-[9px] px-2 py-0.5 rounded-full font-sans not-italic normal-case font-bold">⚠️ Chưa có hồ sơ ví</span>
+                    <button class="ml-1 bg-blue-50 text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white border border-blue-200 px-2 py-0.5 rounded-lg text-[9px] font-sans not-italic normal-case font-bold" @click="openWalletLinkModal(rp)">Gắn hồ sơ ví</button>
                   </div>
                 </div>
               </td>
               <td class="p-6">
-                <div class="text-slate-300 text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
+                <div class="text-[var(--admin-text)] text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
                 <template v-if="rp.jobId === LPBANK_REFERRAL_JOB_ID">
-                  <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
-                    <div class="text-[10px] text-amber-400">Bạn bè: <span class="text-white font-bold">{{ rp.friendName || '—' }}</span></div>
-                    <div class="text-[10px] text-amber-400">SĐT bạn bè: <span class="text-white font-bold">{{ rp.friendPhone || '—' }}</span></div>
-                    <div class="text-[10px] text-amber-400">Mã đơn: <span class="text-white font-bold break-all">{{ rp.referralOrderCode || '—' }}</span></div>
-                    <div class="text-[10px] text-amber-400" v-if="rp.status === 'pending'">Lần dự kiến: #{{ (usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0) + 1 }}</div>
+                  <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
+                    <div class="text-[10px] text-[var(--admin-warning)]">Bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendName || '—' }}</span></div>
+                    <div class="text-[10px] text-[var(--admin-warning)]">SĐT bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendPhone || '—' }}</span></div>
+                    <div class="text-[10px] text-[var(--admin-warning)]">Mã đơn: <span class="text-[var(--admin-text)] font-bold break-all">{{ rp.referralOrderCode || '—' }}</span></div>
+                    <div class="text-[10px] text-[var(--admin-warning)]" v-if="rp.status === 'pending'">Lần dự kiến: #{{ (usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0) + 1 }}</div>
                   </div>
-                  <div class="text-emerald-400 text-sm font-black" v-if="rp.status === 'pending'">
+                  <div class="text-[var(--admin-success)] text-sm font-black" v-if="rp.status === 'pending'">
                     Dự kiến: {{ getLpbankReferralRewardByCount(usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0).toLocaleString() }} XU
                   </div>
-                  <div class="text-emerald-400 text-sm font-black" v-else>
+                  <div class="text-[var(--admin-success)] text-sm font-black" v-else>
                     +{{ (rp.actualReward || rp.reward || 0).toLocaleString() }} XU
-                    <span class="text-slate-500 text-[10px]" v-if="rp.referralSuccessNumber">(Lần #{{ rp.referralSuccessNumber }})</span>
+                    <span class="text-[var(--admin-muted)] text-[10px]" v-if="rp.referralSuccessNumber">(Lần #{{ rp.referralSuccessNumber }})</span>
                   </div>
                 </template>
-                <div class="text-emerald-400 text-sm font-black" v-else>+{{ String(rp.reward).replace(/\D/g, '') }} XU</div>
+                <div class="text-[var(--admin-success)] text-sm font-black" v-else>+{{ String(rp.reward).replace(/\D/g, '') }} XU</div>
               </td>
               <td class="p-6">
                 <div class="flex flex-col items-center gap-2">
                   <div class="flex justify-center gap-2 flex-wrap">
-                    <a class="bg-blue-600 text-[8px] text-white p-2 rounded" v-if="rp.taskLink" :href="rp.taskLink" target="_blank">LINK BÀI</a>
+                    <a class="bg-[var(--admin-primary)] text-[8px] text-white p-2 rounded" v-if="rp.taskLink" :href="rp.taskLink" target="_blank">LINK BÀI</a>
                     <div class="cursor-pointer" v-for="(img, idx) in getReportImages(rp)" :key="idx" @click="openImage(img.url)">
-                      <div class="w-12 h-12 rounded-lg border border-slate-700 overflow-hidden hover:scale-110 hover:border-blue-500 transition-all">
+                      <div class="w-12 h-12 rounded-lg border border-[var(--admin-border)] overflow-hidden hover:scale-110 hover:border-[var(--admin-primary)] transition-all">
                         <img class="w-full h-full object-cover" :src="img.url" />
                       </div>
                     </div>
-                    <div class="text-slate-700 text-[9px]" v-if="!getReportImages(rp).length && !rp.taskLink">KHÔNG CÓ ẢNH</div>
+                    <div class="text-slate-400 text-[9px]" v-if="!getReportImages(rp).length && !rp.taskLink">KHÔNG CÓ ẢNH</div>
                   </div>
                   <!-- EXIF BADGE -->
                   <template v-if="rp.exif && Array.isArray(rp.exif) && rp.exif.length">
                     <div class="w-full space-y-1">
                       <template v-if="rp.exif.some((e: any) => e.suspicious)">
-                        <span class="inline-flex items-center gap-1 bg-red-500/20 border border-red-500/60 text-red-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ CẢNH BÁO GIAN LẬN · {{ rp.exif.filter((e: any) => e.suspicious).length }}/{{ rp.exif.length }} ẢNH · {{ rp.exif.find((e: any) => e.suspicious)?.software }}</span>
+                        <span class="inline-flex items-center gap-1 bg-red-100 border border-red-300 text-[var(--admin-danger)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ CẢNH BÁO GIAN LẬN · {{ rp.exif.filter((e: any) => e.suspicious).length }}/{{ rp.exif.length }} ẢNH · {{ rp.exif.find((e: any) => e.suspicious)?.software }}</span>
                       </template>
                       <template v-else-if="rp.exif.some((e: any) => !e.hasExif)">
-                        <span class="inline-flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/40 text-yellow-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ KHÔNG CÓ EXIF · {{ rp.exif.filter((e: any) => !e.hasExif).length }}/{{ rp.exif.length }} ẢNH</span>
+                        <span class="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-[var(--admin-warning)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ KHÔNG CÓ EXIF · {{ rp.exif.filter((e: any) => !e.hasExif).length }}/{{ rp.exif.length }} ẢNH</span>
                       </template>
                       <template v-else>
-                        <span class="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">✓ {{ rp.exif[0]?.device || 'Thiết bị thật' }}<template v-if="rp.exif[0]?.dateTaken"> · {{ fmtDate(rp.exif[0].dateTaken) }}</template></span>
+                        <span class="inline-flex items-center gap-1 bg-emerald-50 border border-emerald-200 text-[var(--admin-success)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">✓ {{ rp.exif[0]?.device || 'Thiết bị thật' }}<template v-if="rp.exif[0]?.dateTaken"> · {{ fmtDate(rp.exif[0].dateTaken) }}</template></span>
                       </template>
-                      <span v-if="hasOldPhoto(rp.exif, rp.createdAt)" class="inline-flex items-center gap-1 bg-orange-500/20 border border-orange-500/60 text-orange-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ ẢNH CŨ · {{ fmtDate(rp.exif.find((e: any) => isOldPhoto(e?.dateTaken, rp.createdAt))?.dateTaken) }}</span>
+                      <span v-if="hasOldPhoto(rp.exif, rp.createdAt)" class="inline-flex items-center gap-1 bg-orange-100 border border-orange-300 text-orange-600 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ ẢNH CŨ · {{ fmtDate(rp.exif.find((e: any) => isOldPhoto(e?.dateTaken, rp.createdAt))?.dateTaken) }}</span>
                     </div>
                   </template>
                   <template v-else-if="rp.exif && !Array.isArray(rp.exif)">
                     <div class="w-full space-y-1">
-                      <span v-if="rp.exif.suspicious" class="inline-flex bg-red-500/20 border border-red-500/60 text-red-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ CẢNH BÁO GIAN LẬN · {{ rp.exif.software }}</span>
-                      <span v-else-if="!rp.exif.hasExif" class="inline-flex bg-yellow-500/10 border border-yellow-500/40 text-yellow-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ KHÔNG CÓ EXIF</span>
-                      <span v-else class="inline-flex bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">✓ {{ rp.exif.device || 'Thiết bị thật' }}<template v-if="rp.exif.dateTaken"> · {{ fmtDate(rp.exif.dateTaken) }}</template></span>
-                      <span v-if="isOldPhoto(rp.exif.dateTaken, rp.createdAt)" class="inline-flex bg-orange-500/20 border border-orange-500/60 text-orange-400 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ ẢNH CŨ · {{ fmtDate(rp.exif.dateTaken) }}</span>
+                      <span v-if="rp.exif.suspicious" class="inline-flex bg-red-100 border border-red-300 text-[var(--admin-danger)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ CẢNH BÁO GIAN LẬN · {{ rp.exif.software }}</span>
+                      <span v-else-if="!rp.exif.hasExif" class="inline-flex bg-amber-50 border border-amber-200 text-[var(--admin-warning)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ KHÔNG CÓ EXIF</span>
+                      <span v-else class="inline-flex bg-emerald-50 border border-emerald-200 text-[var(--admin-success)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">✓ {{ rp.exif.device || 'Thiết bị thật' }}<template v-if="rp.exif.dateTaken"> · {{ fmtDate(rp.exif.dateTaken) }}</template></span>
+                      <span v-if="isOldPhoto(rp.exif.dateTaken, rp.createdAt)" class="inline-flex bg-orange-100 border border-orange-300 text-orange-600 text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ ẢNH CŨ · {{ fmtDate(rp.exif.dateTaken) }}</span>
                     </div>
                   </template>
                 </div>
               </td>
               <td class="p-6 text-center text-[10px]">
-                <span class="bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full border border-yellow-500/20" v-if="rp.status === 'pending'">ĐANG CHỜ</span>
-                <span class="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full border border-emerald-500/20" v-else-if="rp.status === 'approved' || rp.status === 'collected'">ĐÃ DUYỆT</span>
-                <span class="bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20" v-else>BỊ HỦY</span>
-                <div :class="['text-[8px] mt-2 normal-case leading-tight', rp.status === 'rejected' ? 'text-red-400 italic' : 'text-blue-400 font-bold']" v-if="rp.note">LỜI NHẮN: {{ rp.note }}</div>
+                <span class="bg-amber-50 text-[var(--admin-warning)] px-3 py-1 rounded-full border border-amber-200" v-if="rp.status === 'pending'">ĐANG CHỜ</span>
+                <span class="bg-emerald-50 text-[var(--admin-success)] px-3 py-1 rounded-full border border-emerald-200" v-else-if="rp.status === 'approved' || rp.status === 'collected'">ĐÃ DUYỆT</span>
+                <span class="bg-red-50 text-[var(--admin-danger)] px-3 py-1 rounded-full border border-red-200" v-else>BỊ HỦY</span>
+                <div :class="['text-[8px] mt-2 normal-case leading-tight', rp.status === 'rejected' ? 'text-[var(--admin-danger)] italic' : 'text-[var(--admin-primary)] font-bold']" v-if="rp.note">LỜI NHẮN: {{ rp.note }}</div>
               </td>
               <td class="p-6 text-right">
                 <div class="flex flex-col md:flex-row justify-end gap-2">
                   <template v-if="rp.status === 'pending'">
-                    <button class="bg-emerald-500 hover:bg-emerald-400 text-white text-[9px] px-4 py-2 rounded-lg" @click="approveReport(rp)">💰 Cộng xu</button>
-                    <button class="bg-blue-600 hover:bg-blue-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="openMessagePopup(rp.id)">NHẮN</button>
-                    <button class="bg-red-600 hover:bg-red-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="openRejectPopup(rp.id)">HỦY</button>
+                    <button class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white text-[9px] px-4 py-2 rounded-lg" @click="approveReport(rp)">💰 Cộng xu</button>
+                    <button class="bg-[var(--admin-primary)] hover:bg-blue-700 text-white text-[9px] px-4 py-2 rounded-lg" @click="openMessagePopup(rp.id)">NHẮN</button>
+                    <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white text-[9px] px-4 py-2 rounded-lg" @click="openRejectPopup(rp.id)">HỦY</button>
                   </template>
-                  <button v-else class="bg-slate-800 text-slate-500 text-[9px] px-4 py-2 rounded-lg cursor-not-allowed" disabled>Đã xử lý</button>
-                  <button class="bg-slate-800 text-slate-400 hover:text-white text-[9px] px-4 py-2 rounded-lg" @click="deleteReport(rp.id)">XÓA</button>
+                  <button v-else class="bg-slate-100 text-slate-400 text-[9px] px-4 py-2 rounded-lg cursor-not-allowed" disabled>Đã xử lý</button>
+                  <button class="bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-[var(--admin-text)] text-[9px] px-4 py-2 rounded-lg" @click="deleteReport(rp.id)">XÓA</button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
-        <div class="p-20 text-center text-slate-700 text-xs" v-if="(activeTab === 'app_jobs' && !filteredAppReports.length) || (activeTab === 'other_jobs' && !filteredOtherReports.length)">KHÔNG CÓ DỮ LIỆU.</div>
+        <div class="p-20 text-center text-slate-400 text-xs" v-if="(activeTab === 'app_jobs' && !filteredAppReports.length) || (activeTab === 'other_jobs' && !filteredOtherReports.length)">KHÔNG CÓ DỮ LIỆU.</div>
       </div>
 
       <!-- RÚT TIỀN -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'withdrawals'">
         <table class="w-full text-left border-collapse">
           <thead>
-            <tr class="bg-[#0d121f] text-emerald-500 text-[10px] tracking-[2px] border-b border-slate-800">
+            <tr class="bg-[var(--admin-card-soft)] text-[var(--admin-success)] text-[10px] tracking-[2px] border-b border-[var(--admin-border)]">
               <th class="p-6 min-w-[200px]">NGƯỜI RÚT</th>
               <th class="p-6 min-w-[250px]">THÔNG TIN NGÂN HÀNG</th>
               <th class="p-6 text-center min-w-[110px]">QR NGÂN HÀNG</th>
@@ -1374,51 +1374,51 @@ const handleAdminLogout = async () => {
               <th class="p-6 text-right min-w-[200px]">HÀNH ĐỘNG</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-800/50">
-            <tr class="hover:bg-white/[0.02] group" v-for="wd in filteredWithdrawals" :key="wd.id">
+          <tbody class="divide-y divide-[var(--admin-border)]">
+            <tr class="hover:bg-slate-50 group" v-for="wd in filteredWithdrawals" :key="wd.id">
               <td class="p-6">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="bg-pink-500/20 text-pink-400 border border-pink-500/30 text-[8px] px-2 py-0.5 rounded" v-if="wd.site === 'freelance'">FREELANCE</span>
-                  <span class="bg-violet-500/20 text-violet-400 border border-violet-500/30 text-[8px] px-2 py-0.5 rounded" v-else-if="wd.site === 'rapjob'">RAP JOB</span>
-                  <span class="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
+                  <span class="bg-pink-100 text-pink-600 border border-pink-200 text-[8px] px-2 py-0.5 rounded" v-if="wd.site === 'freelance'">FREELANCE</span>
+                  <span class="bg-violet-100 text-violet-600 border border-violet-200 text-[8px] px-2 py-0.5 rounded" v-else-if="wd.site === 'rapjob'">RAP JOB</span>
+                  <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
                 </div>
-                <div class="text-white text-sm font-black">{{ usersMap[wd.uid]?.username || 'CHƯA CẬP NHẬT' }}</div>
-                <div class="text-slate-500 text-[9px] font-sans not-italic">UID: {{ wd.uid?.slice(0, 8) }}…</div>
-                <div class="text-slate-400 text-[10px] font-sans not-italic">Ví hiện tại: <span class="text-yellow-400 font-bold">{{ usersMap[wd.uid]?.balance ?? '—' }} XU</span></div>
-                <div class="text-slate-400 text-[10px] font-sans not-italic">Ngày sinh: <span class="text-emerald-400 font-bold">{{ usersMap[wd.uid]?.dateOfBirth || usersMap[wd.uid]?.dob || '—' }}</span></div>
-                <div class="text-slate-500 text-[10px] font-sans not-italic">{{ formatDate(wd.createdAt) }}</div>
+                <div class="text-[var(--admin-text)] text-sm font-black">{{ usersMap[wd.uid]?.username || 'CHƯA CẬP NHẬT' }}</div>
+                <div class="text-[var(--admin-muted)] text-[9px] font-sans not-italic">UID: {{ wd.uid?.slice(0, 8) }}…</div>
+                <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">Ví hiện tại: <span class="text-[var(--admin-warning)] font-bold">{{ usersMap[wd.uid]?.balance ?? '—' }} XU</span></div>
+                <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">Ngày sinh: <span class="text-[var(--admin-success)] font-bold">{{ usersMap[wd.uid]?.dateOfBirth || usersMap[wd.uid]?.dob || '—' }}</span></div>
+                <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">{{ formatDate(wd.createdAt) }}</div>
               </td>
               <td class="p-6">
-                <div class="text-slate-300 text-[11px] font-sans not-italic leading-relaxed max-w-[250px] bg-[#0d121f] p-3 rounded-xl border border-slate-700">{{ wd.bankInfo }}</div>
+                <div class="text-[var(--admin-text)] text-[11px] font-sans not-italic leading-relaxed max-w-[250px] bg-[var(--admin-card-soft)] p-3 rounded-xl border border-[var(--admin-border)]">{{ wd.bankInfo }}</div>
               </td>
               <td class="p-6 text-center">
-                <div v-if="wd.qrImage?.url" @click="openImage(wd.qrImage.url)" class="w-16 h-16 mx-auto rounded-lg overflow-hidden border border-slate-700 bg-white cursor-zoom-in hover:border-emerald-500 hover:scale-105 transition-all">
+                <div v-if="wd.qrImage?.url" @click="openImage(wd.qrImage.url)" class="w-16 h-16 mx-auto rounded-lg overflow-hidden border border-[var(--admin-border)] bg-white cursor-zoom-in hover:border-[var(--admin-success)] hover:scale-105 transition-all">
                   <img :src="wd.qrImage.url" class="w-full h-full object-contain" />
                 </div>
-                <div v-else class="text-slate-700 text-[9px] normal-case font-sans not-italic">Chưa có QR</div>
+                <div v-else class="text-slate-400 text-[9px] normal-case font-sans not-italic">Chưa có QR</div>
               </td>
               <td class="p-6 text-center">
-                <div class="text-emerald-400 text-lg font-black">{{ getVndAmount(wd).toLocaleString('vi-VN') }} VNĐ</div>
-                <div class="text-yellow-500 text-[9px] mt-1 font-sans tracking-widest">({{ getXuAmount(wd).toLocaleString('vi-VN') }} XU)</div>
+                <div class="text-[var(--admin-success)] text-lg font-black">{{ getVndAmount(wd).toLocaleString('vi-VN') }} VNĐ</div>
+                <div class="text-[var(--admin-warning)] text-[9px] mt-1 font-sans tracking-widest">({{ getXuAmount(wd).toLocaleString('vi-VN') }} XU)</div>
               </td>
               <td class="p-6 text-center text-[10px]">
-                <span class="bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full border border-yellow-500/20" v-if="wd.status === 'pending'">ĐANG CHỜ</span>
-                <span class="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full border border-emerald-500/20" v-else-if="wd.status === 'approved'">ĐÃ CHUYỂN</span>
-                <span class="bg-red-500/10 text-red-500 px-3 py-1 rounded-full border border-red-500/20" v-else>HỦY & HOÀN</span>
+                <span class="bg-amber-50 text-[var(--admin-warning)] px-3 py-1 rounded-full border border-amber-200" v-if="wd.status === 'pending'">ĐANG CHỜ</span>
+                <span class="bg-emerald-50 text-[var(--admin-success)] px-3 py-1 rounded-full border border-emerald-200" v-else-if="wd.status === 'approved'">ĐÃ CHUYỂN</span>
+                <span class="bg-red-50 text-[var(--admin-danger)] px-3 py-1 rounded-full border border-red-200" v-else>HỦY & HOÀN</span>
               </td>
               <td class="p-6 text-right">
                 <div class="flex flex-col md:flex-row justify-end gap-2">
                   <template v-if="wd.status === 'pending'">
-                    <button class="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="approveWithdrawal(wd)">ĐÃ CHUYỂN</button>
-                    <button class="bg-red-600 hover:bg-red-500 text-white text-[9px] px-4 py-2 rounded-lg" @click="rejectWithdrawal(wd)">TỪ CHỐI & HOÀN XU</button>
+                    <button class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white text-[9px] px-4 py-2 rounded-lg" @click="approveWithdrawal(wd)">ĐÃ CHUYỂN</button>
+                    <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white text-[9px] px-4 py-2 rounded-lg" @click="rejectWithdrawal(wd)">TỪ CHỐI & HOÀN XU</button>
                   </template>
-                  <button class="bg-slate-800 text-slate-400 hover:text-white text-[9px] px-4 py-2 rounded-lg" @click="deleteWithdrawal(wd.id)">XÓA</button>
+                  <button class="bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-[var(--admin-text)] text-[9px] px-4 py-2 rounded-lg" @click="deleteWithdrawal(wd.id)">XÓA</button>
                 </div>
               </td>
             </tr>
           </tbody>
         </table>
-        <div class="p-20 text-center text-slate-700 text-xs" v-if="!filteredWithdrawals.length">KHÔNG CÓ DỮ LIỆU.</div>
+        <div class="p-20 text-center text-slate-400 text-xs" v-if="!filteredWithdrawals.length">KHÔNG CÓ DỮ LIỆU.</div>
       </div>
 
       <!-- THREAD HẰNG NGÀY — collection riêng daily_thread_reports, tách biệt hoàn toàn khỏi reports -->
@@ -1432,112 +1432,112 @@ const handleAdminLogout = async () => {
       <!-- VIP JOBS TAB -->
       <div v-else-if="activeTab === 'vip_jobs'" class="p-6">
         <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <h2 class="text-lg text-yellow-400 tracking-widest">💎 QUẢN LÝ VIP JOBS REALTIME</h2>
+          <h2 class="text-lg text-[var(--admin-warning)] tracking-widest">💎 QUẢN LÝ VIP JOBS REALTIME</h2>
           <div class="flex items-center gap-2 flex-wrap">
-            <button @click="seedVipJobs" :disabled="isSeedingVipJobs" class="bg-emerald-700 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] px-4 py-2 rounded-xl font-black transition-all">
+            <button @click="seedVipJobs" :disabled="isSeedingVipJobs" class="bg-[var(--admin-success)] hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-[10px] px-4 py-2 rounded-xl font-black transition-all">
               {{ isSeedingVipJobs ? '⏳ ĐANG SEED...' : '🌱 SEED JOB VIP CÒN THIẾU' }}
             </button>
-            <input v-model="newVipJobId" class="bg-[#0d121f] text-white text-xs py-2 px-3 rounded-xl border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic placeholder:text-slate-600 w-40" placeholder="Job ID (vd: msb-bank)" @keyup.enter="addNewVipJob" />
-            <button class="bg-yellow-600 hover:bg-yellow-500 text-black text-[10px] px-4 py-2 rounded-xl font-black" @click="addNewVipJob">+ THÊM JOB</button>
+            <input v-model="newVipJobId" class="bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-xl border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic placeholder:text-slate-400 w-40" placeholder="Job ID (vd: msb-bank)" @keyup.enter="addNewVipJob" />
+            <button class="bg-[var(--admin-warning)] hover:bg-amber-700 text-white text-[10px] px-4 py-2 rounded-xl font-black" @click="addNewVipJob">+ THÊM JOB</button>
           </div>
         </div>
         <div class="flex items-center justify-center py-10" v-if="isVipJobsLoading">
-          <div class="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+          <div class="w-8 h-8 border-4 border-[var(--admin-warning)] border-t-transparent rounded-full animate-spin"></div>
         </div>
         <div class="space-y-4" v-else-if="vipJobs.length">
-          <div v-for="job in vipJobs" :key="job.id" class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5 space-y-4">
+          <div v-for="job in vipJobs" :key="job.id" class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5 space-y-4">
             <!-- Header -->
             <div class="flex items-center justify-between">
-              <span class="text-yellow-400 text-xs font-black tracking-widest uppercase">ID: {{ job.id }}</span>
+              <span class="text-[var(--admin-warning)] text-xs font-black tracking-widest uppercase">ID: {{ job.id }}</span>
               <div class="flex gap-2 flex-wrap">
-                <button @click="setVipJobStatus(job.id, 'open')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'open' ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-emerald-500/20']">OPEN</button>
-                <button @click="setVipJobStatus(job.id, 'paused')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'paused' ? 'bg-yellow-500 text-black' : 'bg-slate-800 text-slate-400 hover:bg-yellow-500/20']">PAUSED</button>
-                <button @click="setVipJobStatus(job.id, 'hidden')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'hidden' ? 'bg-slate-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-500/20']">HIDDEN</button>
-                <button @click="setVipJobStatus(job.id, 'soldout')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'soldout' ? 'bg-red-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-red-500/20']">SOLDOUT</button>
+                <button @click="setVipJobStatus(job.id, 'open')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'open' ? 'bg-emerald-500 text-white' : 'bg-white text-slate-400 border border-[var(--admin-border)] hover:bg-emerald-50']">OPEN</button>
+                <button @click="setVipJobStatus(job.id, 'paused')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'paused' ? 'bg-amber-500 text-white' : 'bg-white text-slate-400 border border-[var(--admin-border)] hover:bg-amber-50']">PAUSED</button>
+                <button @click="setVipJobStatus(job.id, 'hidden')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'hidden' ? 'bg-slate-500 text-white' : 'bg-white text-slate-400 border border-[var(--admin-border)] hover:bg-slate-100']">HIDDEN</button>
+                <button @click="setVipJobStatus(job.id, 'soldout')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'soldout' ? 'bg-red-500 text-white' : 'bg-white text-slate-400 border border-[var(--admin-border)] hover:bg-red-50']">SOLDOUT</button>
               </div>
             </div>
             <!-- Fields -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" v-if="editingVipJob[job.id]">
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">TITLE</label>
-                <input v-model="editingVipJob[job.id].title" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">TITLE</label>
+                <input v-model="editingVipJob[job.id].title" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
               </div>
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">REWARD (vd: 85.000 xu)</label>
-                <input v-model="editingVipJob[job.id].reward" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">REWARD (vd: 85.000 xu)</label>
+                <input v-model="editingVipJob[job.id].reward" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
               </div>
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">BADGE (vd: HOT 🔥)</label>
-                <input v-model="editingVipJob[job.id].badge" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">BADGE (vd: HOT 🔥)</label>
+                <input v-model="editingVipJob[job.id].badge" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
               </div>
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">COLOR (vd: text-orange-400)</label>
-                <input v-model="editingVipJob[job.id].color" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">COLOR (vd: text-orange-400)</label>
+                <input v-model="editingVipJob[job.id].color" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
               </div>
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">ORDER (số thứ tự)</label>
-                <input v-model.number="editingVipJob[job.id].order" type="number" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">ORDER (số thứ tự)</label>
+                <input v-model.number="editingVipJob[job.id].order" type="number" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
               </div>
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">WARNING (cảnh báo tuổi)</label>
-                <input v-model="editingVipJob[job.id].warning" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" placeholder="Vd: Yêu cầu đủ 18 tuổi" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">WARNING (cảnh báo tuổi)</label>
+                <input v-model="editingVipJob[job.id].warning" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" placeholder="Vd: Yêu cầu đủ 18 tuổi" />
               </div>
               <div>
-                <label class="text-[9px] text-slate-500 tracking-widest block mb-1">YÊU CẦU TUỔI (số, vd: 18)</label>
-                <input v-model.number="editingVipJob[job.id].ageRequirement" type="number" min="0" max="99" class="w-full bg-[#111726] text-white text-xs py-2 px-3 rounded-lg border border-slate-700 outline-none focus:border-yellow-500 font-sans normal-case not-italic" placeholder="Không điền = không hiện badge" />
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">YÊU CẦU TUỔI (số, vd: 18)</label>
+                <input v-model.number="editingVipJob[job.id].ageRequirement" type="number" min="0" max="99" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" placeholder="Không điền = không hiện badge" />
               </div>
             </div>
             <!-- Actions -->
             <div class="flex justify-end gap-3">
-              <button @click="deleteVipJob(job.id)" class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-[10px] px-4 py-2 rounded-lg border border-red-600/30 transition-all">XÓA JOB</button>
-              <button @click="saveVipJob(job.id)" class="bg-yellow-600 hover:bg-yellow-500 text-black text-[10px] px-6 py-2 rounded-lg font-black transition-all">LƯU THAY ĐỔI</button>
+              <button @click="deleteVipJob(job.id)" class="bg-red-50 hover:bg-[var(--admin-danger)] text-[var(--admin-danger)] hover:text-white text-[10px] px-4 py-2 rounded-lg border border-red-200 transition-all">XÓA JOB</button>
+              <button @click="saveVipJob(job.id)" class="bg-[var(--admin-warning)] hover:bg-amber-700 text-white text-[10px] px-6 py-2 rounded-lg font-black transition-all">LƯU THAY ĐỔI</button>
             </div>
           </div>
         </div>
-        <div class="py-20 text-center text-slate-700 text-xs tracking-widest" v-else>
+        <div class="py-20 text-center text-slate-400 text-xs tracking-widest" v-else>
           CHƯA CÓ VIP JOB NÀO.<br/>
-          <span class="text-slate-800 text-[10px] normal-case font-sans not-italic mt-2 block">Nhập Job ID và bấm "+ THÊM JOB" để tạo.</span>
+          <span class="text-slate-400 text-[10px] normal-case font-sans not-italic mt-2 block">Nhập Job ID và bấm "+ THÊM JOB" để tạo.</span>
         </div>
       </div>
 
       <!-- CẤU HÌNH WEB TAB -->
       <div v-else-if="activeTab === 'app_config'" class="p-6 max-w-2xl mx-auto">
-        <h2 class="text-lg text-slate-300 tracking-widest mb-8">⚙️ CẤU HÌNH WEB REALTIME</h2>
+        <h2 class="text-lg text-[var(--admin-text)] tracking-widest mb-8">⚙️ CẤU HÌNH WEB REALTIME</h2>
         <div class="space-y-6">
           <!-- App Version -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">APP VERSION (trigger reload cho user)</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">APP VERSION (trigger reload cho user)</label>
             <div class="flex items-center gap-4">
-              <div class="text-5xl text-white font-black">{{ appConfig.appVersion }}</div>
-              <button @click="bumpAppVersion" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2.5 rounded-xl font-black tracking-widest transition-all active:scale-95">
+              <div class="text-5xl text-[var(--admin-text)] font-black">{{ appConfig.appVersion }}</div>
+              <button @click="bumpAppVersion" class="bg-[var(--admin-primary)] hover:bg-blue-700 text-white text-xs px-5 py-2.5 rounded-xl font-black tracking-widest transition-all active:scale-95">
                 +1 TĂNG VERSION
               </button>
             </div>
-            <p class="text-slate-600 text-[10px] font-sans normal-case not-italic mt-3">Tắt: user thấy popup tự bấm tải lại. Bật: trang tự reload sau 3 giây.</p>
+            <p class="text-slate-400 text-[10px] font-sans normal-case not-italic mt-3">Tắt: user thấy popup tự bấm tải lại. Bật: trang tự reload sau 3 giây.</p>
           </div>
 
           <!-- Force Refresh -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">FORCE REFRESH KHI VERSION TĂNG</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">FORCE REFRESH KHI VERSION TĂNG</label>
             <div class="flex items-center gap-4">
               <button
                 @click="appConfig.forceRefreshEnabled = !appConfig.forceRefreshEnabled"
-                :class="['w-14 h-7 rounded-full transition-all relative', appConfig.forceRefreshEnabled ? 'bg-emerald-500' : 'bg-slate-700']"
+                :class="['w-14 h-7 rounded-full transition-all relative', appConfig.forceRefreshEnabled ? 'bg-emerald-500' : 'bg-slate-300']"
               >
                 <div :class="['absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all', appConfig.forceRefreshEnabled ? 'left-7' : 'left-0.5']"></div>
               </button>
-              <span :class="['text-sm font-black', appConfig.forceRefreshEnabled ? 'text-emerald-400' : 'text-slate-500']">
+              <span :class="['text-sm font-black', appConfig.forceRefreshEnabled ? 'text-[var(--admin-success)]' : 'text-[var(--admin-muted)]']">
                 {{ appConfig.forceRefreshEnabled ? 'BẬT — tự reload sau 3 giây' : 'TẮT — hiện popup cho user tự bấm tải lại' }}
               </span>
             </div>
           </div>
 
           <!-- Refresh Message -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">NỘI DUNG THÔNG BÁO KHI RELOAD</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">NỘI DUNG THÔNG BÁO KHI RELOAD</label>
             <textarea
               v-model="appConfig.refreshMessage"
-              class="w-full bg-[#111726] text-white text-sm py-3 px-4 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-sans normal-case not-italic resize-none"
+              class="w-full bg-white text-[var(--admin-text)] text-sm py-3 px-4 rounded-xl border border-[var(--admin-border)] outline-none focus:border-[var(--admin-primary)] font-sans normal-case not-italic resize-none"
               rows="3"
               placeholder="Vd: Hệ thống vừa cập nhật phiên bản mới. Trang sẽ tải lại để áp dụng thay đổi."
             ></textarea>
@@ -1547,7 +1547,7 @@ const handleAdminLogout = async () => {
           <button
             @click="saveAppConfig"
             :disabled="isSavingConfig"
-            class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black italic uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 shadow-[0_0_20px_rgba(37,99,235,0.3)] flex items-center justify-center gap-2"
+            class="w-full bg-[var(--admin-primary)] hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black italic uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
           >
             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" v-if="isSavingConfig"></div>
             <span>{{ isSavingConfig ? 'ĐANG LƯU...' : '💾 LƯU CẤU HÌNH' }}</span>
@@ -1557,71 +1557,71 @@ const handleAdminLogout = async () => {
 
       <!-- SUPPORT CONFIG TAB -->
       <div v-else-if="activeTab === 'support_config'" class="p-6 max-w-2xl mx-auto">
-        <h2 class="text-lg text-slate-300 tracking-widest mb-8">💬 HỖ TRỢ / THÔNG BÁO REALTIME</h2>
+        <h2 class="text-lg text-[var(--admin-text)] tracking-widest mb-8">💬 HỖ TRỢ / THÔNG BÁO REALTIME</h2>
         <div class="space-y-6">
 
           <!-- Bật/tắt thông báo hỗ trợ -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">BẬT / TẮT THÔNG BÁO HỖ TRỢ</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">BẬT / TẮT THÔNG BÁO HỖ TRỢ</label>
             <div class="flex items-center gap-4">
               <button
                 @click="supportConfigAdmin.enabled = !supportConfigAdmin.enabled"
-                :class="['w-14 h-7 rounded-full transition-all relative', supportConfigAdmin.enabled ? 'bg-emerald-500' : 'bg-slate-700']"
+                :class="['w-14 h-7 rounded-full transition-all relative', supportConfigAdmin.enabled ? 'bg-emerald-500' : 'bg-slate-300']"
               >
                 <div :class="['absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all', supportConfigAdmin.enabled ? 'left-7' : 'left-0.5']"></div>
               </button>
-              <span :class="['text-sm font-black', supportConfigAdmin.enabled ? 'text-emerald-400' : 'text-slate-500']">
+              <span :class="['text-sm font-black', supportConfigAdmin.enabled ? 'text-[var(--admin-success)]' : 'text-[var(--admin-muted)]']">
                 {{ supportConfigAdmin.enabled ? 'BẬT — user thấy nút Hỗ trợ hoạt động' : 'TẮT — ẩn thông báo' }}
               </span>
             </div>
           </div>
 
           <!-- Auto popup -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">TỰ BẬT POPUP CHO USER</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">TỰ BẬT POPUP CHO USER</label>
             <div class="flex items-center gap-4">
               <button
                 @click="supportConfigAdmin.autoPopupEnabled = !supportConfigAdmin.autoPopupEnabled"
-                :class="['w-14 h-7 rounded-full transition-all relative', supportConfigAdmin.autoPopupEnabled ? 'bg-rose-500' : 'bg-slate-700']"
+                :class="['w-14 h-7 rounded-full transition-all relative', supportConfigAdmin.autoPopupEnabled ? 'bg-rose-500' : 'bg-slate-300']"
               >
                 <div :class="['absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-all', supportConfigAdmin.autoPopupEnabled ? 'left-7' : 'left-0.5']"></div>
               </button>
-              <span :class="['text-sm font-black', supportConfigAdmin.autoPopupEnabled ? 'text-rose-400' : 'text-slate-500']">
+              <span :class="['text-sm font-black', supportConfigAdmin.autoPopupEnabled ? 'text-rose-600' : 'text-[var(--admin-muted)]']">
                 {{ supportConfigAdmin.autoPopupEnabled ? 'BẬT — bảng hỗ trợ tự nổi lên khi version tăng' : 'TẮT — user phải tự bấm nút Hỗ trợ' }}
               </span>
             </div>
-            <p class="text-slate-600 text-[10px] font-sans normal-case not-italic mt-3">Kết hợp với tăng Announcement Version để đẩy thông báo mới tới tất cả user.</p>
+            <p class="text-slate-400 text-[10px] font-sans normal-case not-italic mt-3">Kết hợp với tăng Announcement Version để đẩy thông báo mới tới tất cả user.</p>
           </div>
 
           <!-- Announcement Version -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">ANNOUNCEMENT VERSION (trigger popup cho user)</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">ANNOUNCEMENT VERSION (trigger popup cho user)</label>
             <div class="flex items-center gap-4">
-              <div class="text-5xl text-white font-black">{{ supportConfigAdmin.announcementVersion }}</div>
-              <button @click="bumpAnnouncementVersion" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-5 py-2.5 rounded-xl font-black tracking-widest transition-all active:scale-95">
+              <div class="text-5xl text-[var(--admin-text)] font-black">{{ supportConfigAdmin.announcementVersion }}</div>
+              <button @click="bumpAnnouncementVersion" class="bg-rose-600 hover:bg-rose-700 text-white text-xs px-5 py-2.5 rounded-xl font-black tracking-widest transition-all active:scale-95">
                 +1 VERSION
               </button>
             </div>
-            <p class="text-slate-600 text-[10px] font-sans normal-case not-italic mt-3">Tăng version + bật Auto Popup + Lưu → tất cả user đang mở web sẽ thấy bảng hỗ trợ tự nổi lên.</p>
+            <p class="text-slate-400 text-[10px] font-sans normal-case not-italic mt-3">Tăng version + bật Auto Popup + Lưu → tất cả user đang mở web sẽ thấy bảng hỗ trợ tự nổi lên.</p>
           </div>
 
           <!-- Tiêu đề -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">TIÊU ĐỀ BẢNG HỖ TRỢ</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">TIÊU ĐỀ BẢNG HỖ TRỢ</label>
             <input
               v-model="supportConfigAdmin.title"
               type="text"
-              class="w-full bg-[#111726] text-white text-sm py-3 px-4 rounded-xl border border-slate-700 outline-none focus:border-rose-500 font-sans normal-case not-italic"
+              class="w-full bg-white text-[var(--admin-text)] text-sm py-3 px-4 rounded-xl border border-[var(--admin-border)] outline-none focus:border-rose-500 font-sans normal-case not-italic"
               placeholder="Vd: Hỗ trợ"
             />
           </div>
 
           <!-- Nội dung thông báo -->
-          <div class="bg-[#0d121f] border border-slate-700 rounded-2xl p-5">
-            <label class="text-[10px] text-slate-500 tracking-widest block mb-3">NỘI DUNG THÔNG BÁO</label>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5">
+            <label class="text-[10px] text-[var(--admin-muted)] tracking-widest block mb-3">NỘI DUNG THÔNG BÁO</label>
             <textarea
               v-model="supportConfigAdmin.message"
-              class="w-full bg-[#111726] text-white text-sm py-3 px-4 rounded-xl border border-slate-700 outline-none focus:border-rose-500 font-sans normal-case not-italic resize-none"
+              class="w-full bg-white text-[var(--admin-text)] text-sm py-3 px-4 rounded-xl border border-[var(--admin-border)] outline-none focus:border-rose-500 font-sans normal-case not-italic resize-none"
               rows="4"
               placeholder="Vd: App này đang tạm dừng, vui lòng không làm tiếp. Nhắn tin Fanpage để được hỗ trợ."
             ></textarea>
@@ -1631,12 +1631,12 @@ const handleAdminLogout = async () => {
           <button
             @click="saveSupportConfig"
             :disabled="isSavingSupportConfig"
-            class="w-full bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-black italic uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 shadow-[0_0_20px_rgba(225,29,72,0.3)] flex items-center justify-center gap-2"
+            class="w-full bg-rose-600 hover:bg-rose-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black italic uppercase tracking-widest py-4 rounded-2xl transition-all active:scale-95 shadow-md flex items-center justify-center gap-2"
           >
             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" v-if="isSavingSupportConfig"></div>
             <span>{{ isSavingSupportConfig ? 'ĐANG LƯU...' : '💾 LƯU THÔNG BÁO' }}</span>
           </button>
-          <p class="text-slate-600 text-[10px] font-sans normal-case not-italic text-center">Nút Nhắn tin Fanpage được cố định trong hệ thống.</p>
+          <p class="text-slate-400 text-[10px] font-sans normal-case not-italic text-center">Nút Nhắn tin Fanpage được cố định trong hệ thống.</p>
 
         </div>
       </div>
@@ -1646,6 +1646,18 @@ const handleAdminLogout = async () => {
 </template>
 
 <style scoped>
+.admin-theme {
+  --admin-bg: #F6F7FB;
+  --admin-card: #FFFFFF;
+  --admin-card-soft: #F1F5F9;
+  --admin-border: #E2E8F0;
+  --admin-text: #0F172A;
+  --admin-muted: #64748B;
+  --admin-primary: #2563EB;
+  --admin-success: #059669;
+  --admin-warning: #D97706;
+  --admin-danger: #DC2626;
+}
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

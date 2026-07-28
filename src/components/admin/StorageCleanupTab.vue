@@ -589,44 +589,44 @@ watch(isDryRun, async (newVal, oldVal) => {
 <template>
   <div class="p-8 space-y-6">
     <!-- Banner khôi phục tiến trình cũ (sau crash/reload) -->
-    <div v-if="resumeBanner" class="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-5 space-y-3">
-      <div class="text-amber-400 font-black text-xs uppercase tracking-widest">⚠️ Đã tìm thấy tiến trình cũ ({{ resumeBanner.mode === 'normalize' ? 'Chuẩn hoá' : 'Dọn ảnh' }})</div>
-      <div class="text-slate-300 text-xs normal-case font-sans not-italic space-y-0.5">
+    <div v-if="resumeBanner" class="bg-amber-50 border border-amber-300 rounded-2xl p-5 space-y-3">
+      <div class="text-[var(--admin-warning)] font-black text-xs uppercase tracking-widest">⚠️ Đã tìm thấy tiến trình cũ ({{ resumeBanner.mode === 'normalize' ? 'Chuẩn hoá' : 'Dọn ảnh' }})</div>
+      <div class="text-[var(--admin-text)] text-xs normal-case font-sans not-italic space-y-0.5">
         <div>Đã quét {{ resumeBanner.scanned }} đơn</div>
         <div v-if="resumeBanner.mode === 'normalize'">Đã chuẩn hoá {{ resumeBanner.normalized }} đơn</div>
         <div v-else>Đã đánh dấu dọn {{ resumeBanner.cleanedReports }} đơn, đã xoá {{ resumeBanner.deletedFiles }} ảnh</div>
         <div>Batch gần nhất: {{ resumeBanner.batchNumber }}</div>
       </div>
-      <div class="text-slate-400 text-xs normal-case font-sans not-italic">Bạn muốn tiếp tục từ lần trước không?</div>
+      <div class="text-[var(--admin-muted)] text-xs normal-case font-sans not-italic">Bạn muốn tiếp tục từ lần trước không?</div>
       <div class="flex gap-3 flex-wrap">
-        <button @click="resumeCleanupFromSaved" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-5 py-3 rounded-xl transition-all active:scale-95 tracking-widest text-xs uppercase">▶ Tiếp tục từ lần trước</button>
-        <button @click="restartCleanupFromScratch" class="bg-slate-700 hover:bg-slate-600 text-white font-black px-5 py-3 rounded-xl transition-all active:scale-95 tracking-widest text-xs uppercase">🔄 Chạy lại từ đầu</button>
-        <button @click="discardSavedCleanupProgress" class="bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-black px-5 py-3 rounded-xl transition-all active:scale-95 tracking-widest text-xs uppercase border border-slate-700">🗑️ Xoá tiến trình cũ</button>
+        <button @click="resumeCleanupFromSaved" class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white font-black px-5 py-3 rounded-xl transition-all active:scale-95 tracking-widest text-xs uppercase">▶ Tiếp tục từ lần trước</button>
+        <button @click="restartCleanupFromScratch" class="bg-slate-500 hover:bg-slate-600 text-white font-black px-5 py-3 rounded-xl transition-all active:scale-95 tracking-widest text-xs uppercase">🔄 Chạy lại từ đầu</button>
+        <button @click="discardSavedCleanupProgress" class="bg-slate-200 hover:bg-slate-300 text-slate-500 hover:text-[var(--admin-text)] font-black px-5 py-3 rounded-xl transition-all active:scale-95 tracking-widest text-xs uppercase border border-[var(--admin-border)]">🗑️ Xoá tiến trình cũ</button>
       </div>
     </div>
 
     <div>
-      <h3 class="text-rose-400 font-black text-base uppercase tracking-widest mb-2">🧹 Dọn ảnh Storage</h3>
-      <div class="text-slate-500 text-xs space-y-1 normal-case not-italic font-sans">
-        <div>• Mỗi lần chỉ kiểm tra <span class="text-white font-bold">30 đơn</span> — không đọc toàn bộ collection một phát.</div>
+      <h3 class="text-rose-600 font-black text-base uppercase tracking-widest mb-2">🧹 Dọn ảnh Storage</h3>
+      <div class="text-[var(--admin-muted)] text-xs space-y-1 normal-case not-italic font-sans">
+        <div>• Mỗi lần chỉ kiểm tra <span class="text-[var(--admin-text)] font-bold">30 đơn</span> — không đọc toàn bộ collection một phát.</div>
         <div>• Job cơ bản (đã xử lý): xoá ảnh nếu status là approved / rejected / collected / paid.</div>
         <div>• Job VIP/ngân hàng/chứng khoán (đã xử lý &amp; &gt; 7 ngày): xoá ảnh.</div>
-        <div>• Pending bất kỳ loại: <span class="text-emerald-400 font-bold">KHÔNG xoá</span>.</div>
+        <div>• Pending bất kỳ loại: <span class="text-[var(--admin-success)] font-bold">KHÔNG xoá</span>.</div>
         <div>• Firestore document giữ nguyên. Chỉ xoá file ảnh trên Storage.</div>
-        <div>• Lần đầu dùng: bấm <span class="text-white font-bold">"🧮 Chuẩn hoá tự động"</span> trước để query lọc đúng các đơn cũ chưa dọn (chạy theo lô 30 đơn, có thể tạm dừng).</div>
+        <div>• Lần đầu dùng: bấm <span class="text-[var(--admin-text)] font-bold">"🧮 Chuẩn hoá tự động"</span> trước để query lọc đúng các đơn cũ chưa dọn (chạy theo lô 30 đơn, có thể tạm dừng).</div>
       </div>
     </div>
 
-    <label class="flex items-center gap-2 text-xs text-slate-400 normal-case font-sans not-italic cursor-pointer w-fit">
-      <input type="checkbox" v-model="isDryRun" :disabled="(isAutoRunning && !isAutoPaused) || isNormalizing" class="w-4 h-4 accent-rose-500" />
+    <label class="flex items-center gap-2 text-xs text-[var(--admin-muted)] normal-case font-sans not-italic cursor-pointer w-fit">
+      <input type="checkbox" v-model="isDryRun" :disabled="(isAutoRunning && !isAutoPaused) || isNormalizing" class="w-4 h-4 accent-rose-600" />
       ☑ Chạy thử, không xoá thật
     </label>
 
-    <div v-if="!isDryRun" class="flex items-center gap-2 bg-red-600/10 border border-red-500/50 rounded-xl px-4 py-3 w-fit">
-      <span class="text-red-400 font-black text-xs uppercase tracking-widest">⚠️ CHẾ ĐỘ XOÁ THẬT</span>
-      <span class="text-red-300 text-[11px] normal-case font-sans not-italic">— ảnh sẽ bị xoá vĩnh viễn khỏi Firebase Storage. Tích lại ô trên để quay về chạy thử.</span>
+    <div v-if="!isDryRun" class="flex items-center gap-2 bg-red-50 border border-red-300 rounded-xl px-4 py-3 w-fit">
+      <span class="text-[var(--admin-danger)] font-black text-xs uppercase tracking-widest">⚠️ CHẾ ĐỘ XOÁ THẬT</span>
+      <span class="text-red-600 text-[11px] normal-case font-sans not-italic">— ảnh sẽ bị xoá vĩnh viễn khỏi Firebase Storage. Tích lại ô trên để quay về chạy thử.</span>
     </div>
-    <div v-else class="flex items-center gap-2 text-emerald-500 text-[11px] normal-case font-sans not-italic">
+    <div v-else class="flex items-center gap-2 text-[var(--admin-success)] text-[11px] normal-case font-sans not-italic">
       ✅ Đang ở chế độ chạy thử — không xoá ảnh thật, không cập nhật Firestore.
     </div>
 
@@ -637,79 +637,79 @@ watch(isDryRun, async (newVal, oldVal) => {
       </button>
 
       <button v-if="isNormalizing && !isNormalizePaused" @click="pauseNormalizeAuto"
-        class="bg-amber-600 hover:bg-amber-500 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">⏸ Tạm dừng</button>
+        class="bg-amber-600 hover:bg-amber-700 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">⏸ Tạm dừng</button>
       <button v-if="isNormalizing && isNormalizePaused" @click="resumeNormalizeAuto"
-        class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">▶ Tiếp tục</button>
+        class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">▶ Tiếp tục</button>
 
       <button @click="startAutoCleanup" :disabled="isAutoRunning || isNormalizing || isCheckingStorageCleanup || isDeletingStorage"
-        class="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-black px-8 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase shadow-[0_0_20px_rgba(225,29,72,0.3)]">
+        class="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black px-8 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase shadow-sm">
         {{ isAutoRunning ? (isDryRun ? '⏳ ĐANG CHẠY THỬ...' : '⏳ ĐANG XOÁ THẬT...') : (isDryRun ? '🚀 Dọn tự động — chạy thử' : '🔥 Dọn tự động — XOÁ THẬT') }}
       </button>
 
       <button v-if="isAutoRunning && !isAutoPaused" @click="pauseAutoCleanup"
-        class="bg-amber-600 hover:bg-amber-500 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">⏸ Tạm dừng</button>
+        class="bg-amber-600 hover:bg-amber-700 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">⏸ Tạm dừng</button>
       <button v-if="isAutoRunning && isAutoPaused" @click="resumeAutoCleanup"
-        class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">
+        class="bg-[var(--admin-success)] hover:bg-emerald-700 text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">
         {{ isDryRun ? '▶ Tiếp tục chạy thử' : '▶ Tiếp tục xoá thật' }}
       </button>
       <button v-if="isAutoRunning && isDryRun" @click="endDryRunSession"
-        class="bg-slate-800 hover:bg-slate-700 text-rose-400 hover:text-rose-300 font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase border border-rose-800/50">⛔ Kết thúc phiên chạy thử</button>
+        class="bg-white hover:bg-rose-50 text-rose-600 hover:text-rose-700 font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase border border-rose-300">⛔ Kết thúc phiên chạy thử</button>
 
       <button @click="scanStorageImages" :disabled="isCheckingStorageCleanup || isDeletingStorage || isAutoRunning || isNormalizing"
-        class="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white font-black px-8 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">
+        class="bg-slate-500 hover:bg-slate-600 disabled:opacity-50 text-white font-black px-8 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase">
         {{ isCheckingStorageCleanup ? '⏳ ĐANG KIỂM TRA...' : (storageCleanupError ? '🔁 Thử lại' : (lastCleanupDocId ? '📦 Kiểm tra lô tiếp theo' : '🔍 Kiểm tra 30 đơn đầu tiên')) }}
       </button>
 
       <button v-if="lastCleanupDocId || storageCleanupResult" @click="resetStorageCleanup"
         :disabled="isCheckingStorageCleanup || isDeletingStorage || isAutoRunning || isNormalizing"
-        class="bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-400 hover:text-white font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase border border-slate-700">🔄 Quét lại từ đầu</button>
+        class="bg-slate-200 hover:bg-slate-300 disabled:opacity-50 text-slate-500 hover:text-[var(--admin-text)] font-black px-6 py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase border border-[var(--admin-border)]">🔄 Quét lại từ đầu</button>
     </div>
 
     <!-- Panel tiến trình Chuẩn hoá tự động -->
-    <div v-if="isNormalizing || normalizeBatchCount > 0" class="bg-[#0d121f] border border-indigo-800/40 rounded-2xl p-5 space-y-4">
+    <div v-if="isNormalizing || normalizeBatchCount > 0" class="bg-[var(--admin-card-soft)] border border-indigo-200 rounded-2xl p-5 space-y-4">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-black uppercase tracking-widest" :class="isNormalizing ? (isNormalizePaused ? 'text-amber-400' : 'text-indigo-400') : 'text-slate-500'">
+        <span class="text-xs font-black uppercase tracking-widest" :class="isNormalizing ? (isNormalizePaused ? 'text-amber-600' : 'text-indigo-600') : 'text-[var(--admin-muted)]'">
           {{ isNormalizing ? (isNormalizePaused ? '⏸ Tạm dừng' : '🧮 Đang chuẩn hoá...') : '⏹ Đã dừng' }}
         </span>
-        <span class="text-slate-500 text-[10px] uppercase tracking-widest">Batch: <span class="text-white font-black">{{ normalizeBatchCount }}</span></span>
+        <span class="text-[var(--admin-muted)] text-[10px] uppercase tracking-widest">Batch: <span class="text-[var(--admin-text)] font-black">{{ normalizeBatchCount }}</span></span>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-slate-300">{{ normalizeStats.scanned }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Đã quét</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-indigo-400">{{ normalizeStats.normalized }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Đã chuẩn hoá</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-slate-500">{{ normalizeStats.skippedNoImages }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Bỏ qua không ảnh</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-slate-500">{{ normalizeStats.skippedAlreadyNormalized }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Bỏ qua đã chuẩn hoá</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-red-500">{{ normalizeStats.errors }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Lỗi</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-text)]">{{ normalizeStats.scanned }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Đã quét</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-indigo-600">{{ normalizeStats.normalized }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Đã chuẩn hoá</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-muted)]">{{ normalizeStats.skippedNoImages }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Bỏ qua không ảnh</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-muted)]">{{ normalizeStats.skippedAlreadyNormalized }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Bỏ qua đã chuẩn hoá</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-danger)]">{{ normalizeStats.errors }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Lỗi</div></div>
       </div>
     </div>
 
-    <div v-if="normalizeProgress" class="text-indigo-400 text-sm font-sans normal-case not-italic tracking-normal">{{ normalizeProgress }}</div>
-    <div v-if="storageCleanupProgress" class="text-blue-400 text-sm font-sans normal-case not-italic tracking-normal">{{ storageCleanupProgress }}</div>
-    <div v-if="storageCleanupError" class="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-xl p-4 normal-case font-sans not-italic">⚠️ {{ storageCleanupError }}</div>
+    <div v-if="normalizeProgress" class="text-indigo-600 text-sm font-sans normal-case not-italic tracking-normal">{{ normalizeProgress }}</div>
+    <div v-if="storageCleanupProgress" class="text-[var(--admin-primary)] text-sm font-sans normal-case not-italic tracking-normal">{{ storageCleanupProgress }}</div>
+    <div v-if="storageCleanupError" class="text-[var(--admin-danger)] text-sm bg-red-50 border border-red-200 rounded-xl p-4 normal-case font-sans not-italic">⚠️ {{ storageCleanupError }}</div>
 
     <!-- Panel tiến trình Dọn tự động -->
-    <div v-if="isAutoRunning || autoRoundCount > 0" class="bg-[#0d121f] border border-rose-800/40 rounded-2xl p-5 space-y-4">
+    <div v-if="isAutoRunning || autoRoundCount > 0" class="bg-[var(--admin-card-soft)] border border-rose-200 rounded-2xl p-5 space-y-4">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-black uppercase tracking-widest" :class="isAutoRunning ? (isAutoPaused ? 'text-amber-400' : 'text-emerald-400') : 'text-slate-500'">
+        <span class="text-xs font-black uppercase tracking-widest" :class="isAutoRunning ? (isAutoPaused ? 'text-amber-600' : 'text-[var(--admin-success)]') : 'text-[var(--admin-muted)]'">
           {{ isAutoRunning ? (isAutoPaused ? (isDryRun ? '⏸ Tạm dừng (chạy thử)' : '⏸ Tạm dừng (xoá thật)') : (isDryRun ? '🧪 ĐANG CHẠY THỬ — KHÔNG XOÁ ẢNH' : '🔥 ĐANG XOÁ THẬT')) : '⏹ Đã dừng' }}
         </span>
-        <span class="text-slate-500 text-[10px] uppercase tracking-widest">Vòng: <span class="text-white font-black">{{ autoRoundCount }}</span></span>
+        <span class="text-[var(--admin-muted)] text-[10px] uppercase tracking-widest">Vòng: <span class="text-[var(--admin-text)] font-black">{{ autoRoundCount }}</span></span>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-slate-300">{{ autoStats.checked }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Đã kiểm tra</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-rose-400">{{ autoStats.deletedImages }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">{{ isDryRun ? 'Sẽ xoá ảnh' : 'Đã xoá ảnh' }}</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-blue-400">{{ autoStats.cleanedReports }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">{{ isDryRun ? 'Sẽ đánh dấu đơn' : 'Đã đánh dấu đơn' }}</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-slate-500">{{ autoStats.pendingSkipped }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Bỏ qua pending</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-amber-400">{{ autoStats.vipNotOldEnough }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">VIP chưa đủ 7 ngày</div></div>
-        <div class="bg-[#111726] rounded-xl p-3 text-center"><div class="text-lg font-black text-red-500">{{ autoStats.errors }}</div><div class="text-slate-500 text-[9px] tracking-widest mt-1 uppercase">Lỗi xoá ảnh</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-text)]">{{ autoStats.checked }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Đã kiểm tra</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-rose-600">{{ autoStats.deletedImages }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">{{ isDryRun ? 'Sẽ xoá ảnh' : 'Đã xoá ảnh' }}</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-primary)]">{{ autoStats.cleanedReports }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">{{ isDryRun ? 'Sẽ đánh dấu đơn' : 'Đã đánh dấu đơn' }}</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-muted)]">{{ autoStats.pendingSkipped }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Bỏ qua pending</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-amber-600">{{ autoStats.vipNotOldEnough }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">VIP chưa đủ 7 ngày</div></div>
+        <div class="bg-white rounded-xl p-3 text-center"><div class="text-lg font-black text-[var(--admin-danger)]">{{ autoStats.errors }}</div><div class="text-[var(--admin-muted)] text-[9px] tracking-widest mt-1 uppercase">Lỗi xoá ảnh</div></div>
       </div>
 
       <div v-if="autoLogs.length" class="space-y-2">
         <div class="flex items-center justify-between">
-          <span class="text-slate-500 text-[10px] uppercase tracking-widest">Log gần nhất</span>
-          <button @click="clearAutoLogs" class="text-slate-500 hover:text-white text-[10px] uppercase tracking-widest font-bold">Xoá log</button>
+          <span class="text-[var(--admin-muted)] text-[10px] uppercase tracking-widest">Log gần nhất</span>
+          <button @click="clearAutoLogs" class="text-[var(--admin-muted)] hover:text-[var(--admin-text)] text-[10px] uppercase tracking-widest font-bold">Xoá log</button>
         </div>
-        <div class="bg-black/40 rounded-xl p-3 max-h-48 overflow-y-auto space-y-1 font-mono">
-          <div v-for="(line, idx) in autoLogs" :key="idx" class="text-slate-400 text-[10px] normal-case not-italic">{{ line }}</div>
+        <div class="bg-white border border-[var(--admin-border)] rounded-xl p-3 max-h-48 overflow-y-auto space-y-1 font-mono">
+          <div v-for="(line, idx) in autoLogs" :key="idx" class="text-[var(--admin-muted)] text-[10px] normal-case not-italic">{{ line }}</div>
         </div>
       </div>
     </div>
@@ -717,21 +717,21 @@ watch(isDryRun, async (newVal, oldVal) => {
     <Transition name="fade">
       <div v-if="storageCleanupResult" class="space-y-6">
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center"><div class="text-2xl font-black text-slate-300">{{ storageCleanupResult.checkedReports }}</div><div class="text-slate-500 text-[10px] tracking-widest mt-1 uppercase">Đã kiểm tra</div></div>
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center"><div class="text-2xl font-black text-blue-400">{{ storageCleanupResult.basicReportCount }}</div><div class="text-slate-500 text-[10px] tracking-widest mt-1 uppercase">Job cơ bản</div></div>
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-400">{{ storageCleanupResult.vipReportCount }}</div><div class="text-slate-500 text-[10px] tracking-widest mt-1 uppercase">VIP &gt; 7 ngày</div></div>
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center"><div class="text-2xl font-black text-slate-500">{{ storageCleanupResult.pendingSkipped }}</div><div class="text-slate-500 text-[10px] tracking-widest mt-1 uppercase">Pending bỏ qua</div></div>
-          <div class="bg-[#0d121f] border border-rose-800/50 rounded-2xl p-4 text-center"><div class="text-2xl font-black text-rose-400">{{ storageCleanupResult.totalImageCount }}</div><div class="text-slate-500 text-[10px] tracking-widest mt-1 uppercase">Ảnh sẽ xoá</div></div>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-4 text-center"><div class="text-2xl font-black text-[var(--admin-text)]">{{ storageCleanupResult.checkedReports }}</div><div class="text-[var(--admin-muted)] text-[10px] tracking-widest mt-1 uppercase">Đã kiểm tra</div></div>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-4 text-center"><div class="text-2xl font-black text-[var(--admin-primary)]">{{ storageCleanupResult.basicReportCount }}</div><div class="text-[var(--admin-muted)] text-[10px] tracking-widest mt-1 uppercase">Job cơ bản</div></div>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-4 text-center"><div class="text-2xl font-black text-amber-600">{{ storageCleanupResult.vipReportCount }}</div><div class="text-[var(--admin-muted)] text-[10px] tracking-widest mt-1 uppercase">VIP &gt; 7 ngày</div></div>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-4 text-center"><div class="text-2xl font-black text-[var(--admin-muted)]">{{ storageCleanupResult.pendingSkipped }}</div><div class="text-[var(--admin-muted)] text-[10px] tracking-widest mt-1 uppercase">Pending bỏ qua</div></div>
+          <div class="bg-red-50 border border-red-300 rounded-2xl p-4 text-center"><div class="text-2xl font-black text-[var(--admin-danger)]">{{ storageCleanupResult.totalImageCount }}</div><div class="text-[var(--admin-muted)] text-[10px] tracking-widest mt-1 uppercase">Ảnh sẽ xoá</div></div>
         </div>
 
-        <div v-if="storageCleanupResult.totalImageCount === 0" class="text-center text-slate-500 text-sm italic normal-case font-sans py-2">
+        <div v-if="storageCleanupResult.totalImageCount === 0" class="text-center text-[var(--admin-muted)] text-sm italic normal-case font-sans py-2">
           Không có ảnh nào cần xoá trong lô này.
-          <span v-if="storageCleanupResult.hasMore" class="block mt-1 text-blue-400 not-italic font-bold">Bấm "Kiểm tra lô tiếp theo" để tiếp tục.</span>
-          <span v-else class="block mt-1 text-emerald-400 not-italic font-bold">✅ Đã hết collection.</span>
+          <span v-if="storageCleanupResult.hasMore" class="block mt-1 text-[var(--admin-primary)] not-italic font-bold">Bấm "Kiểm tra lô tiếp theo" để tiếp tục.</span>
+          <span v-else class="block mt-1 text-[var(--admin-success)] not-italic font-bold">✅ Đã hết collection.</span>
         </div>
 
         <button v-if="storageCleanupResult.totalImageCount > 0" @click="confirmDeleteImages" :disabled="isDeletingStorage || isCheckingStorageCleanup"
-          class="w-full bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase shadow-[0_0_20px_rgba(220,38,38,0.4)]">
+          class="w-full bg-[var(--admin-danger)] hover:bg-red-700 disabled:opacity-50 text-white font-black py-4 rounded-xl transition-all active:scale-95 tracking-widest text-sm uppercase shadow-md">
           {{ isDeletingStorage ? '⏳ ĐANG XOÁ ẢNH...' : `🗑️ Xác nhận xoá ảnh lô này (${storageCleanupResult.totalImageCount} ảnh)` }}
         </button>
       </div>

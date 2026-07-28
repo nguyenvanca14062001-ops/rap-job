@@ -318,106 +318,106 @@ const openLink = (url: string) => { if (url) window.open(url, '_blank') }
 
     <!-- FILTERS -->
     <div class="flex flex-wrap gap-3 items-center">
-      <div class="flex items-center gap-1 bg-[#0d121f] p-1.5 rounded-xl border border-slate-800">
-        <button :class="['px-3 py-2 rounded-lg text-[10px] font-black transition-all', dateMode === 'today' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:text-white']" @click="dateMode = 'today'">HÔM NAY</button>
-        <button :class="['px-3 py-2 rounded-lg text-[10px] font-black transition-all', dateMode === 'yesterday' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:text-white']" @click="dateMode = 'yesterday'">HÔM QUA</button>
-        <button :class="['px-3 py-2 rounded-lg text-[10px] font-black transition-all', dateMode === 'custom' ? 'bg-teal-600 text-white' : 'text-slate-500 hover:text-white']" @click="dateMode = 'custom'">CHỌN NGÀY</button>
-        <input v-if="dateMode === 'custom'" v-model="customDate" type="date" class="bg-[#111726] text-white text-[10px] py-2 px-2 rounded-lg border border-slate-700 outline-none font-sans" />
+      <div class="flex items-center gap-1 bg-[var(--admin-card-soft)] p-1.5 rounded-xl border border-[var(--admin-border)]">
+        <button :class="['px-3 py-2 rounded-lg text-[10px] font-black transition-all', dateMode === 'today' ? 'bg-teal-600 text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]']" @click="dateMode = 'today'">HÔM NAY</button>
+        <button :class="['px-3 py-2 rounded-lg text-[10px] font-black transition-all', dateMode === 'yesterday' ? 'bg-teal-600 text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]']" @click="dateMode = 'yesterday'">HÔM QUA</button>
+        <button :class="['px-3 py-2 rounded-lg text-[10px] font-black transition-all', dateMode === 'custom' ? 'bg-teal-600 text-white' : 'text-[var(--admin-muted)] hover:text-[var(--admin-text)]']" @click="dateMode = 'custom'">CHỌN NGÀY</button>
+        <input v-if="dateMode === 'custom'" v-model="customDate" type="date" class="bg-white text-[var(--admin-text)] text-[10px] py-2 px-2 rounded-lg border border-[var(--admin-border)] outline-none font-sans" />
       </div>
 
-      <select v-model="statusFilter" class="bg-[#0d121f] text-white text-[10px] py-2.5 px-3 rounded-xl border border-slate-800 outline-none cursor-pointer">
+      <select v-model="statusFilter" class="bg-[var(--admin-card-soft)] text-[var(--admin-text)] text-[10px] py-2.5 px-3 rounded-xl border border-[var(--admin-border)] outline-none cursor-pointer">
         <option value="pending">⏳ Chờ cộng xu</option>
         <option value="paid">✅ Đã cộng xu</option>
         <option value="rejected">❌ Đã từ chối</option>
         <option value="all">📚 Tất cả</option>
       </select>
 
-      <select v-model="warningFilter" class="bg-[#0d121f] text-white text-[10px] py-2.5 px-3 rounded-xl border border-slate-800 outline-none cursor-pointer">
+      <select v-model="warningFilter" class="bg-[var(--admin-card-soft)] text-[var(--admin-text)] text-[10px] py-2.5 px-3 rounded-xl border border-[var(--admin-border)] outline-none cursor-pointer">
         <option value="all">Tất cả cảnh báo</option>
         <option value="has_warning">⚠️ Có cảnh báo</option>
         <option value="duplicate_link">🔗 Link trùng</option>
         <option value="duplicate_nick">👤 Nick trùng</option>
       </select>
 
-      <span v-if="isSearchMode" class="text-[10px] text-teal-400 tracking-widest font-sans">🔎 ĐANG TÌM "{{ props.searchQuery }}" — KHÔNG GIỚI HẠN THEO NGÀY</span>
+      <span v-if="isSearchMode" class="text-[10px] text-teal-600 tracking-widest font-sans">🔎 ĐANG TÌM "{{ props.searchQuery }}" — KHÔNG GIỚI HẠN THEO NGÀY</span>
     </div>
 
     <!-- BULK ACTION BAR -->
     <Transition name="fade">
-      <div v-if="selectedIds.length" class="bg-teal-900/40 border border-teal-500/30 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
-        <span class="text-teal-400 text-sm tracking-widest">ĐÃ CHỌN: <span class="text-white text-lg">{{ selectedIds.length }}</span> ĐƠN</span>
+      <div v-if="selectedIds.length" class="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex flex-wrap justify-between items-center gap-3">
+        <span class="text-teal-700 text-sm tracking-widest">ĐÃ CHỌN: <span class="text-[var(--admin-text)] text-lg">{{ selectedIds.length }}</span> ĐƠN</span>
         <div class="flex gap-2 flex-wrap">
-          <button class="bg-teal-500 hover:bg-teal-400 text-teal-950 px-5 py-2.5 rounded-xl text-xs font-black" @click="bulkApprove">✅ CỘNG XU ĐƠN ĐÃ CHỌN</button>
-          <button class="bg-red-600 hover:bg-red-500 text-white px-5 py-2.5 rounded-xl text-xs font-black" @click="openRejectBulk">❌ TỪ CHỐI ĐƠN ĐÃ CHỌN</button>
-          <button class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-5 py-2.5 rounded-xl text-xs font-black" @click="clearSelected">BỎ CHỌN</button>
+          <button class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-xs font-black" @click="bulkApprove">✅ CỘNG XU ĐƠN ĐÃ CHỌN</button>
+          <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white px-5 py-2.5 rounded-xl text-xs font-black" @click="openRejectBulk">❌ TỪ CHỐI ĐƠN ĐÃ CHỌN</button>
+          <button class="bg-slate-200 hover:bg-slate-300 text-[var(--admin-text)] px-5 py-2.5 rounded-xl text-xs font-black" @click="clearSelected">BỎ CHỌN</button>
         </div>
       </div>
     </Transition>
 
-    <div v-if="isLoading" class="p-20 text-center text-teal-500 animate-pulse tracking-widest">ĐANG TẢI...</div>
-    <div v-else-if="!groupedByUser.length" class="p-20 text-center text-slate-700 text-xs">KHÔNG CÓ DỮ LIỆU.</div>
+    <div v-if="isLoading" class="p-20 text-center text-teal-600 animate-pulse tracking-widest">ĐANG TẢI...</div>
+    <div v-else-if="!groupedByUser.length" class="p-20 text-center text-slate-400 text-xs">KHÔNG CÓ DỮ LIỆU.</div>
 
     <div v-else class="space-y-4">
       <div class="flex items-center gap-2 px-1" v-if="pendingIdsVisible.length">
-        <input type="checkbox" class="w-4 h-4 accent-teal-500 rounded cursor-pointer" :checked="isAllPendingSelected" @change="toggleAllPending" />
-        <span class="text-[10px] text-slate-500 tracking-widest">CHỌN TẤT CẢ ĐƠN CHỜ ĐANG HIỂN THỊ ({{ pendingIdsVisible.length }})</span>
+        <input type="checkbox" class="w-4 h-4 accent-teal-600 rounded cursor-pointer" :checked="isAllPendingSelected" @change="toggleAllPending" />
+        <span class="text-[10px] text-[var(--admin-muted)] tracking-widest">CHỌN TẤT CẢ ĐƠN CHỜ ĐANG HIỂN THỊ ({{ pendingIdsVisible.length }})</span>
       </div>
 
-      <div v-for="group in groupedByUser" :key="group.uid" class="bg-[#0d121f] border border-slate-800 rounded-2xl overflow-hidden">
+      <div v-for="group in groupedByUser" :key="group.uid" class="bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-2xl overflow-hidden shadow-sm">
         <!-- Group header -->
-        <div class="p-4 flex flex-wrap justify-between items-center gap-2 bg-[#111726] border-b border-slate-800">
+        <div class="p-4 flex flex-wrap justify-between items-center gap-2 bg-[var(--admin-card-soft)] border-b border-[var(--admin-border)]">
           <div class="font-sans not-italic normal-case">
             <div class="flex items-center gap-2">
-              <span class="text-white text-sm font-black">{{ group.user?.username || group.user?.fullName || 'CHƯA CẬP NHẬT' }}</span>
-              <span v-if="group.hasWarning" class="text-[9px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-black">⚠️ NGHI VẤN</span>
+              <span class="text-[var(--admin-text)] text-sm font-black">{{ group.user?.username || group.user?.fullName || 'CHƯA CẬP NHẬT' }}</span>
+              <span v-if="group.hasWarning" class="text-[9px] bg-orange-100 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full font-black">⚠️ NGHI VẤN</span>
             </div>
-            <span class="text-slate-600 text-[9px]">UID: {{ group.uid?.slice(0, 8) }}…</span>
+            <span class="text-slate-400 text-[9px]">UID: {{ group.uid?.slice(0, 8) }}…</span>
           </div>
           <div class="flex items-center gap-3 text-[10px] font-sans not-italic normal-case font-bold">
-            <span class="text-yellow-400">Chờ kiểm tra {{ group.pendingToday }}/{{ DAILY_THREAD_MAX_PENDING_PER_DAY }}</span>
-            <span class="text-slate-400">Chờ: {{ group.pendingTotal }}</span>
+            <span class="text-[var(--admin-warning)]">Chờ kiểm tra {{ group.pendingToday }}/{{ DAILY_THREAD_MAX_PENDING_PER_DAY }}</span>
+            <span class="text-[var(--admin-muted)]">Chờ: {{ group.pendingTotal }}</span>
           </div>
         </div>
 
         <!-- Rows -->
-        <div class="divide-y divide-slate-800/60">
+        <div class="divide-y divide-[var(--admin-border)]">
           <div v-for="rp in group.items" :key="rp.id" class="p-4 flex flex-wrap items-center gap-3">
-            <input v-if="rp.status === 'pending'" type="checkbox" class="w-4 h-4 accent-teal-500 rounded cursor-pointer shrink-0" :value="rp.id" v-model="selectedIds" />
+            <input v-if="rp.status === 'pending'" type="checkbox" class="w-4 h-4 accent-teal-600 rounded cursor-pointer shrink-0" :value="rp.id" v-model="selectedIds" />
             <div v-else class="w-4 shrink-0"></div>
 
             <div class="min-w-[130px] font-sans not-italic normal-case">
-              <p class="text-white text-[12px] font-bold">🧵 {{ rp.threadNick }}</p>
-              <p class="text-slate-500 text-[10px]">View QR: <span :class="rp.warnings.includes('low_view') ? 'text-orange-400 font-bold' : 'text-white'">{{ rp.qrViews }}</span></p>
-              <p v-if="rp.displaySuggestedReward > 0" class="text-emerald-400 text-[10px] font-bold">Đề xuất: {{ rp.displaySuggestedReward.toLocaleString() }} xu</p>
-              <p v-else class="text-orange-400 text-[10px] font-bold">View thấp - chưa đề xuất xu</p>
+              <p class="text-[var(--admin-text)] text-[12px] font-bold">🧵 {{ rp.threadNick }}</p>
+              <p class="text-[var(--admin-muted)] text-[10px]">View QR: <span :class="rp.warnings.includes('low_view') ? 'text-orange-600 font-bold' : 'text-[var(--admin-text)]'">{{ rp.qrViews }}</span></p>
+              <p v-if="rp.displaySuggestedReward > 0" class="text-[var(--admin-success)] text-[10px] font-bold">Đề xuất: {{ rp.displaySuggestedReward.toLocaleString() }} xu</p>
+              <p v-else class="text-orange-600 text-[10px] font-bold">View thấp - chưa đề xuất xu</p>
             </div>
 
-            <button @click="openLink(rp.postUrl)" class="text-teal-400 text-[10px] underline decoration-dotted hover:text-teal-300 font-sans not-italic normal-case truncate max-w-[180px]">
+            <button @click="openLink(rp.postUrl)" class="text-teal-600 text-[10px] underline decoration-dotted hover:text-teal-700 font-sans not-italic normal-case truncate max-w-[180px]">
               Mở bài viết ↗
             </button>
 
-            <span class="text-slate-500 text-[10px] font-sans not-italic">{{ formatDate(rp.createdAt) }}</span>
+            <span class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">{{ formatDate(rp.createdAt) }}</span>
 
             <div class="flex flex-wrap gap-1" v-if="rp.warnings.length">
-              <span v-if="rp.warnings.includes('duplicate_link')" class="text-[8px] bg-red-500/20 text-red-400 border border-red-500/30 px-2 py-0.5 rounded-full font-black">LINK TRÙNG</span>
-              <span v-if="rp.warnings.includes('duplicate_nick')" class="text-[8px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-black">NICK TRÙNG</span>
-              <span v-if="rp.warnings.includes('low_view')" class="text-[8px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full font-black">VIEW THẤP</span>
-              <span v-if="rp.warnings.includes('too_many')" class="text-[8px] bg-purple-500/20 text-purple-400 border border-purple-500/30 px-2 py-0.5 rounded-full font-black">QUÁ 5 ĐƠN</span>
+              <span v-if="rp.warnings.includes('duplicate_link')" class="text-[8px] bg-red-100 text-[var(--admin-danger)] border border-red-200 px-2 py-0.5 rounded-full font-black">LINK TRÙNG</span>
+              <span v-if="rp.warnings.includes('duplicate_nick')" class="text-[8px] bg-orange-100 text-orange-600 border border-orange-200 px-2 py-0.5 rounded-full font-black">NICK TRÙNG</span>
+              <span v-if="rp.warnings.includes('low_view')" class="text-[8px] bg-amber-50 text-[var(--admin-warning)] border border-amber-200 px-2 py-0.5 rounded-full font-black">VIEW THẤP</span>
+              <span v-if="rp.warnings.includes('too_many')" class="text-[8px] bg-purple-100 text-purple-600 border border-purple-200 px-2 py-0.5 rounded-full font-black">QUÁ 5 ĐƠN</span>
             </div>
 
             <span class="text-[9px] px-2 py-1 rounded-full border font-sans not-italic normal-case ml-auto shrink-0"
-                  :class="rp.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : rp.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'">
+                  :class="rp.status === 'pending' ? 'bg-amber-50 text-[var(--admin-warning)] border-amber-200' : rp.status === 'rejected' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-emerald-50 text-[var(--admin-success)] border-emerald-200'">
               {{ rp.status === 'paid' ? `ĐÃ CỘNG ${(rp.actualReward || 0).toLocaleString()} XU` : dailyThreadStatusLabel(rp.status).toUpperCase() }}
             </span>
 
             <div class="flex gap-2 shrink-0 w-full md:w-auto" v-if="rp.status === 'pending'">
-              <button class="bg-teal-500 hover:bg-teal-400 text-teal-950 text-[9px] px-3 py-2 rounded-lg font-black" @click="approveOne(rp)">💰 Cộng xu</button>
-              <button class="bg-red-600 hover:bg-red-500 text-white text-[9px] px-3 py-2 rounded-lg font-black" @click="openRejectOne(rp)">TỪ CHỐI</button>
+              <button class="bg-teal-600 hover:bg-teal-700 text-white text-[9px] px-3 py-2 rounded-lg font-black" @click="approveOne(rp)">💰 Cộng xu</button>
+              <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white text-[9px] px-3 py-2 rounded-lg font-black" @click="openRejectOne(rp)">TỪ CHỐI</button>
             </div>
-            <div v-else-if="rp.status === 'rejected'" class="text-rose-400 text-[9px] font-sans not-italic normal-case max-w-[160px] shrink-0">
+            <div v-else-if="rp.status === 'rejected'" class="text-rose-600 text-[9px] font-sans not-italic normal-case max-w-[160px] shrink-0">
               {{ rp.rejectReason }}<span v-if="rp.rejectNote"> — {{ rp.rejectNote }}</span>
             </div>
-            <button v-else class="bg-slate-800 text-slate-500 text-[9px] px-3 py-2 rounded-lg font-black cursor-not-allowed shrink-0" disabled>Đã xử lý</button>
+            <button v-else class="bg-slate-100 text-slate-400 text-[9px] px-3 py-2 rounded-lg font-black cursor-not-allowed shrink-0" disabled>Đã xử lý</button>
           </div>
         </div>
       </div>
@@ -427,22 +427,22 @@ const openLink = (url: string) => { if (url) window.open(url, '_blank') }
     <Transition name="fade">
       <div v-if="showRejectModal" class="fixed inset-0 z-[7000] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="closeRejectModal"></div>
-        <div class="relative bg-[#111726] border border-red-500/30 w-full max-w-md rounded-[30px] p-6 shadow-2xl">
-          <h3 class="text-white text-base tracking-tight mb-4 font-sans not-italic normal-case font-black">
+        <div class="admin-theme relative bg-[var(--admin-card)] border border-red-200 w-full max-w-md rounded-[30px] p-6 shadow-xl">
+          <h3 class="text-[var(--admin-text)] text-base tracking-tight mb-4 font-sans not-italic normal-case font-black">
             TỪ CHỐI {{ rejectTargetIds.length }} ĐƠN
           </h3>
           <div class="grid grid-cols-2 gap-2 mb-4">
             <button v-for="reason in DAILY_THREAD_REJECT_REASONS" :key="reason"
               @click="rejectReasonSelected = reason"
-              :class="['text-[10px] py-2.5 px-3 rounded-xl font-sans not-italic normal-case font-bold transition-all', rejectReasonSelected === reason ? 'bg-red-600 text-white' : 'bg-[#0d121f] text-slate-400 border border-slate-700 hover:border-red-500/50']">
+              :class="['text-[10px] py-2.5 px-3 rounded-xl font-sans not-italic normal-case font-bold transition-all', rejectReasonSelected === reason ? 'bg-red-600 text-white' : 'bg-[var(--admin-card-soft)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:border-red-300']">
               {{ reason }}
             </button>
           </div>
           <textarea v-model="rejectNoteText" rows="2" placeholder="Ghi chú thêm (không bắt buộc)"
-            class="w-full bg-[#0d121f] text-white border border-slate-700 rounded-xl p-3 mb-4 font-sans normal-case not-italic text-sm outline-none focus:border-red-500 resize-none placeholder:text-slate-600"></textarea>
+            class="w-full bg-[var(--admin-card-soft)] text-[var(--admin-text)] border border-[var(--admin-border)] rounded-xl p-3 mb-4 font-sans normal-case not-italic text-sm outline-none focus:border-red-500 resize-none placeholder:text-slate-400"></textarea>
           <div class="flex gap-3 justify-end font-sans not-italic normal-case">
-            <button class="px-5 py-2.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded-xl text-xs font-black" @click="closeRejectModal">HỦY</button>
-            <button class="px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black" @click="confirmReject">XÁC NHẬN TỪ CHỐI</button>
+            <button class="px-5 py-2.5 bg-slate-200 text-[var(--admin-muted)] hover:bg-slate-300 rounded-xl text-xs font-black" @click="closeRejectModal">HỦY</button>
+            <button class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black" @click="confirmReject">XÁC NHẬN TỪ CHỐI</button>
           </div>
         </div>
       </div>
