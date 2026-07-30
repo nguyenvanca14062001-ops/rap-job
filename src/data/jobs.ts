@@ -128,7 +128,8 @@ export const jobsData: Record<string, any> = {
         extraLinks: [
           { text: "THAM GIA NHÓM 1 ➔", url: "https://zalo.me/g/fambpb151" },
           { text: "THAM GIA NHÓM 2 ➔", url: "https://zalo.me/g/1ucvwyabtkhevegfg0s6" },
-          { text: "THAM GIA NHÓM 3 ➔", url: "https://zalo.me/g/feyhu2samzen3gjirnqh" }
+          { text: "THAM GIA NHÓM 3 ➔", url: "https://zalo.me/g/feyhu2samzen3gjirnqh" },
+          { text: "THAM GIA NHÓM 5 ➔", url: "https://zalo.me/g/j0kwaispbne09pbdwu1i" }
         ]
       }
     ]
