@@ -515,11 +515,14 @@ const initFirebaseSync = (user: any) => {
     isDataLoading.value = false
   })
 
-  if (import.meta.env.DEV) console.log('[Firestore] START withdrawals listener — collection: withdrawals, uid filter, orderBy createdAt desc, limit 20')
+  if (import.meta.env.DEV) console.log('[Firestore] START withdrawals listener — collection: withdrawals, uid filter, sorted client-side (tránh phụ thuộc composite index)')
   unsubscribeWithdrawals = onSnapshot(
-    query(collection(db, "withdrawals"), where("uid", "==", user.uid), orderBy("createdAt", "desc"), limit(20)),
+    query(collection(db, "withdrawals"), where("uid", "==", user.uid)),
     (snapshot) => {
-      myWithdrawals.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      myWithdrawals.value = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a: any, b: any) => (b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+        .slice(0, 20)
     },
     (error) => {
       console.error('[Firestore] Lỗi tải lịch sử rút tiền (withdrawals listener):', error)
