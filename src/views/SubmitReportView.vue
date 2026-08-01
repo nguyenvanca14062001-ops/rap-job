@@ -254,17 +254,21 @@ const submitReport = async () => {
 
   isLoading.value = true
   try {
-    // Chặn spam: tối đa 3 đơn pending cùng lúc
-    const qSpam = query(
-      collection(db, "reports"),
-      where("uid", "==", userUid.value),
-      where("status", "==", "pending")
-    )
-    const snapshotSpam = await getDocs(qSpam)
-    if (snapshotSpam.docs.length >= 3) {
-      alert("⚠️ HỆ THỐNG TẠM KHÓA: Bạn đang có 3 đơn chờ duyệt. Vui lòng chờ Admin xử lý trước khi gửi thêm!")
-      isLoading.value = false
-      return
+    // Chặn spam: chỉ giới hạn tổng đơn VIP pending (tối đa 3 đơn cùng lúc).
+    // Job cơ bản không giới hạn tổng — chỉ giữ nguyên rule "1 lần/job" ở bước bên dưới.
+    if (VIP_JOB_IDS_SUBMIT.includes(selectedJob.value.id)) {
+      const qPending = query(
+        collection(db, "reports"),
+        where("uid", "==", userUid.value),
+        where("status", "==", "pending")
+      )
+      const snapshotPending = await getDocs(qPending)
+      const vipPendingCount = snapshotPending.docs.filter(d => VIP_JOB_IDS_SUBMIT.includes(d.data().jobId)).length
+      if (vipPendingCount >= 3) {
+        alert("⚠️ Bạn chỉ được có tối đa 3 đơn VIP đang chờ duyệt. Vui lòng chờ admin xử lý bớt rồi gửi tiếp.")
+        isLoading.value = false
+        return
+      }
     }
 
     // Chặn làm lại: các job tương tác chỉ được làm 1 lần duy nhất
