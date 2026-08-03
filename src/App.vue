@@ -586,7 +586,7 @@ const handleReceiveJob = (jobId: string) => {
     showBankModal.value = true
   } else if (jobId === 'referral-hub') {
     activePopup.value = ''
-    router.push('/jobs/referral-lpbank')
+    router.push('/jobs/referral-abbank')
   } else if (jobId === 'daily_threads') {
     activePopup.value = ''
     router.push('/jobs/daily-threads')

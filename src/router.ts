@@ -20,7 +20,7 @@ import AdminView from '@/views/AdminView.vue'
 // @ts-ignore
 import ProfileView from '@/views/Profile.vue'
 // @ts-ignore
-import ReferralLpbankView from '@/views/ReferralLpbankView.vue'
+import ReferralAbbankView from '@/views/ReferralAbbankView.vue'
 // @ts-ignore
 import DailyThreadsView from '@/views/DailyThreadsView.vue'
 
@@ -33,7 +33,9 @@ const routes = [
   { path: '/job/:id', name: 'job-detail', component: JobDetailView },
   { path: '/admin', name: 'admin', component: AdminView },
   { path: '/profile', name: 'profile', component: ProfileView },
-  { path: '/jobs/referral-lpbank', name: 'referral-lpbank', component: ReferralLpbankView },
+  { path: '/jobs/referral-abbank', name: 'referral-abbank', component: ReferralAbbankView },
+  // Route cũ (job đã đổi sang ABBANK) — redirect để tránh lỗi user bấm link cũ
+  { path: '/jobs/referral-lpbank', redirect: '/jobs/referral-abbank' },
   { path: '/jobs/daily-threads', name: 'daily-threads', component: DailyThreadsView },
   // @ts-ignore
   { path: '/survey-cinema', name: 'survey-cinema', component: () => import('@/views/SurveyView.vue') }
@@ -45,7 +47,7 @@ const router = createRouter({
   routes
 })
 
-const requiresAuth = ['/profile', '/withdraw', '/submit-report', '/history', '/jobs/referral-lpbank', '/jobs/daily-threads']
+const requiresAuth = ['/profile', '/withdraw', '/submit-report', '/history', '/jobs/referral-abbank', '/jobs/referral-lpbank', '/jobs/daily-threads']
 
 router.beforeEach(async (to, from, next) => {
   await auth.authStateReady()

@@ -3,13 +3,12 @@ export const jobsData: Record<string, any> = {
 
   'referral-hub': {
     title: "GIỚI THIỆU BẠN BÈ",
-    subtitle: "Mời bạn bè đăng ký app nhận thưởng tăng dần",
-    reward: "100.000",
-    rewardText: "100.000 - 150.000 xu",
+    subtitle: "Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần",
+    reward: "85.000 xu",
     color: "text-orange-500",
     badge: "VIP 💎",
     type: "friend_referral",
-    route: "/jobs/referral-lpbank"
+    route: "/jobs/referral-abbank"
   },
 
   'daily_threads': {

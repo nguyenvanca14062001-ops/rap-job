@@ -8,7 +8,7 @@ import Swal from 'sweetalert2'
 import { jobsData } from '@/data/jobs'
 import { getReportImages } from '@/utils/reportImages'
 import { normalizePhone } from '@/utils/phone'
-import { LPBANK_REFERRAL_JOB_ID, getLpbankReferralRewardByCount } from '@/utils/referralLpbank'
+import { ABBANK_REFERRAL_JOB_ID } from '@/utils/referralAbbank'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
@@ -406,7 +406,7 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus']
+const VIP_JOB_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus']
 
 const loadVipJobs = () => {
   if (unsubVipJobs) unsubVipJobs()
@@ -612,7 +612,7 @@ const hasOldPhoto = (arr: any[], createdAt: any) => Array.isArray(arr) && arr.so
 const openRejectPopup = (id: string) => { selectedReportId.value = id; rejectReason.value = ''; showRejectPopup.value = true }
 const closeRejectPopup = () => { showRejectPopup.value = false; selectedReportId.value = null; rejectReason.value = '' }
 const selectedReportForReject = computed(() => reports.value.find(r => r.id === selectedReportId.value))
-const lpbankRejectReasons = ['Ảnh không hợp lệ', 'Không thấy mã giới thiệu', 'Không đủ 2 ảnh', 'Thông tin không đúng', 'Bạn nhắn tin Fanpage đi ạ', 'Khác']
+const referralRejectReasons = ['Ảnh không hợp lệ', 'Không thấy mã giới thiệu', 'Không đủ 2 ảnh', 'Thông tin không đúng', 'Bạn nhắn tin Fanpage đi ạ', 'Khác']
 const confirmReject = async () => {
   if (!selectedReportId.value) return
   try {
@@ -814,32 +814,18 @@ const addXuToUser = async (uid: string) => {
 }
 
 // ============================================================================
-// CỘNG XU CHO ĐƠN reports (job thường / VIP / referral LPBANK) — bấm 1 nút duy nhất.
+// CỘNG XU CHO ĐƠN reports (job thường / VIP / referral ABBANK) — bấm 1 nút duy nhất.
 // Dùng Firestore transaction: đọc lại report + user ngay trước khi ghi, chặn cộng trùng
 // nếu report không còn 'pending', và chỉ update field balance (increment) — không bao giờ
 // setDoc ghi đè toàn bộ user hay ép balance về một số cố định.
 // ============================================================================
 const approveReport = async (report: any) => {
   const targetUid = effUid(report)
-  const isReferral = report.jobId === LPBANK_REFERRAL_JOB_ID
+  const isReferral = report.jobId === ABBANK_REFERRAL_JOB_ID
   const user = usersMap.value[targetUid] || {}
 
-  let suggestedReward = Number(String(report.reward || report.suggestedReward || '0').replace(/\D/g, '')) || 0
-  if (isReferral) {
-    const rawCount = Number(user?.lpbankReferralPaidCount)
-    let successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : NaN
-    if (!Number.isFinite(successCountBefore)) {
-      // Ước tính fallback ngoài transaction — chỉ dùng để hiển thị số đề xuất khi user chưa có counter
-      const fallbackSnap = await getDocs(query(
-        collection(db, "reports"),
-        where("uid", "==", targetUid),
-        where("jobId", "==", LPBANK_REFERRAL_JOB_ID),
-        where("status", "in", ["approved", "paid", "collected", "completed"])
-      ))
-      successCountBefore = fallbackSnap.size
-    }
-    suggestedReward = getLpbankReferralRewardByCount(successCountBefore)
-  }
+  // Referral ABBANK dùng thưởng cố định (đã lưu sẵn ở report.reward lúc submit), không còn tính tăng dần theo số lần.
+  const suggestedReward = Number(String(report.reward || report.suggestedReward || '0').replace(/\D/g, '')) || 0
 
   const { value: rewardInput, isConfirmed } = await Swal.fire({
     title: '💰 CỘNG XU ĐƠN NÀY',
@@ -884,13 +870,13 @@ const approveReport = async (report: any) => {
       }
 
       if (isReferral) {
-        const rawCount = Number(userSnap.data()?.lpbankReferralPaidCount)
+        const rawCount = Number(userSnap.data()?.abbankReferralPaidCount)
         const successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : 0
         newSuccessNumber = successCountBefore + 1
         reportUpdates.referralSuccessNumber = newSuccessNumber
-        reportUpdates.referralProgram = 'lpbank'
+        reportUpdates.referralProgram = 'abbank'
         // merge:true — chỉ ghi 2 field này, không đụng tới phần còn lại của user doc
-        tx.set(userRef, { balance: increment(amount), lpbankReferralPaidCount: newSuccessNumber }, { merge: true })
+        tx.set(userRef, { balance: increment(amount), abbankReferralPaidCount: newSuccessNumber }, { merge: true })
       } else {
         tx.update(userRef, { balance: increment(amount) })
       }
@@ -904,7 +890,7 @@ const approveReport = async (report: any) => {
       [targetUid]: {
         ...usersMap.value[targetUid],
         balance: curBal + amount,
-        ...(isReferral ? { lpbankReferralPaidCount: newSuccessNumber } : {})
+        ...(isReferral ? { abbankReferralPaidCount: newSuccessNumber } : {})
       }
     }
     Swal.fire('ĐÃ CỘNG XU!', `+${amount.toLocaleString()} XU${isReferral ? ` — Lần giới thiệu #${newSuccessNumber}` : ''}`, 'success')
@@ -1024,8 +1010,8 @@ const handleAdminLogout = async () => {
         <div class="admin-theme relative bg-[var(--admin-card)] border border-red-200 w-full max-w-md p-6 rounded-2xl shadow-xl text-center">
           <h3 class="text-xl text-[var(--admin-danger)] mb-4">TỪ CHỐI BẰNG CHỨNG</h3>
           <p class="text-[var(--admin-muted)] text-xs normal-case not-italic font-bold mb-4">Vui lòng nhập lý do từ chối để khách hàng biết.</p>
-          <div class="flex flex-wrap gap-2 mb-4 justify-center" v-if="selectedReportForReject?.jobId === LPBANK_REFERRAL_JOB_ID">
-            <button v-for="r in lpbankRejectReasons" :key="r"
+          <div class="flex flex-wrap gap-2 mb-4 justify-center" v-if="selectedReportForReject?.jobId === ABBANK_REFERRAL_JOB_ID">
+            <button v-for="r in referralRejectReasons" :key="r"
                     class="px-3 py-1.5 bg-[var(--admin-card-soft)] hover:bg-[var(--admin-danger)] text-[var(--admin-muted)] hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
                     @click="rejectReason = r">{{ r }}</button>
           </div>
@@ -1285,15 +1271,14 @@ const handleAdminLogout = async () => {
               </td>
               <td class="p-6">
                 <div class="text-[var(--admin-text)] text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
-                <template v-if="rp.jobId === LPBANK_REFERRAL_JOB_ID">
+                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID">
                   <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
                     <div class="text-[10px] text-[var(--admin-warning)]">Bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendName || '—' }}</span></div>
                     <div class="text-[10px] text-[var(--admin-warning)]">SĐT bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendPhone || '—' }}</span></div>
                     <div class="text-[10px] text-[var(--admin-warning)]">Mã đơn: <span class="text-[var(--admin-text)] font-bold break-all">{{ rp.referralOrderCode || '—' }}</span></div>
-                    <div class="text-[10px] text-[var(--admin-warning)]" v-if="rp.status === 'pending'">Lần dự kiến: #{{ (usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0) + 1 }}</div>
                   </div>
                   <div class="text-[var(--admin-success)] text-sm font-black" v-if="rp.status === 'pending'">
-                    Dự kiến: {{ getLpbankReferralRewardByCount(usersMap[effUid(rp)]?.lpbankReferralPaidCount || 0).toLocaleString() }} XU
+                    Dự kiến: {{ (rp.reward || 85000).toLocaleString() }} XU
                   </div>
                   <div class="text-[var(--admin-success)] text-sm font-black" v-else>
                     +{{ (rp.actualReward || rp.reward || 0).toLocaleString() }} XU

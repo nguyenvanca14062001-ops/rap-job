@@ -8,7 +8,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import Swal from 'sweetalert2'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
 import { normalizePhone } from '@/utils/phone'
-import { LPBANK_REFERRAL_JOB_ID, LPBANK_REFERRAL_CODE } from '@/utils/referralLpbank'
+import { ABBANK_REFERRAL_JOB_ID, ABBANK_REFERRAL_CODE, ABBANK_REFERRAL_REWARD } from '@/utils/referralAbbank'
 
 const props = defineProps<{
   myReports?: any[]
@@ -18,7 +18,7 @@ const props = defineProps<{
 const router = useRouter()
 const baseUrl = import.meta.env.BASE_URL
 const FANPAGE_URL = 'https://www.facebook.com/rapjobfreelance/'
-const REQUIRED_IMAGES = 2
+const REQUIRED_IMAGES = 3
 
 const isLoggedIn = ref(false)
 const userUid = ref('')
@@ -40,7 +40,8 @@ onMounted(() => {
 const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
-const sampleImages = ['images/anh-lpbank1.jpg', 'images/anh-lpbank4.jpg']
+// Ảnh mẫu lấy lại từ hướng dẫn job APP ABBANK hiện có: bước nhập mã giới thiệu, bước đăng ký thành công, bước hoàn tất giao dịch 30k
+const sampleImages = ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank4.jpg']
 
 // --- Copy helper (toast) ---
 const copyText = (text: string, toastTitle: string) => {
@@ -61,7 +62,7 @@ const copyText = (text: string, toastTitle: string) => {
     document.body.removeChild(textArea)
   })
 }
-const copyReferralCode = () => copyText(LPBANK_REFERRAL_CODE, 'Đã sao chép mã giới thiệu')
+const copyReferralCode = () => copyText(ABBANK_REFERRAL_CODE, 'Đã sao chép mã giới thiệu')
 
 const formatDate = (ts: any) => {
   if (!ts) return ''
@@ -69,9 +70,9 @@ const formatDate = (ts: any) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} - ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`
 }
 
-// --- Lịch sử đơn LPBANK (lấy từ myReports đã đồng bộ sẵn) ---
+// --- Lịch sử đơn ABBANK (lấy từ myReports đã đồng bộ sẵn) ---
 const showHistoryModal = ref(false)
-const lpbankHistory = computed(() => (props.myReports || []).filter(r => r.jobId === LPBANK_REFERRAL_JOB_ID))
+const abbankHistory = computed(() => (props.myReports || []).filter(r => r.jobId === ABBANK_REFERRAL_JOB_ID))
 
 // --- Popup gửi bằng chứng ---
 const showSubmitModal = ref(false)
@@ -134,7 +135,7 @@ const removeImage = (index: number) => {
   imageError.value = ''
 }
 
-// --- Popup thành công (riêng cho LPBANK referral) ---
+// --- Popup thành công (riêng cho ABBANK referral) ---
 const showSuccessModal = ref(false)
 const lastSubmittedOrder = ref<{ friendName: string; friendPhone: string; orderCode: string; createdAt: Date } | null>(null)
 
@@ -191,11 +192,12 @@ const submitReferral = async () => {
       phoneNormalized: normalizePhone(userDoc.phoneRef || userDoc.phone || ''),
       birthYear: userDoc.birthYear || userDoc.yearOfBirth || userDoc.dateOfBirth || userDoc.dob || '',
 
-      jobId: LPBANK_REFERRAL_JOB_ID,
-      jobName: 'Giới thiệu bạn bè đăng ký APP LPBANK',
+      jobId: ABBANK_REFERRAL_JOB_ID,
+      jobName: 'Giới thiệu bạn bè đăng ký APP ABBANK',
       category: 'vip',
       type: 'friend_referral',
-      bankType: 'lpbank',
+      bankType: 'abbank',
+      referralProgram: 'abbank',
 
       friendName: name,
       friendPhone: phone,
@@ -203,13 +205,12 @@ const submitReferral = async () => {
 
       referralOrderCode: orderCode,
 
-      reward: 0,
-      estimatedReward: null,
-
       proofImages,
       imageCount: proofImages.length,
 
       status: 'pending',
+      reward: ABBANK_REFERRAL_REWARD,
+      actualReward: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
 
@@ -268,56 +269,48 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
         <div class="absolute -right-10 -top-10 w-40 h-40 bg-amber-500/10 rounded-full blur-[60px] pointer-events-none"></div>
         <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-3xl relative z-10">👥</div>
         <h1 class="text-2xl md:text-4xl text-white tracking-tighter leading-tight mb-3 relative z-10">
-          GIỚI THIỆU BẠN BÈ<br/>ĐĂNG KÝ <span class="text-amber-400">APP LPBANK PLUS</span>
+          GIỚI THIỆU BẠN BÈ<br/>ĐĂNG KÝ <span class="text-amber-400">APP ABBANK</span>
         </h1>
         <div class="bg-[#052e1f] border border-[#005c3c] rounded-full px-6 py-2.5 w-max mx-auto flex items-center gap-2 shadow-inner relative z-10">
           <span class="text-[#f59e0b] text-xl">⚡</span>
-          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: 100.000 - 150.000 XU</span>
+          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: 85.000 XU / 1 LƯỢT HỢP LỆ</span>
         </div>
         <p class="text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed mt-4 max-w-md mx-auto relative z-10">
-          Mời bạn bè đăng ký APP LPBANK PLUS theo hướng dẫn để nhận thưởng.
+          Mời bạn bè đăng ký APP ABBANK theo hướng dẫn để nhận thưởng.
         </p>
         <div class="flex flex-col sm:flex-row gap-3 mt-6 relative z-10">
           <button @click="openSubmitModal" class="flex-1 py-4 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-2xl shadow-lg active:scale-95 transition-all text-[13px] md:text-sm">
-            GỬI BẰNG CHỨNG LPBANK PLUS 📥
+            GỬI BẰNG CHỨNG ABBANK 📥
           </button>
           <button @click="showHistoryModal = true" class="flex-1 py-4 bg-[#0d121f] border border-slate-700 hover:border-amber-500/60 text-white rounded-2xl active:scale-95 transition-all text-[13px] md:text-sm">
-            LỊCH SỬ ĐƠN LPBANK PLUS 📜
+            LỊCH SỬ ĐƠN ABBANK 📜
           </button>
         </div>
       </div>
 
-      <!-- THƯỞNG TĂNG DẦN -->
-      <div class="bg-[#111726] border border-slate-800/50 rounded-[30px] p-6 shadow-xl">
-        <h3 class="text-amber-400 text-sm md:text-base tracking-tight mb-4 flex items-center gap-2">🎁 THƯỞNG TĂNG DẦN</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center">
-            <p class="text-slate-500 text-[9px] tracking-widest mb-1">LẦN 1</p>
-            <p class="text-emerald-400 text-base md:text-lg">100.000</p>
-          </div>
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center">
-            <p class="text-slate-500 text-[9px] tracking-widest mb-1">LẦN 2</p>
-            <p class="text-emerald-400 text-base md:text-lg">110.000</p>
-          </div>
-          <div class="bg-[#0d121f] border border-slate-800 rounded-2xl p-4 text-center">
-            <p class="text-slate-500 text-[9px] tracking-widest mb-1">LẦN 3</p>
-            <p class="text-emerald-400 text-base md:text-lg">120.000</p>
-          </div>
-          <div class="bg-[#0d121f] border border-amber-500/40 rounded-2xl p-4 text-center">
-            <p class="text-amber-500 text-[9px] tracking-widest mb-1">TỪ LẦN 4</p>
-            <p class="text-amber-400 text-base md:text-lg">150.000</p>
-          </div>
+      <!-- HƯỚNG DẪN THỰC HIỆN -->
+      <div class="bg-[#111726] border border-slate-800/50 rounded-[30px] p-6 md:p-8 shadow-xl space-y-6">
+        <h3 class="text-blue-400 text-sm md:text-base tracking-tight">📖 HƯỚNG DẪN THỰC HIỆN</h3>
+        <div class="relative pl-10">
+          <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
+          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-emerald-500 text-[#090e17] flex items-center justify-center text-sm shadow-lg">1</div>
+          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">
+            Hướng dẫn bạn bè tải APP ABBANK, đăng ký tài khoản và nhập mã giới thiệu <span class="text-emerald-400 select-all">{{ ABBANK_REFERRAL_CODE }}</span>.
+          </p>
         </div>
-        <p class="text-slate-500 text-[10px] font-medium normal-case mt-4 leading-relaxed">
-          Chỉ tính những đơn đã được admin duyệt thành công. Đơn chờ duyệt hoặc bị từ chối không được tính.
-        </p>
+        <div class="relative pl-10">
+          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-emerald-500 text-[#090e17] flex items-center justify-center text-sm shadow-lg">2</div>
+          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">
+            Làm theo {{ sampleImages.length }} ảnh mẫu bên dưới, sau đó chụp lại và gửi bằng chứng.
+          </p>
+        </div>
       </div>
 
       <!-- MÃ GIỚI THIỆU -->
       <div class="bg-[#111726] border border-emerald-500/30 rounded-[30px] p-6 shadow-xl">
         <p class="text-emerald-400 text-[10px] tracking-[2px] mb-2">MÃ GIỚI THIỆU</p>
         <div class="flex items-center justify-between gap-4">
-          <p class="text-white text-2xl md:text-3xl tracking-wider select-all font-sans not-italic">{{ LPBANK_REFERRAL_CODE }}</p>
+          <p class="text-white text-2xl md:text-3xl tracking-wider select-all font-sans not-italic">{{ ABBANK_REFERRAL_CODE }}</p>
           <button @click="copyReferralCode" class="bg-emerald-500 hover:bg-emerald-400 text-[#090e17] px-4 py-3 rounded-xl text-[11px] shrink-0 active:scale-95 transition-all">
             📋 SAO CHÉP
           </button>
@@ -327,29 +320,14 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
       <!-- CẢNH BÁO -->
       <div class="bg-gradient-to-r from-orange-950/70 to-red-950/50 border border-orange-600/40 rounded-2xl p-4 space-y-2 shadow-inner">
         <p class="text-orange-300 text-[11px] md:text-xs font-bold normal-case leading-relaxed flex items-start gap-2">
-          <span>⚠️</span><span>1 điện thoại chỉ đăng ký được 1 tài khoản LPBANK PLUS.</span>
+          <span>⚠️</span><span>1 điện thoại chỉ đăng ký được 1 tài khoản ABBANK.</span>
         </p>
         <p class="text-orange-300 text-[11px] md:text-xs font-bold normal-case leading-relaxed flex items-start gap-2">
-          <span>⚠️</span><span>Không được đăng ký 2 tài khoản LPBANK PLUS trên cùng 1 điện thoại.</span>
+          <span>⚠️</span><span>Người đăng ký phải từ 15 tuổi trở lên, số điện thoại và CCCD/CMND chưa từng đăng ký ABBANK trước đó.</span>
         </p>
-      </div>
-
-      <!-- HƯỚNG DẪN 2 BƯỚC -->
-      <div class="bg-[#111726] border border-slate-800/50 rounded-[30px] p-6 md:p-8 shadow-xl space-y-6">
-        <h3 class="text-blue-400 text-sm md:text-base tracking-tight">📖 HƯỚNG DẪN THỰC HIỆN</h3>
-        <div class="relative pl-10">
-          <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
-          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-emerald-500 text-[#090e17] flex items-center justify-center text-sm shadow-lg">1</div>
-          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">
-            Hướng dẫn bạn bè tải APP LPBANK PLUS, đăng ký tài khoản và nhập mã giới thiệu <span class="text-emerald-400 select-all">{{ LPBANK_REFERRAL_CODE }}</span>.
-          </p>
-        </div>
-        <div class="relative pl-10">
-          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-emerald-500 text-[#090e17] flex items-center justify-center text-sm shadow-lg">2</div>
-          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">
-            Làm theo 2 ảnh mẫu bên dưới, sau đó chụp lại và gửi bằng chứng.
-          </p>
-        </div>
+        <p class="text-orange-300 text-[11px] md:text-xs font-bold normal-case leading-relaxed flex items-start gap-2">
+          <span>⚠️</span><span>Bạn bè phải hoàn tất xác thực tài khoản và phát sinh giao dịch theo hướng dẫn mới được tính thưởng.</span>
+        </p>
       </div>
 
       <!-- ẢNH MẪU -->
@@ -372,7 +350,7 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
         <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="closeSubmitModal"></div>
         <div class="relative bg-[#111726] border border-amber-500/30 w-full max-w-lg rounded-[36px] p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg md:text-xl text-white tracking-tight">📥 GỬI BẰNG CHỨNG LPBANK PLUS</h2>
+            <h2 class="text-lg md:text-xl text-white tracking-tight">📥 GỬI BẰNG CHỨNG ABBANK</h2>
             <button @click="closeSubmitModal" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -410,7 +388,7 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
 
               <div class="mt-1 p-4 bg-[#0d121f] border border-slate-800/80 rounded-2xl shadow-inner">
                 <p class="text-[10px] md:text-[11px] text-yellow-400 font-black tracking-widest mb-3 uppercase italic leading-relaxed">
-                  ⚠️ Bạn phải gửi đủ {{ sampleImages.length }} ảnh mẫu LPBANK PLUS này (chạm để zoom to):
+                  ⚠️ Bạn phải gửi đủ {{ sampleImages.length }} ảnh mẫu ABBANK này (chạm để zoom to):
                 </p>
                 <div class="grid grid-cols-2 gap-2">
                   <div v-for="(img, idx) in sampleImages" :key="idx" @click="openImage(baseUrl + img)"
@@ -431,14 +409,14 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
 
             <button @click="submitReferral" :disabled="isSubmitting"
                     class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-2xl text-[13px] md:text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50">
-              {{ submitStage === 'uploading' ? 'ĐANG TẢI ẢNH LÊN...' : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isSubmitting ? 'ĐANG XỬ LÝ...' : 'GỬI BẰNG CHỨNG LPBANK PLUS 📥' }}
+              {{ submitStage === 'uploading' ? 'ĐANG TẢI ẢNH LÊN...' : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isSubmitting ? 'ĐANG XỬ LÝ...' : 'GỬI BẰNG CHỨNG ABBANK 📥' }}
             </button>
           </div>
         </div>
       </div>
     </Transition>
 
-    <!-- POPUP THÀNH CÔNG (riêng cho LPBANK referral) -->
+    <!-- POPUP THÀNH CÔNG (riêng cho ABBANK referral) -->
     <Transition name="fade">
       <div v-if="showSuccessModal && lastSubmittedOrder" class="fixed inset-0 z-[6000] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
@@ -448,7 +426,7 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
           </div>
           <h2 class="text-xl text-white tracking-tight mb-2">NỘP ĐƠN THÀNH CÔNG</h2>
           <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-4">
-            Đơn giới thiệu bạn bè LPBANK PLUS đã được gửi.<br/>Vui lòng chờ phê duyệt.<br/>
+            Đơn giới thiệu bạn bè ABBANK đã được gửi.<br/>Vui lòng chờ phê duyệt.<br/>
             Để được duyệt nhanh hơn, hãy gửi ảnh bằng chứng + mã đơn này qua Fanpage.
           </p>
 
@@ -480,25 +458,25 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
       </div>
     </Transition>
 
-    <!-- POPUP LỊCH SỬ ĐƠN LPBANK -->
+    <!-- POPUP LỊCH SỬ ĐƠN ABBANK -->
     <Transition name="fade">
       <div v-if="showHistoryModal" class="fixed inset-0 z-[5500] flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="showHistoryModal = false"></div>
         <div class="relative bg-[#111726] border border-slate-800 w-full max-w-lg rounded-[36px] p-6 md:p-8 shadow-2xl max-h-[85vh] overflow-y-auto">
           <div class="flex items-center justify-between mb-5">
-            <h2 class="text-lg text-white tracking-tight">📜 LỊCH SỬ ĐƠN LPBANK PLUS</h2>
+            <h2 class="text-lg text-white tracking-tight">📜 LỊCH SỬ ĐƠN ABBANK</h2>
             <button @click="showHistoryModal = false" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
 
-          <div v-if="!lpbankHistory.length" class="text-center py-12">
+          <div v-if="!abbankHistory.length" class="text-center py-12">
             <div class="text-4xl mb-3">📭</div>
             <p class="text-slate-600 text-[10px] tracking-[3px]">CHƯA CÓ ĐƠN NÀO</p>
           </div>
 
           <div v-else class="space-y-3 text-left">
-            <div v-for="rp in lpbankHistory" :key="rp.id" class="bg-[#0d121f] border rounded-2xl p-4"
+            <div v-for="rp in abbankHistory" :key="rp.id" class="bg-[#0d121f] border rounded-2xl p-4"
                  :class="rp.status === 'rejected' ? 'border-rose-500/30' : rp.status === 'pending' ? 'border-yellow-500/20' : 'border-emerald-500/20'">
               <div class="flex justify-between items-start gap-3 mb-2">
                 <div class="font-sans not-italic normal-case min-w-0">
@@ -506,7 +484,6 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
                   <p class="text-slate-500 text-[10px]">SĐT: {{ rp.friendPhone }}</p>
                   <p class="text-slate-600 text-[9px] mt-1 truncate">Mã đơn: {{ rp.referralOrderCode }}</p>
                   <p class="text-slate-600 text-[9px]">{{ formatDate(rp.createdAt) }}</p>
-                  <p v-if="rp.referralSuccessNumber" class="text-amber-400 text-[9px] font-bold mt-1">Lần giới thiệu #{{ rp.referralSuccessNumber }}</p>
                 </div>
                 <span class="shrink-0 text-[9px] px-2 py-1 rounded-full font-sans not-italic normal-case"
                       :class="rp.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : rp.status === 'rejected' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'">
