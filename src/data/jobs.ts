@@ -4,7 +4,8 @@ export const jobsData: Record<string, any> = {
   'referral-hub': {
     title: "GIỚI THIỆU BẠN BÈ",
     subtitle: "Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần",
-    reward: "85.000 xu",
+    reward: "85.000",
+    rewardText: "85.000 xu",
     color: "text-orange-500",
     badge: "VIP 💎",
     type: "friend_referral",
@@ -101,9 +102,9 @@ export const jobsData: Record<string, any> = {
         id: 2,
         title: "TẢI MÃ QR VÀ GHIM VÀO BÌNH LUẬN ĐẦU TIÊN",
         content: "Sau khi đăng bài, vào phần bình luận → Tải QR về máy → Đăng ảnh QR làm bình luận đầu tiên để mọi người dễ truy cập đăng ký.",
-        downloadLink: "images/anh-qr-nhom7.jpg",
+        downloadLink: "images/anh-ma-qr1.jpg",
         buttonText: "📥 TẢI MÃ QR VỀ MÁY",
-        img: "images/anh-qr-nhom7.jpg",
+        img: "images/anh-ma-qr1.jpg",
         note: "BẮT BUỘC: Phải ghim QR làm bình luận đầu tiên bên dưới bài đăng."
       },
       {
