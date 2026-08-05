@@ -58,6 +58,7 @@ const getJobIcon = (id: string) => {
     'app-chung-khoan-4': { t: '📈', c: 'text-white' },
     'abbank': { t: 'ABB', c: 'text-white' },
     'referral-hub': { t: '👥', c: 'text-white' },
+    'momo': { t: 'MoMo', c: 'text-white' },
   };
   const res = config[id] || { t: 'JOB', c: 'text-slate-400' };
   return { type: 'text', content: res.t, colorClass: res.c };
@@ -80,6 +81,7 @@ const getSocialProof = (id: string) => {
     'app-chung-khoan-4': '163',
     'abbank':            '204',
     'referral-hub':      '89',
+    'momo':              '167',
   };
   return seeds[id] || '500';
 };
@@ -107,6 +109,7 @@ const getShortDesc = (id: string) => {
     'msb-bank': 'Nhận quà tặng khi mở thẻ MSB',
     'abbank': 'Mở tài khoản ABBANK',
     'referral-hub': 'Mời bạn bè đăng ký app nhận thưởng tăng dần',
+    'momo': 'Đăng ký ví MoMo nhận thưởng',
   };
   return desc[id] || 'Làm nhiệm vụ ngay';
 }

@@ -33,7 +33,7 @@ const closeImage = () => { selectedImage.value = null }
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
 
 const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'post-threads', 'join-zalo']
-const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus']
+const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo']
 
 type JobOption = { id: string; name: string; reward: string }
 
@@ -69,7 +69,8 @@ const jobSamples: Record<string, string[]> = {
   'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg'],
   'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg'],
   'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank4.jpg'],
-  'lpbank-plus': ['images/anh-lpbank3.jpg', 'images/anh-lpbank2.jpg']
+  'lpbank-plus': ['images/anh-lpbank3.jpg', 'images/anh-lpbank2.jpg'],
+  'momo': ['images/anh-momo-2.jpg', 'images/anh-momo-3.jpg', 'images/anh-momo-4.jpg']
 }
 
 const selectedJob = ref<JobOption>({ id: '', name: '', reward: '' })
@@ -136,7 +137,7 @@ const isFanpageTask = computed(() =>
 )
 
 const fourImageJobs: string[] = []
-const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank']
+const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank', 'momo']
 const twoImageJobs = ['lpbank-plus']
 
 const imageRequirementText = computed(() => {

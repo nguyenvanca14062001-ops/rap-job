@@ -1,4 +1,17 @@
 // src/data/jobs.ts
+
+// ==============================================
+// CẤU HÌNH JOB VÍ MOMO — điền link/ảnh thật vào đây khi có, không cần sửa gì khác
+// ==============================================
+const MOMO_CONFIG = {
+  momoDownloadLink: "https://onelink.momo.vn/WZPv/aM9rCxWt?utm_source=referral_others",
+  momoReferralCode: "0366045803",
+  momoReferralGuideImage: "images/anh-momo-2.jpg",
+  momoBankLinkGuideImage: "images/anh-momo-1.png",
+  momoTopupImage1: "images/anh-momo-3.jpg",
+  momoTopupImage2: "images/anh-momo-4.jpg",
+}
+
 export const jobsData: Record<string, any> = {
 
   'referral-hub': {
@@ -124,12 +137,11 @@ export const jobsData: Record<string, any> = {
       {
         id: 1,
         title: "THAM GIA NHÓM ZALO RẠP JOB",
-        content: "NẾU NHÓM 1,2 ĐÃ FULL THÌ THAM GIA NHÓM 3.",
+        content: "NẾU NHÓM 3 ĐÃ FULL THÌ THAM GIA NHÓM 5 HOẶC NHÓM 9.",
         extraLinks: [
-          { text: "THAM GIA NHÓM 1 ➔", url: "https://zalo.me/g/fambpb151" },
-          { text: "THAM GIA NHÓM 2 ➔", url: "https://zalo.me/g/1ucvwyabtkhevegfg0s6" },
           { text: "THAM GIA NHÓM 3 ➔", url: "https://zalo.me/g/feyhu2samzen3gjirnqh" },
-          { text: "THAM GIA NHÓM 5 ➔", url: "https://zalo.me/g/j0kwaispbne09pbdwu1i" }
+          { text: "THAM GIA NHÓM 5 ➔", url: "https://zalo.me/g/j0kwaispbne09pbdwu1i" },
+          { text: "THAM GIA NHÓM 9 ➔", url: "https://zalo.me/g/sm5jknirc3wn3glx6dal" }
         ]
       }
     ]
@@ -459,7 +471,47 @@ export const jobsData: Record<string, any> = {
         id: 4,
         title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
         content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
-       
+
+      }
+    ]
+  },
+
+  'momo': {
+    title: "VÍ MOMO",
+    subtitle: "Đăng ký ví MoMo nhận thưởng",
+    reward: "85.000 xu",
+    color: "text-orange-500",
+    badge: "VIP",
+    ageRequirement: 15,
+    warning: "1 điện thoại chỉ được phép đăng ký 1 tài khoản ví MoMo, không đăng xuất ra đăng ký tài khoản khác.",
+    steps: [
+      {
+        id: 1,
+        title: "Bước 1: Tải app MoMo về điện thoại",
+        content: "Tải ứng dụng Ví MoMo về điện thoại (CH Play hoặc App Store) để bắt đầu đăng ký tài khoản.",
+        downloadLink: MOMO_CONFIG.momoDownloadLink || "#",
+        buttonText: "TẢI APP VỀ ĐIỆN THOẠI"
+      },
+      {
+        id: 2,
+        title: "Bước 2: Đăng ký và nhập mã giới thiệu",
+        content: "Đăng ký tài khoản MoMo bằng số điện thoại của bạn. Trong lúc đăng ký, bắt buộc nhập mã giới thiệu bên dưới rồi chụp lại ảnh màn hình.",
+        referralCode: MOMO_CONFIG.momoReferralCode,
+        img: MOMO_CONFIG.momoReferralGuideImage,
+        note: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU KHI ĐĂNG KÝ"
+      },
+      {
+        id: 3,
+        title: "Bước 3: Liên kết ngân hàng với ví MoMo",
+        content: "Vào mục Liên kết ngân hàng trong app MoMo, chọn ngân hàng của bạn để liên kết với ví.",
+        img: MOMO_CONFIG.momoBankLinkGuideImage,
+        note: "CHỈ CÓ CÁC NGÂN HÀNG DƯỚI ĐÂY MỚI LIÊN KẾT ĐƯỢC VỚI VÍ MOMO"
+      },
+      {
+        id: 4,
+        title: "Bước 4: Nạp 10.000đ vào ví MoMo",
+        content: "Sau khi liên kết ngân hàng thành công, nạp 10.000đ vào ví MoMo từ ngân hàng vừa liên kết.",
+        images: [MOMO_CONFIG.momoTopupImage1, MOMO_CONFIG.momoTopupImage2].filter(Boolean)
       }
     ]
   }

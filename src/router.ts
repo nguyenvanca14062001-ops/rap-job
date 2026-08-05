@@ -23,6 +23,8 @@ import ProfileView from '@/views/Profile.vue'
 import ReferralAbbankView from '@/views/ReferralAbbankView.vue'
 // @ts-ignore
 import DailyThreadsView from '@/views/DailyThreadsView.vue'
+// @ts-ignore
+import MomoJobView from '@/views/MomoJobView.vue'
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -37,6 +39,7 @@ const routes = [
   // Route cũ (job đã đổi sang ABBANK) — redirect để tránh lỗi user bấm link cũ
   { path: '/jobs/referral-lpbank', redirect: '/jobs/referral-abbank' },
   { path: '/jobs/daily-threads', name: 'daily-threads', component: DailyThreadsView },
+  { path: '/jobs/momo', name: 'momo-job', component: MomoJobView },
   // @ts-ignore
   { path: '/survey-cinema', name: 'survey-cinema', component: () => import('@/views/SurveyView.vue') }
 ]

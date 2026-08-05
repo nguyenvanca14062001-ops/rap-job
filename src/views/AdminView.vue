@@ -95,7 +95,7 @@ const loadDashboardStats = async () => {
     statsTodayTotal.value = countSnap.data().count
     detailSnap.forEach(doc => {
       const data = doc.data()
-      if (isAppJob(data.jobName)) {
+      if (isAppJob(data.jobName, data.jobId)) {
         statsTodayAppTotal.value++
         const nameLower = (data.jobName || '').toLowerCase()
         if (nameLower.includes('chứng khoán số 1') || nameLower.includes('kafi')) statsAppBreakdown.value['CK SỐ 1 (Kafi)'].today++
@@ -110,9 +110,9 @@ const loadDashboardStats = async () => {
   finally { isStatsLoading.value = false }
 }
 
-const updateLocalStatsOnApprove = (jobName: string) => {
+const updateLocalStatsOnApprove = (jobName: string, jobId?: string) => {
   statsTodayTotal.value++
-  if (isAppJob(jobName)) {
+  if (isAppJob(jobName, jobId)) {
     statsTodayAppTotal.value++
     const n = (jobName || '').toLowerCase()
     if (n.includes('chứng khoán số 1') || n.includes('kafi')) statsAppBreakdown.value['CK SỐ 1 (Kafi)'].today++
@@ -270,7 +270,7 @@ const bulkApproveOtherJobs = async () => {
         const reward = Number(String(rp.reward || '0').replace(/\D/g, '')) || 0
         await setDoc(doc(db, "users", rp.uid), { balance: increment(reward) }, { merge: true })
         await updateDoc(doc(db, "reports", id), { status: 'approved', approvedAt: serverTimestamp() })
-        updateLocalStatsOnApprove(rp.jobName)
+        updateLocalStatsOnApprove(rp.jobName, rp.jobId)
       }
       selectedOtherJobs.value = []
       Swal.fire('THÀNH CÔNG!', 'Đã duyệt xong!', 'success')
@@ -406,7 +406,7 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus']
+const VIP_JOB_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo']
 
 const loadVipJobs = () => {
   if (unsubVipJobs) unsubVipJobs()
@@ -744,7 +744,10 @@ onMounted(() => {
   })
 })
 
-const isAppJob = (jobName: string) => {
+const isAppJob = (jobName: string, jobId?: string) => {
+  // Ưu tiên đối chiếu jobId với danh sách VIP_JOB_IDS chuẩn — tránh sót các job VIP
+  // có tên không chứa từ khóa "app"/"ngân hàng"/... (vd: VÍ MOMO).
+  if (jobId && VIP_JOB_IDS.includes(jobId)) return true
   if (!jobName) return false
   const n = jobName.toLowerCase()
   return ['app', 'ngân hàng', 'chứng khoán', 'vpbank', 'tpbank', 'mbbank', 'msb', 'cake', 'tnex', 'kafi', 'dnse', 'kis'].some(kw => n.includes(kw))
@@ -761,8 +764,8 @@ const checkReportStatus = (status: string) => {
   return status === statusFilter.value
 }
 
-const filteredAppReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r.jobName)))
-const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r.jobName)))
+const filteredAppReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r.jobName, r.jobId)))
+const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r.jobName, r.jobId)))
 const filteredWithdrawals = computed(() => withdrawals.value.filter(w => (siteFilter.value === 'all' || w.site === siteFilter.value) && (searchQuery.value.trim() ? true : (statusFilter.value === 'all' || w.status === statusFilter.value))))
 
 const getXuAmount = (wd: any) => { let x = wd.amountXu || wd.amount || wd.xu || 0; if (typeof x === 'string') x = Number(x.replace(/\D/g, '')); return Number(x) || 0 }
@@ -894,7 +897,7 @@ const approveReport = async (report: any) => {
       }
     }
     Swal.fire('ĐÃ CỘNG XU!', `+${amount.toLocaleString()} XU${isReferral ? ` — Lần giới thiệu #${newSuccessNumber}` : ''}`, 'success')
-    updateLocalStatsOnApprove(report.jobName)
+    updateLocalStatsOnApprove(report.jobName, report.jobId)
   } catch (e: any) {
     Swal.fire('LỖI!', e.message || String(e), 'error')
   }

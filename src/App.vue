@@ -26,9 +26,9 @@ const jobIconMap: Record<string, string> = {
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
-  'referral-hub': '👥', 'daily_threads': '🧵',
+  'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰',
 }
-const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus']
+const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'momo']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -604,7 +604,8 @@ const handleReceiveJob = (jobId: string) => {
 
 const confirmAgeAndNavigate = () => {
   showAgeConfirmModal.value = false
-  router.push(`/job/${ageConfirmJobId.value}`)
+  const id = ageConfirmJobId.value
+  router.push(id === 'momo' ? '/jobs/momo' : `/job/${id}`)
 }
 
 const cancelAgeConfirm = () => {
