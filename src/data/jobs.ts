@@ -8,8 +8,7 @@ const MOMO_CONFIG = {
   momoReferralCode: "0366045803",
   momoReferralGuideImage: "images/anh-momo-2.jpg",
   momoBankLinkGuideImage: "images/anh-momo-1.png",
-  momoTopupImage1: "images/anh-momo-3.jpg",
-  momoTopupImage2: "images/anh-momo-4.jpg",
+  momoTopupImage: "images/anh-momo-6.jpg",
 }
 
 export const jobsData: Record<string, any> = {
@@ -510,8 +509,8 @@ export const jobsData: Record<string, any> = {
       {
         id: 4,
         title: "Bước 4: Nạp 10.000đ vào ví MoMo",
-        content: "Sau khi liên kết ngân hàng thành công, nạp 10.000đ vào ví MoMo từ ngân hàng vừa liên kết.",
-        images: [MOMO_CONFIG.momoTopupImage1, MOMO_CONFIG.momoTopupImage2].filter(Boolean)
+        content: "Sau khi liên kết ngân hàng thành công, chọn Nạp vào Ví và nạp 10.000đ. Chụp lại ảnh lịch sử giao dịch để gửi bằng chứng.",
+        img: MOMO_CONFIG.momoTopupImage
       }
     ]
   }
