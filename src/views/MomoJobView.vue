@@ -178,14 +178,10 @@ const handleCopy = (text: string) => {
           <h4 class="text-sky-400 text-base md:text-lg font-black not-italic mb-2 uppercase tracking-tight">{{ stripStepPrefix(stepById(4).title) }}</h4>
           <p class="text-slate-400 text-xs italic normal-case opacity-80 leading-relaxed mb-5 whitespace-pre-line">{{ stepById(4).content }}</p>
 
-          <div class="grid grid-cols-2 gap-3 max-w-md" v-if="stepById(4).images?.length">
-            <div v-for="(imgSrc, idx) in stepById(4).images" :key="idx">
-              <div class="rounded-2xl overflow-hidden border border-slate-700/50 shadow-lg relative group bg-slate-900 cursor-zoom-in"
-                   @click="openImage(baseUrl + imgSrc)">
-                <img class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" :src="baseUrl + imgSrc" />
-              </div>
-              <p class="text-slate-500 text-[9px] font-black uppercase tracking-widest text-center mt-1.5 not-italic">Ảnh {{ Number(idx) + 1 }}</p>
-            </div>
+          <div v-if="stepById(4).img" class="w-full sm:max-w-sm rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
+               @click="openImage(baseUrl + stepById(4).img)">
+            <img class="w-full h-auto object-contain hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(4).img" />
+            <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">🔍 CHẠM ĐỂ PHÓNG TO</div>
           </div>
         </div>
 
