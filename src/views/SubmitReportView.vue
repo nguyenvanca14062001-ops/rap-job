@@ -70,7 +70,7 @@ const jobSamples: Record<string, string[]> = {
   'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg'],
   'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank4.jpg'],
   'lpbank-plus': ['images/anh-lpbank3.jpg', 'images/anh-lpbank2.jpg'],
-  'momo': ['images/anh-momo-2.jpg', 'images/anh-momo-6.jpg']
+  'momo': ['images/anh-momo-2.jpg', 'images/anh-momo-6.jpg', 'images/anh-momo-7.jpg']
 }
 
 const selectedJob = ref<JobOption>({ id: '', name: '', reward: '' })
@@ -137,8 +137,8 @@ const isFanpageTask = computed(() =>
 )
 
 const fourImageJobs: string[] = []
-const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank']
-const twoImageJobs = ['lpbank-plus', 'momo']
+const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank', 'momo']
+const twoImageJobs = ['lpbank-plus']
 
 const imageRequirementText = computed(() => {
   const jobId = selectedJob.value.id
