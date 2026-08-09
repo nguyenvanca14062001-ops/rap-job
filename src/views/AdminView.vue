@@ -9,6 +9,7 @@ import { jobsData } from '@/data/jobs'
 import { getReportImages } from '@/utils/reportImages'
 import { normalizePhone } from '@/utils/phone'
 import { ABBANK_REFERRAL_JOB_ID } from '@/utils/referralAbbank'
+import { MOMO_REFERRAL_JOB_ID } from '@/utils/referralMomo'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
@@ -406,7 +407,7 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo']
+const VIP_JOB_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo', MOMO_REFERRAL_JOB_ID]
 
 const loadVipJobs = () => {
   if (unsubVipJobs) unsubVipJobs()
@@ -870,6 +871,17 @@ const approveReport = async (report: any) => {
         reward: amount,
         approvedAt: serverTimestamp(),
         approvedBy: auth.currentUser?.email || auth.currentUser?.uid || null
+      }
+
+      // Tái khẳng định các field phân loại VIP cho đơn giới thiệu MOMO — đảm bảo đơn luôn
+      // được tính là nhiệm vụ VIP dù report gốc có thiếu field nào đó.
+      if (report.jobId === MOMO_REFERRAL_JOB_ID) {
+        reportUpdates.jobCategory = 'vip'
+        reportUpdates.category = 'vip'
+        reportUpdates.jobType = 'vip'
+        reportUpdates.isVip = true
+        reportUpdates.bankType = 'momo'
+        reportUpdates.referralProgram = 'momo'
       }
 
       if (isReferral) {

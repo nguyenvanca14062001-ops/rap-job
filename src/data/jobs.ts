@@ -14,7 +14,7 @@ const MOMO_CONFIG = {
 export const jobsData: Record<string, any> = {
 
   'referral-hub': {
-    title: "GIỚI THIỆU BẠN BÈ",
+    title: "GIỚI THIỆU BẠN BÈ ABBANK",
     subtitle: "Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần",
     reward: "85.000",
     rewardText: "85.000 xu",
@@ -22,6 +22,19 @@ export const jobsData: Record<string, any> = {
     badge: "VIP 💎",
     type: "friend_referral",
     route: "/jobs/referral-abbank"
+  },
+
+  'referral_momo': {
+    title: "GIỚI THIỆU BẠN BÈ MOMO",
+    subtitle: "Mời bạn bè đăng ký APP VÍ MOMO",
+    reward: "85.000",
+    rewardText: "85.000 xu",
+    color: "text-orange-500",
+    badge: "VIP",
+    type: "friend_referral",
+    bankType: "momo",
+    referralProgram: "momo",
+    route: null
   },
 
   'daily_threads': {

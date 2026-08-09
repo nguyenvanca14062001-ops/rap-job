@@ -18,6 +18,7 @@ import InfoSection from '@/components/home/InfoSection.vue'
 import TreasureChest from '@/components/TreasureChest.vue'
 import ProfileCard from '@/components/home/ProfileCard.vue'
 import Logo from '@/components/Logo.vue'
+import MomoReferralHubModal from '@/components/MomoReferralHubModal.vue'
 import { jobsData } from '@/data/jobs'
 
 // --- JOB BROWSER (dùng trong CÔNG VIỆC bottom sheet) ---
@@ -26,9 +27,9 @@ const jobIconMap: Record<string, string> = {
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
-  'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰',
+  'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥',
 }
-const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'momo']
+const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'momo', 'referral_momo']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -151,6 +152,7 @@ const isDataLoading = ref(true)
 const windowWidth = ref(0) 
 const showWelcomePopup = ref(false)
 const showBankModal = ref(false)
+const showMomoReferralHub = ref(false)
 const activePopup = ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
 const mobileRejectNote = ref<string | null>(null)
 const jobCategory = ref<'basic' | 'vip' | ''>('')
@@ -590,6 +592,9 @@ const handleReceiveJob = (jobId: string) => {
   } else if (jobId === 'daily_threads') {
     activePopup.value = ''
     router.push('/jobs/daily-threads')
+  } else if (jobId === 'referral_momo') {
+    activePopup.value = ''
+    showMomoReferralHub.value = true
   } else if (VIP_IDS.includes(jobId)) {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
@@ -1159,6 +1164,8 @@ watch(activePopup, (val) => {
         </div>
       </div>
     </div>
+
+    <MomoReferralHubModal :show="showMomoReferralHub" :myReports="myReports" @close="showMomoReferralHub = false" />
 
     <!-- BOTTOM SHEET BACKDROP -->
     <Transition name="fade-backdrop">

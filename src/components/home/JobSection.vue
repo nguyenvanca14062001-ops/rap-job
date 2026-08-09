@@ -59,6 +59,7 @@ const getJobIcon = (id: string) => {
     'abbank': { t: 'ABB', c: 'text-white' },
     'referral-hub': { t: '👥', c: 'text-white' },
     'momo': { t: 'MoMo', c: 'text-white' },
+    'referral_momo': { t: '👥', c: 'text-white' },
   };
   const res = config[id] || { t: 'JOB', c: 'text-slate-400' };
   return { type: 'text', content: res.t, colorClass: res.c };
@@ -82,6 +83,7 @@ const getSocialProof = (id: string) => {
     'abbank':            '204',
     'referral-hub':      '89',
     'momo':              '167',
+    'referral_momo':     '54',
   };
   return seeds[id] || '500';
 };
@@ -110,6 +112,7 @@ const getShortDesc = (id: string) => {
     'abbank': 'Mở tài khoản ABBANK',
     'referral-hub': 'Mời bạn bè đăng ký app nhận thưởng tăng dần',
     'momo': 'Đăng ký ví MoMo nhận thưởng',
+    'referral_momo': 'Mời bạn bè đăng ký APP VÍ MOMO',
   };
   return desc[id] || 'Làm nhiệm vụ ngay';
 }
