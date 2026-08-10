@@ -1286,7 +1286,7 @@ const handleAdminLogout = async () => {
               </td>
               <td class="p-6">
                 <div class="text-[var(--admin-text)] text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
-                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID">
+                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID || rp.jobId === MOMO_REFERRAL_JOB_ID">
                   <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
                     <div class="text-[10px] text-[var(--admin-warning)]">Bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendName || '—' }}</span></div>
                     <div class="text-[10px] text-[var(--admin-warning)]">SĐT bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendPhone || '—' }}</span></div>
