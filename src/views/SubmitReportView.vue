@@ -33,7 +33,7 @@ const closeImage = () => { selectedImage.value = null }
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
 
 const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'post-threads', 'join-zalo']
-const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo']
+const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'momo']
 
 type JobOption = { id: string; name: string; reward: string }
 
