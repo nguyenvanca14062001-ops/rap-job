@@ -13,6 +13,21 @@ const MOMO_CONFIG = {
 
 export const jobsData: Record<string, any> = {
 
+  // Card tổng/parent gộp 3 job "giới thiệu bạn bè" (MoMo/ABBANK/LPBank Plus) — click mở popup chọn job con,
+  // không phải job nộp đơn trực tiếp. 3 job con thật vẫn giữ nguyên jobId/report/logic riêng.
+  'referral-friends': {
+    title: "GIỚI THIỆU BẠN BÈ",
+    subtitle: "Chọn app muốn giới thiệu để nhận thưởng",
+    reward: "85.000",
+    rewardText: "85.000 xu / lượt",
+    color: "text-orange-500",
+    badge: "VIP 💎",
+    type: "friend_referral_group",
+    route: null
+  },
+
+  // Card cũ, đã bị thay bởi 'referral_abbank' (đúng jobId dùng trong report/vip_jobs) — giữ lại
+  // để không phá vỡ các nơi khác còn tham chiếu key 'referral-hub'. KHÔNG dùng key này cho job VIP mới.
   'referral-hub': {
     title: "GIỚI THIỆU BẠN BÈ ABBANK",
     subtitle: "Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần",
@@ -24,11 +39,26 @@ export const jobsData: Record<string, any> = {
     route: "/jobs/referral-abbank"
   },
 
+  // jobId chuẩn thật sự dùng trong report (ABBANK_REFERRAL_JOB_ID) và trong vip_jobs — dùng key này
+  // khi seed/tạo job VIP cho ABBANK, không dùng 'referral-hub' ở trên nữa.
+  'referral_abbank': {
+    title: "GIỚI THIỆU BẠN BÈ ABBANK",
+    subtitle: "Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần",
+    reward: "85.000",
+    rewardText: "85.000 xu",
+    color: "text-orange-500",
+    badge: "VIP 💎",
+    type: "friend_referral",
+    bankType: "abbank",
+    referralProgram: "abbank",
+    route: "/jobs/referral-abbank"
+  },
+
   'referral_momo': {
     title: "GIỚI THIỆU BẠN BÈ MOMO",
     subtitle: "Mời bạn bè đăng ký APP VÍ MOMO",
-    reward: "85.000",
-    rewardText: "85.000 xu",
+    reward: "65.000",
+    rewardText: "65.000 xu",
     color: "text-orange-500",
     badge: "VIP",
     type: "friend_referral",
@@ -449,14 +479,47 @@ export const jobsData: Record<string, any> = {
   },
 
   'lpbank-plus': {
-    title: "APP LPBank Plus",
+    title: "APP LPBANK PLUS",
     subtitle: "Mở tài khoản LPBank Plus",
     reward: "85.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
     ageRequirement: 15,
     zaloGuideUrl: "",
+    // Text ngắn hiển thị dưới khối tiêu đề ở trang chi tiết
+    shortDesc: "Hoàn thành đăng ký APP LPBANK PLUS theo hướng dẫn để nhận thưởng.",
     warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký LPBank Plus trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    // Link nhóm Zalo để lấy mã giới thiệu
+    zaloReferralLink: "https://zalo.me/g/shxqdjooiubce1rnvhq8",
+    // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
+    proofSampleImages: [
+      "images/anh-lpbank-new2.jpg",
+      "images/anh-lpbank-new3.jpg",
+      "images/anh-lpbank-new4.jpg"
+    ],
+    // 3 bước hướng dẫn rút gọn — dùng chung cho khối "CÁC BƯỚC THỰC HIỆN" ở trang chi tiết và popup "XEM HƯỚNG DẪN"
+    quickSteps: [
+      {
+        id: 1,
+        title: "TẢI APP LPBANK PLUS",
+        content: "Tải APP LPBank Plus về điện thoại để đăng ký.",
+        note: "CHÚ Ý: CÓ 2 APP LPBANK, PHẢI TẢI ĐÚNG APP LPBANK PLUS CÓ CHỮ PLUS MỚI ĐÚNG NHÉ, KHÔNG CHỌN NHẦM APP LPBANK KHÁC.",
+        img: "images/anh-lpbank-buoc1.jpg"
+      },
+      {
+        id: 2,
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU",
+        content: "Tham gia nhóm Zalo để lấy mã giới thiệu.",
+        referralCode: "0366045803",
+        img: "images/anh-lpbank-new1.jpg"
+      },
+      {
+        id: 3,
+        title: "ĐĂNG KÝ THÀNH CÔNG VÀ HOÀN TẤT THEO HƯỚNG DẪN",
+        content: "Sau khi đăng ký thành công, chuyển 100.000đ vào APP LPBank Plus rồi chuyển ra lại. Sau khi hoàn thành đầy đủ, chụp lại 3 ảnh bằng chứng rồi gửi nộp đơn.",
+        img: "images/anh-lpbank-new4.jpg"
+      }
+    ],
     steps: [
       {
         id: 1,

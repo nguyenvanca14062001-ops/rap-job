@@ -1,30 +1,23 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { auth, db, storage } from '@/firebase'
 import { collection, doc, setDoc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
 import { normalizePhone } from '@/utils/phone'
 import { VIP_JOB_IDS } from '@/utils/vipJobs'
-import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
+import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/utils/referralLpbankPlus'
+import { jobsData } from '@/data/jobs'
 
-const props = defineProps<{ show: boolean; vipJobs?: any[] }>()
+defineProps<{ show: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'submitted', payload: { friendName: string; friendPhone: string; orderCode: string; createdAt: Date }): void }>()
 
 const baseUrl = import.meta.env.BASE_URL
 
-// Đọc reward thật từ Firestore vip_jobs (doc referral_momo) — khớp với số Admin cấu hình, không
-// còn hard-code MOMO_REFERRAL_REWARD cố định khi lưu report.
-const momoRewardAmount = computed(() => {
-  const cfg = (props.vipJobs || []).find((v: any) => (v.jobId || v.id) === MOMO_REFERRAL_JOB_ID)
-  const digits = String(cfg?.reward || '').replace(/\D/g, '')
-  return digits ? Number(digits) : MOMO_REFERRAL_REWARD
-})
-
-// Ảnh mẫu lấy nguyên từ job VÍ MOMO gốc (SubmitReportView.vue -> jobSamples['momo']) — cùng bộ ảnh, không tạo mẫu mới
-const SAMPLE_IMAGES = ['images/anh-momo-2.jpg', 'images/anh-momo-6.jpg', 'images/anh-momo-7.jpg']
+// Ảnh mẫu lấy nguyên từ job APP LPBANK PLUS gốc (src/data/jobs.ts -> 'lpbank-plus'.proofSampleImages) — cùng bộ ảnh, không tạo mẫu mới
+const SAMPLE_IMAGES = jobsData['lpbank-plus'].proofSampleImages as string[]
 const MIN_IMAGES = 3
-const MAX_IMAGES = 5
+const MAX_IMAGES = 3
 
 const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
@@ -56,7 +49,7 @@ const handleFileUpload = async (event: Event) => {
   const files = Array.from(target.files)
 
   if (images.value.length + files.length > MAX_IMAGES) {
-    imageError.value = `Chỉ được chọn tối đa ${MAX_IMAGES} ảnh bằng chứng.`
+    imageError.value = `Chỉ được chọn đúng ${MAX_IMAGES} ảnh bằng chứng.`
     target.value = ''
     return
   }
@@ -148,9 +141,9 @@ const submitReferral = async () => {
       phoneRef,
       phoneNormalized: normalizePhone(phoneRef),
 
-      jobId: MOMO_REFERRAL_JOB_ID,
-      jobName: 'Giới thiệu bạn bè đăng ký APP VÍ MOMO',
-      title: 'GIỚI THIỆU BẠN BÈ',
+      jobId: LPBANK_PLUS_REFERRAL_JOB_ID,
+      jobName: 'Giới thiệu bạn bè đăng ký APP LPBANK PLUS',
+      title: 'GIỚI THIỆU BẠN BÈ APP LPBANK PLUS',
       type: 'friend_referral',
 
       category: 'vip',
@@ -158,15 +151,15 @@ const submitReferral = async () => {
       jobType: 'vip',
       isVip: true,
 
-      bankType: 'momo',
-      referralProgram: 'momo',
+      bankType: 'lpbank',
+      referralProgram: 'lpbank',
 
       friendName: name,
       friendPhone: phone,
       friendPhoneNormalized: normalizePhone(phone),
       referralOrderCode: orderCode,
 
-      reward: momoRewardAmount.value,
+      reward: LPBANK_PLUS_REFERRAL_REWARD,
       actualReward: 0,
 
       proofImages,
@@ -197,7 +190,7 @@ const submitReferral = async () => {
       <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="handleClose"></div>
       <div class="relative bg-[#111726] border border-amber-500/30 w-full max-w-lg rounded-[36px] p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto font-black italic uppercase text-left">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg md:text-xl text-white tracking-tight">📥 GỬI BẰNG CHỨNG GIỚI THIỆU MOMO</h2>
+          <h2 class="text-lg md:text-xl text-white tracking-tight">📥 GỬI BẰNG CHỨNG GIỚI THIỆU LPBANK PLUS</h2>
           <button @click="handleClose" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -217,7 +210,7 @@ const submitReferral = async () => {
 
           <div class="space-y-2">
             <div class="flex items-center justify-between ml-1">
-              <label class="text-amber-400 text-[11px] tracking-widest">ẢNH BẰNG CHỨNG * (TỐI ĐA {{ MAX_IMAGES }} ẢNH)</label>
+              <label class="text-amber-400 text-[11px] tracking-widest">ẢNH BẰNG CHỨNG * (ĐÚNG {{ MAX_IMAGES }} ẢNH)</label>
               <span :class="['text-[10px] font-sans not-italic font-bold', images.length >= MIN_IMAGES ? 'text-emerald-400' : 'text-slate-500']">
                 ĐÃ CHỌN {{ images.length }}/{{ MAX_IMAGES }} ẢNH
               </span>
@@ -227,7 +220,7 @@ const submitReferral = async () => {
                  :class="images.length < MAX_IMAGES ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'">
               <div class="text-3xl mb-2">📸</div>
               <p class="text-[10px] md:text-[11px] text-rose-400 tracking-widest uppercase text-center leading-relaxed">
-                YÊU CẦU BẮT BUỘC NỘP TỪ {{ MIN_IMAGES }} ẢNH TRỞ LÊN (XEM MẪU BÊN DƯỚI)
+                YÊU CẦU BẮT BUỘC NỘP ĐÚNG {{ MIN_IMAGES }} ẢNH (XEM MẪU BÊN DƯỚI)
               </p>
             </div>
             <input type="file" ref="fileInput" @change="handleFileUpload" multiple accept="image/jpeg, image/png, image/jpg" class="hidden" />
@@ -241,12 +234,12 @@ const submitReferral = async () => {
                 <div v-for="(img, idx) in SAMPLE_IMAGES" :key="idx" @click="openImage(baseUrl + img)"
                      class="relative rounded-xl overflow-hidden border border-slate-700/60 bg-slate-900 aspect-[3/4] cursor-zoom-in group hover:border-amber-500 transition-colors">
                   <img class="w-full h-full object-cover group-hover:scale-105 transition-transform" :src="baseUrl + img" />
-                  <div class="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">MẪU {{ idx + 1 }}</div>
+                  <div class="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">MẪU {{ Number(idx) + 1 }}</div>
                 </div>
               </div>
             </div>
 
-            <div v-if="images.length > 0" class="grid grid-cols-2 gap-3 mt-3">
+            <div v-if="images.length > 0" class="grid grid-cols-3 gap-3 mt-3">
               <div v-for="(img, index) in images" :key="index" class="relative rounded-2xl overflow-hidden border border-slate-800 bg-[#0d121f] aspect-square">
                 <img class="w-full h-full object-cover bg-white" :src="img" />
                 <button class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[10px] font-sans not-italic z-10 shadow-lg" @click.stop="removeImage(index)">✕</button>

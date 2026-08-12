@@ -1,37 +1,30 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { auth, db, storage } from '@/firebase'
 import { collection, doc, setDoc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
 import { normalizePhone } from '@/utils/phone'
 import { VIP_JOB_IDS } from '@/utils/vipJobs'
-import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
+import { jobsData } from '@/data/jobs'
 
-const props = defineProps<{ show: boolean; vipJobs?: any[] }>()
-const emit = defineEmits<{ (e: 'close'): void; (e: 'submitted', payload: { friendName: string; friendPhone: string; orderCode: string; createdAt: Date }): void }>()
+const props = defineProps<{ show: boolean }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'submitted'): void }>()
 
 const baseUrl = import.meta.env.BASE_URL
+const job = jobsData['lpbank-plus']
+const SAMPLE_IMAGES = job.proofSampleImages as string[]
+const REQUIRED_IMAGES = 3
 
-// Đọc reward thật từ Firestore vip_jobs (doc referral_momo) — khớp với số Admin cấu hình, không
-// còn hard-code MOMO_REFERRAL_REWARD cố định khi lưu report.
-const momoRewardAmount = computed(() => {
-  const cfg = (props.vipJobs || []).find((v: any) => (v.jobId || v.id) === MOMO_REFERRAL_JOB_ID)
-  const digits = String(cfg?.reward || '').replace(/\D/g, '')
-  return digits ? Number(digits) : MOMO_REFERRAL_REWARD
-})
-
-// Ảnh mẫu lấy nguyên từ job VÍ MOMO gốc (SubmitReportView.vue -> jobSamples['momo']) — cùng bộ ảnh, không tạo mẫu mới
-const SAMPLE_IMAGES = ['images/anh-momo-2.jpg', 'images/anh-momo-6.jpg', 'images/anh-momo-7.jpg']
-const MIN_IMAGES = 3
-const MAX_IMAGES = 5
+const JOB_ID = 'lpbank-plus'
 
 const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
 
-const friendName = ref('')
-const friendPhone = ref('')
+const username = ref('')
+const fullName = ref('')
+const phoneRef = ref('')
 const images = ref<string[]>([])
 const imageBlobs = ref<Blob[]>([])
 const imageError = ref('')
@@ -39,24 +32,38 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const isSubmitting = ref(false)
 const submitStage = ref<'idle' | 'uploading' | 'saving'>('idle')
 
+const loadProfile = async () => {
+  const uid = auth.currentUser?.uid
+  if (!uid) return
+  const userSnap = await getDoc(doc(db, 'users', uid))
+  if (!userSnap.exists()) return
+  const userDoc: any = userSnap.data()
+  username.value = userDoc.username || ''
+  if (!fullName.value) fullName.value = userDoc.fullName || ''
+  if (!phoneRef.value) phoneRef.value = userDoc.phoneRef || userDoc.phone || ''
+}
+
+onMounted(loadProfile)
+watch(() => props.show, (v) => { if (v) loadProfile() })
+
 const resetForm = () => {
-  friendName.value = ''
-  friendPhone.value = ''
+  fullName.value = ''
+  phoneRef.value = ''
   images.value = []
   imageBlobs.value = []
   imageError.value = ''
 }
 
 const handleClose = () => { if (!isSubmitting.value) { resetForm(); emit('close') } }
-const triggerFileInput = () => { if (images.value.length < MAX_IMAGES) fileInput.value?.click() }
+const triggerFileInput = () => { if (images.value.length < REQUIRED_IMAGES) fileInput.value?.click() }
 
 const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
   if (!target.files?.length) return
   const files = Array.from(target.files)
 
-  if (images.value.length + files.length > MAX_IMAGES) {
-    imageError.value = `Chỉ được chọn tối đa ${MAX_IMAGES} ảnh bằng chứng.`
+  if (images.value.length + files.length > REQUIRED_IMAGES) {
+    imageError.value = `Chỉ được chọn đúng ${REQUIRED_IMAGES} ảnh bằng chứng.`
     target.value = ''
     return
   }
@@ -89,22 +96,21 @@ const removeImage = (index: number) => {
   imageError.value = ''
 }
 
-const submitReferral = async () => {
+const submitProof = async () => {
   const uid = auth.currentUser?.uid
   if (!uid || isSubmitting.value) return
-  const name = friendName.value.trim()
-  const phone = friendPhone.value.trim()
+  const name = fullName.value.trim()
+  const phone = phoneRef.value.trim()
 
-  if (!name) { alert('⚠️ VUI LÒNG NHẬP TÊN NGƯỜI BẠN ĐÃ GIỚI THIỆU!'); return }
-  if (!phone || normalizePhone(phone).length < 9) { alert('⚠️ VUI LÒNG NHẬP ĐÚNG SỐ ĐIỆN THOẠI NGƯỜI BẠN ĐÃ GIỚI THIỆU!'); return }
-  if (imageBlobs.value.length < MIN_IMAGES) {
-    imageError.value = `Chiến dịch này bắt buộc phải tải lên ít nhất ${MIN_IMAGES} ảnh mẫu để đối soát!`
+  if (!name) { alert('⚠️ VUI LÒNG NHẬP HỌ VÀ TÊN XÁC THỰC!'); return }
+  if (!phone || normalizePhone(phone).length < 9) { alert('⚠️ VUI LÒNG NHẬP ĐÚNG SỐ ĐIỆN THOẠI ĐỐI SOÁT!'); return }
+  if (imageBlobs.value.length !== REQUIRED_IMAGES) {
+    imageError.value = `Vui lòng gửi đúng ${REQUIRED_IMAGES} ảnh bằng chứng theo mẫu bên dưới. Thiếu ảnh hoặc gửi sai ảnh có thể bị từ chối.`
     return
   }
 
   isSubmitting.value = true
   try {
-    // Giới hạn tối đa 3 đơn VIP đang chờ duyệt cùng lúc — áp dụng chung cho mọi job VIP/referral
     const pendingSnap = await getDocs(query(collection(db, 'reports'), where('uid', '==', uid), where('status', '==', 'pending')))
     const pendingVipCount = pendingSnap.docs.filter(d => VIP_JOB_IDS.includes(d.data().jobId)).length
     if (pendingVipCount >= 3) {
@@ -112,9 +118,6 @@ const submitReferral = async () => {
       isSubmitting.value = false
       return
     }
-
-    const userSnap = await getDoc(doc(db, 'users', uid))
-    const userDoc: any = userSnap.exists() ? userSnap.data() : {}
 
     const reportRef = doc(collection(db, 'reports'))
     const reportId = reportRef.id
@@ -138,35 +141,24 @@ const submitReferral = async () => {
 
     submitStage.value = 'saving'
 
-    const orderCode = `${name} - ${phone}`
-    const phoneRef = userDoc.phoneRef || userDoc.phone || ''
-
     const reportData = {
       uid,
-      username: userDoc.username || userDoc.fullName || '',
-      fullName: userDoc.fullName || '',
-      phoneRef,
-      phoneNormalized: normalizePhone(phoneRef),
+      username: username.value,
+      fullName: name,
+      phoneRef: phone,
+      phoneNormalized: normalizePhone(phone),
 
-      jobId: MOMO_REFERRAL_JOB_ID,
-      jobName: 'Giới thiệu bạn bè đăng ký APP VÍ MOMO',
-      title: 'GIỚI THIỆU BẠN BÈ',
-      type: 'friend_referral',
+      jobId: JOB_ID,
+      jobName: 'APP LPBANK PLUS',
+      title: 'APP LPBANK PLUS',
 
       category: 'vip',
       jobCategory: 'vip',
       jobType: 'vip',
       isVip: true,
+      bankType: 'lpbank',
 
-      bankType: 'momo',
-      referralProgram: 'momo',
-
-      friendName: name,
-      friendPhone: phone,
-      friendPhoneNormalized: normalizePhone(phone),
-      referralOrderCode: orderCode,
-
-      reward: momoRewardAmount.value,
+      reward: 85000,
       actualReward: 0,
 
       proofImages,
@@ -179,9 +171,8 @@ const submitReferral = async () => {
 
     await setDoc(reportRef, reportData)
 
-    const createdAt = new Date()
     resetForm()
-    emit('submitted', { friendName: name, friendPhone: phone, orderCode, createdAt })
+    emit('submitted')
   } catch (error: any) {
     alert('❌ LỖI HỆ THỐNG: ' + error.message)
   } finally {
@@ -197,37 +188,45 @@ const submitReferral = async () => {
       <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="handleClose"></div>
       <div class="relative bg-[#111726] border border-amber-500/30 w-full max-w-lg rounded-[36px] p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto font-black italic uppercase text-left">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg md:text-xl text-white tracking-tight">📥 GỬI BẰNG CHỨNG GIỚI THIỆU MOMO</h2>
+          <h2 class="text-lg md:text-xl text-white tracking-tight">📥 GỬI BẰNG CHỨNG LPBANK PLUS</h2>
           <button @click="handleClose" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform shrink-0">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
         <div class="space-y-5">
+          <div class="space-y-2" v-if="username">
+            <label class="text-slate-500 text-[11px] tracking-widest ml-1">TÀI KHOẢN</label>
+            <div class="w-full bg-[#0d121f]/60 border border-slate-800 rounded-2xl py-3.5 px-5 text-slate-400 font-sans not-italic font-semibold text-[14px]">{{ username }}</div>
+          </div>
+
           <div class="space-y-2">
-            <label class="text-amber-400 text-[11px] tracking-widest ml-1">TÊN NGƯỜI BẠN ĐÃ GIỚI THIỆU *</label>
-            <input v-model="friendName" type="text" placeholder="Tên bạn bè"
+            <label class="text-amber-400 text-[11px] tracking-widest ml-1">HỌ VÀ TÊN XÁC THỰC *</label>
+            <input v-model="fullName" type="text" placeholder="Nguyễn Văn A"
                    class="w-full bg-[#0d121f] border border-slate-800 focus:border-amber-500 rounded-2xl py-3.5 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[14px] transition-colors" />
           </div>
           <div class="space-y-2">
-            <label class="text-amber-400 text-[11px] tracking-widest ml-1">SỐ ĐIỆN THOẠI NGƯỜI BẠN ĐÃ GIỚI THIỆU *</label>
-            <input v-model="friendPhone" type="text" placeholder="VD: 0987654321"
+            <label class="text-amber-400 text-[11px] tracking-widest ml-1">SỐ ĐIỆN THOẠI ĐỐI SOÁT *</label>
+            <input v-model="phoneRef" type="text" placeholder="VD: 0987654321"
                    class="w-full bg-[#0d121f] border border-slate-800 focus:border-amber-500 rounded-2xl py-3.5 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[14px] transition-colors" />
           </div>
 
           <div class="space-y-2">
             <div class="flex items-center justify-between ml-1">
-              <label class="text-amber-400 text-[11px] tracking-widest">ẢNH BẰNG CHỨNG * (TỐI ĐA {{ MAX_IMAGES }} ẢNH)</label>
-              <span :class="['text-[10px] font-sans not-italic font-bold', images.length >= MIN_IMAGES ? 'text-emerald-400' : 'text-slate-500']">
-                ĐÃ CHỌN {{ images.length }}/{{ MAX_IMAGES }} ẢNH
+              <label class="text-amber-400 text-[11px] tracking-widest">ẢNH BẰNG CHỨNG * (ĐÚNG {{ REQUIRED_IMAGES }} ẢNH)</label>
+              <span :class="['text-[10px] font-sans not-italic font-bold', images.length === REQUIRED_IMAGES ? 'text-emerald-400' : 'text-slate-500']">
+                ĐÃ CHỌN {{ images.length }}/{{ REQUIRED_IMAGES }} ẢNH
               </span>
             </div>
             <div @click="triggerFileInput"
                  class="w-full border-2 border-dashed border-slate-700/60 hover:border-amber-500/50 bg-[#0d121f]/30 rounded-[28px] py-10 px-6 flex flex-col items-center justify-center transition-all"
-                 :class="images.length < MAX_IMAGES ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'">
+                 :class="images.length < REQUIRED_IMAGES ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'">
               <div class="text-3xl mb-2">📸</div>
               <p class="text-[10px] md:text-[11px] text-rose-400 tracking-widest uppercase text-center leading-relaxed">
-                YÊU CẦU BẮT BUỘC NỘP TỪ {{ MIN_IMAGES }} ẢNH TRỞ LÊN (XEM MẪU BÊN DƯỚI)
+                VUI LÒNG GỬI ĐÚNG {{ REQUIRED_IMAGES }} ẢNH BẰNG CHỨNG THEO MẪU BÊN DƯỚI
+              </p>
+              <p class="text-[9px] md:text-[10px] text-slate-500 tracking-widest uppercase text-center leading-relaxed mt-1 normal-case">
+                Thiếu ảnh hoặc gửi sai ảnh có thể bị từ chối.
               </p>
             </div>
             <input type="file" ref="fileInput" @change="handleFileUpload" multiple accept="image/jpeg, image/png, image/jpg" class="hidden" />
@@ -241,12 +240,12 @@ const submitReferral = async () => {
                 <div v-for="(img, idx) in SAMPLE_IMAGES" :key="idx" @click="openImage(baseUrl + img)"
                      class="relative rounded-xl overflow-hidden border border-slate-700/60 bg-slate-900 aspect-[3/4] cursor-zoom-in group hover:border-amber-500 transition-colors">
                   <img class="w-full h-full object-cover group-hover:scale-105 transition-transform" :src="baseUrl + img" />
-                  <div class="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">MẪU {{ idx + 1 }}</div>
+                  <div class="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">ẢNH {{ idx + 1 }}</div>
                 </div>
               </div>
             </div>
 
-            <div v-if="images.length > 0" class="grid grid-cols-2 gap-3 mt-3">
+            <div v-if="images.length > 0" class="grid grid-cols-3 gap-3 mt-3">
               <div v-for="(img, index) in images" :key="index" class="relative rounded-2xl overflow-hidden border border-slate-800 bg-[#0d121f] aspect-square">
                 <img class="w-full h-full object-cover bg-white" :src="img" />
                 <button class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[10px] font-sans not-italic z-10 shadow-lg" @click.stop="removeImage(index)">✕</button>
@@ -254,7 +253,7 @@ const submitReferral = async () => {
             </div>
           </div>
 
-          <button @click="submitReferral" :disabled="isSubmitting"
+          <button @click="submitProof" :disabled="isSubmitting"
                   class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-2xl text-[13px] md:text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50">
             {{ submitStage === 'uploading' ? 'ĐANG TẢI ẢNH LÊN...' : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isSubmitting ? 'ĐANG XỬ LÝ...' : 'GỬI BẰNG CHỨNG 📥' }}
           </button>

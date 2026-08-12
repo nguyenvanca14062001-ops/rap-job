@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { jobsData } from '@/data/jobs'
 import { useVipJobs } from '@/composables/useVipJobs'
 import Swal from 'sweetalert2'
+import LpbankPlusGuideModal from '@/components/LpbankPlusGuideModal.vue'
+import LpbankPlusProofModal from '@/components/LpbankPlusProofModal.vue'
+import LpbankPlusHistoryModal from '@/components/LpbankPlusHistoryModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +17,17 @@ const { vipJobs } = useVipJobs()
 
 const jobId = route.params.id as string
 const staticJob = jobsData[jobId] || jobsData['app-chung-khoan']
+
+// Job APP LPBANK PLUS dùng giao diện riêng: 3 nút CTA mở popup tại chỗ thay vì điều hướng trang
+const isLpbankPlus = jobId === 'lpbank-plus'
+const showLpGuide = ref(false)
+const showLpProof = ref(false)
+const showLpHistory = ref(false)
+const showLpSuccess = ref(false)
+const openLpGuide = () => { showLpGuide.value = true }
+const openLpProof = () => { showLpGuide.value = false; showLpProof.value = true }
+const openLpHistory = () => { showLpHistory.value = true }
+const handleLpSubmitted = () => { showLpProof.value = false; showLpSuccess.value = true }
 
 const currentJob = computed((): any => {
   const override = vipJobs.value.find((v: any) => v.id === jobId)
@@ -115,9 +129,74 @@ const handleCopy = (text: string) => {
             VÀO NHÓM ZALO XEM HƯỚNG DẪN
           </a>
         </div>
+
+        <p v-if="isLpbankPlus && currentJob.shortDesc" class="mt-5 max-w-xl mx-auto text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed">
+          {{ currentJob.shortDesc }}
+        </p>
       </div>
 
-      <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative">
+      <!-- KHỐI RIÊNG CHO APP LPBANK PLUS: 3 nút CTA mở popup tại chỗ -->
+      <template v-if="isLpbankPlus">
+        <section class="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button @click="openLpGuide" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
+            📖 XEM HƯỚNG DẪN
+          </button>
+          <button @click="openLpProof" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#00df89] hover:bg-[#00c578] text-[#090e17] shadow-lg active:scale-95 transition-all">
+            📥 GỬI BẰNG CHỨNG
+          </button>
+          <button @click="openLpHistory" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
+            📜 LỊCH SỬ NỘP ĐƠN
+          </button>
+        </section>
+
+        <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-8 shadow-2xl">
+          <h3 class="text-white text-base md:text-lg tracking-tight mb-5 text-center">3 ẢNH BẰNG CHỨNG CẦN GỬI</h3>
+          <div class="grid grid-cols-3 gap-3">
+            <div v-for="(img, idx) in currentJob.proofSampleImages" :key="idx" class="text-center">
+              <div class="rounded-2xl overflow-hidden border border-slate-700/50 shadow-lg bg-slate-900 aspect-[3/4] cursor-zoom-in group relative" @click="openImage(baseUrl + img)">
+                <img class="w-full h-full object-cover group-hover:scale-105 transition-transform" :src="baseUrl + img" />
+              </div>
+              <p class="mt-2 text-[10px] text-slate-500 font-sans not-italic normal-case">Ảnh {{ Number(idx) + 1 }}</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl">
+          <h3 class="text-white text-base md:text-lg tracking-tight mb-6 text-center">CÁC BƯỚC THỰC HIỆN</h3>
+          <div class="space-y-8">
+            <div class="relative pl-10" v-for="step in currentJob.quickSteps" :key="step.id">
+              <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
+              <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-sm font-black shadow-lg">{{ step.id }}</div>
+              <div class="pb-2">
+                <h4 class="text-[#3b82f6] text-base italic font-black mb-2 uppercase tracking-tight">BƯỚC {{ step.id }}: {{ step.title }}</h4>
+                <p class="text-slate-400 text-xs italic normal-case opacity-80 leading-relaxed mb-4 whitespace-pre-line">{{ step.content }}</p>
+
+                <div class="mb-4 bg-[#1a0f14] border border-red-500/40 rounded-2xl p-4 flex items-start gap-3" v-if="step.note">
+                  <span class="text-red-500 text-lg shrink-0">⚠️</span>
+                  <p class="text-red-400 text-[11px] font-black normal-case tracking-wide leading-relaxed">{{ step.note }}</p>
+                </div>
+
+                <a v-if="step.id === 2 && currentJob.zaloReferralLink" :href="currentJob.zaloReferralLink" target="_blank"
+                   class="mb-4 inline-flex items-center gap-2 bg-[#0068FF] hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-5 h-5" />
+                  THAM GIA NHÓM ZALO
+                </a>
+                <button v-else-if="step.id === 2" disabled
+                   class="mb-4 inline-flex items-center gap-2 bg-slate-800 text-slate-500 px-6 py-3 rounded-xl text-[11px] font-black uppercase cursor-not-allowed opacity-70">
+                  <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-5 h-5 grayscale" />
+                  THAM GIA NHÓM ZALO (SẮP CÓ)
+                </button>
+
+                <div class="rounded-2xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in max-w-sm" v-if="step.img" @click="openImage(baseUrl + step.img)">
+                  <img class="w-full h-auto object-contain" :src="baseUrl + step.img" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </template>
+
+      <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative" v-if="!isLpbankPlus">
         <div class="text-center space-y-5">
 
          <div class="mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700"
@@ -293,14 +372,44 @@ const handleCopy = (text: string) => {
         </div>
       </div>
 
-      <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20">
+      <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20" v-if="!isLpbankPlus">
         <h2 class="text-lg text-slate-400 font-black italic mb-6 tracking-wide uppercase opacity-60">BẠN ĐÃ LÀM XONG?</h2>
 
         <button class="w-full bg-[#00df89] hover:bg-[#00c578] text-[#090e17] py-5 rounded-2xl text-xl font-black italic uppercase shadow-[0_10px_40px_rgba(0,223,137,0.25)] transition-all active:scale-95" @click="router.push(`/submit-report?job=${route.params.id}`)">
           NỘP BẰNG CHỨNG NGAY
         </button>
       </section>
+      <div class="mb-20" v-else></div>
     </div>
+
+    <template v-if="isLpbankPlus">
+      <LpbankPlusGuideModal :show="showLpGuide" @close="showLpGuide = false" @openProof="openLpProof" />
+      <LpbankPlusProofModal :show="showLpProof" @close="showLpProof = false" @submitted="handleLpSubmitted" />
+      <LpbankPlusHistoryModal :show="showLpHistory" @close="showLpHistory = false" />
+
+      <Transition name="fade">
+        <div v-if="showLpSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showLpSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng APP LPBANK PLUS thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showLpSuccess = false; openLpHistory()" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showLpSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
   </div>
 </template>
 

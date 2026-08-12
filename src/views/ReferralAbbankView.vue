@@ -13,7 +13,26 @@ import { ABBANK_REFERRAL_JOB_ID, ABBANK_REFERRAL_CODE, ABBANK_REFERRAL_REWARD } 
 const props = defineProps<{
   myReports?: any[]
   isDataLoading?: boolean
+  vipJobs?: any[]
 }>()
+
+// Đọc cấu hình thật từ Firestore vip_jobs (doc referral_abbank) — Admin sửa REWARD/REWARD TEXT
+// trong CẤU HÌNH JOB VIP thì trang này phải đổi theo, không còn hard-code 85.000 XU cố định.
+// 'referral-hub' là doc ID cũ trùng tên hiển thị "GIỚI THIỆU BẠN BÈ ABBANK" mà Admin có thể đã
+// từng sửa nhầm trước khi có doc referral_abbank chuẩn — fallback đọc doc đó nếu chưa có doc chuẩn.
+const abbankConfig = computed(() => {
+  const jobs = props.vipJobs || []
+  return jobs.find((v: any) => (v.jobId || v.id) === ABBANK_REFERRAL_JOB_ID)
+    || jobs.find((v: any) => (v.jobId || v.id) === 'referral-hub')
+})
+const abbankRewardAmount = computed(() => {
+  const digits = String(abbankConfig.value?.reward || '').replace(/\D/g, '')
+  return digits ? Number(digits) : ABBANK_REFERRAL_REWARD
+})
+const abbankRewardText = computed(() => {
+  if (abbankConfig.value?.rewardText) return abbankConfig.value.rewardText
+  return `${abbankRewardAmount.value.toLocaleString('vi-VN')} XU / 1 LƯỢT HỢP LỆ`
+})
 
 const router = useRouter()
 const baseUrl = import.meta.env.BASE_URL
@@ -194,8 +213,13 @@ const submitReferral = async () => {
 
       jobId: ABBANK_REFERRAL_JOB_ID,
       jobName: 'Giới thiệu bạn bè đăng ký APP ABBANK',
-      category: 'vip',
       type: 'friend_referral',
+
+      category: 'vip',
+      jobCategory: 'vip',
+      jobType: 'vip',
+      isVip: true,
+
       bankType: 'abbank',
       referralProgram: 'abbank',
 
@@ -209,7 +233,7 @@ const submitReferral = async () => {
       imageCount: proofImages.length,
 
       status: 'pending',
-      reward: ABBANK_REFERRAL_REWARD,
+      reward: abbankRewardAmount.value,
       actualReward: 0,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -273,7 +297,7 @@ const closeSuccessAndShowHistory = () => { showSuccessModal.value = false; showH
         </h1>
         <div class="bg-[#052e1f] border border-[#005c3c] rounded-full px-6 py-2.5 w-max mx-auto flex items-center gap-2 shadow-inner relative z-10">
           <span class="text-[#f59e0b] text-xl">⚡</span>
-          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: 85.000 XU / 1 LƯỢT HỢP LỆ</span>
+          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: {{ abbankRewardText }}</span>
         </div>
         <p class="text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed mt-4 max-w-md mx-auto relative z-10">
           Mời bạn bè đăng ký APP ABBANK theo hướng dẫn để nhận thưởng.

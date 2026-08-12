@@ -19,6 +19,8 @@ import TreasureChest from '@/components/TreasureChest.vue'
 import ProfileCard from '@/components/home/ProfileCard.vue'
 import Logo from '@/components/Logo.vue'
 import MomoReferralHubModal from '@/components/MomoReferralHubModal.vue'
+import LpbankPlusReferralHubModal from '@/components/LpbankPlusReferralHubModal.vue'
+import FriendReferralSelectModal from '@/components/FriendReferralSelectModal.vue'
 import { jobsData } from '@/data/jobs'
 
 // --- JOB BROWSER (dùng trong CÔNG VIỆC bottom sheet) ---
@@ -27,9 +29,12 @@ const jobIconMap: Record<string, string> = {
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
-  'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥',
+  'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥', 'referral-friends': '👥',
 }
-const VIP_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'momo', 'referral_momo']
+const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'momo', 'referral_momo']
+// 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_IDS/jobsData
+// (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
+const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_lpbank_plus']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -68,13 +73,19 @@ const mergedJobs = computed((): Record<string, any> => {
       status:  override.status,
     }
   }
+  // Card parent 'referral-friends' tự ẩn nếu cả 3 job con (referral_momo/referral_abbank/referral_lpbank_plus) đều hidden
+  if ('referral-friends' in result) {
+    const childIds = ['referral_momo', 'referral_abbank', 'referral_lpbank_plus']
+    const allChildrenHidden = childIds.every(cid => vipJobs.value.find(v => v.id === cid)?.status === 'hidden')
+    if (allChildrenHidden) delete result['referral-friends']
+  }
   return result
 })
 
-// Thứ tự VIP jobs theo Firestore order; lọc hidden; fallback về vị trí gốc trong VIP_IDS
+// Thứ tự VIP jobs theo Firestore order; lọc hidden + job đã gộp vào card parent; fallback về vị trí gốc trong VIP_IDS
 const sortedVipJobIds = computed(() =>
   VIP_IDS
-    .filter(id => id in mergedJobs.value)
+    .filter(id => id in mergedJobs.value && !CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB.includes(id))
     .sort((a, b) => {
       const oA = Number(mergedJobs.value[a]?.order ?? VIP_IDS.indexOf(a))
       const oB = Number(mergedJobs.value[b]?.order ?? VIP_IDS.indexOf(b))
@@ -153,6 +164,8 @@ const windowWidth = ref(0)
 const showWelcomePopup = ref(false)
 const showBankModal = ref(false)
 const showMomoReferralHub = ref(false)
+const showLpbankPlusReferralHub = ref(false)
+const showFriendReferralSelect = ref(false)
 const activePopup = ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
 const mobileRejectNote = ref<string | null>(null)
 const jobCategory = ref<'basic' | 'vip' | ''>('')
@@ -586,6 +599,9 @@ const handleReceiveJob = (jobId: string) => {
     router.push('/survey-cinema')
   } else if (jobId === 'APP NGÂN HÀNG' || jobId === 'app-ngan-hang') {
     showBankModal.value = true
+  } else if (jobId === 'referral-friends') {
+    activePopup.value = ''
+    showFriendReferralSelect.value = true
   } else if (jobId === 'referral-hub') {
     activePopup.value = ''
     router.push('/jobs/referral-abbank')
@@ -1137,6 +1153,7 @@ watch(activePopup, (val) => {
             :userPhone="userPhone"
             :userBirthYear="userBirthYear"
             :isDataLoading="isDataLoading"
+            :vipJobs="vipJobs"
           />
         </Transition>
       </main>
@@ -1165,7 +1182,16 @@ watch(activePopup, (val) => {
       </div>
     </div>
 
-    <MomoReferralHubModal :show="showMomoReferralHub" :myReports="myReports" @close="showMomoReferralHub = false" />
+    <MomoReferralHubModal :show="showMomoReferralHub" :myReports="myReports" :vipJobs="vipJobs" @close="showMomoReferralHub = false" />
+    <LpbankPlusReferralHubModal :show="showLpbankPlusReferralHub" :myReports="myReports" @close="showLpbankPlusReferralHub = false" />
+    <FriendReferralSelectModal
+      :show="showFriendReferralSelect"
+      :vipJobs="vipJobs"
+      @close="showFriendReferralSelect = false"
+      @selectMomo="showFriendReferralSelect = false; showMomoReferralHub = true"
+      @selectAbbank="showFriendReferralSelect = false; router.push('/jobs/referral-abbank')"
+      @selectLpbankPlus="showFriendReferralSelect = false; showLpbankPlusReferralHub = true"
+    />
 
     <!-- BOTTOM SHEET BACKDROP -->
     <Transition name="fade-backdrop">

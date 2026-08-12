@@ -10,6 +10,7 @@ import { getReportImages } from '@/utils/reportImages'
 import { normalizePhone } from '@/utils/phone'
 import { ABBANK_REFERRAL_JOB_ID } from '@/utils/referralAbbank'
 import { MOMO_REFERRAL_JOB_ID } from '@/utils/referralMomo'
+import { LPBANK_PLUS_REFERRAL_JOB_ID } from '@/utils/referralLpbankPlus'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
@@ -69,15 +70,6 @@ const rejectReason = ref('')
 // ============================================================================
 const statsTodayTotal = ref(0)
 const statsTodayAppTotal = ref(0)
-type AppBreakdownKey = 'CK SỐ 1 (Kafi)' | 'CK SỐ 2 (DNSE)' | 'CK SỐ 3 (KIS)' | 'MSB BANK' | 'VP BANK' | 'TP BANK'
-const statsAppBreakdown = ref<Record<AppBreakdownKey, { today: number }>>({
-  'CK SỐ 1 (Kafi)': { today: 0 },
-  'CK SỐ 2 (DNSE)': { today: 0 },
-  'CK SỐ 3 (KIS)': { today: 0 },
-  'MSB BANK': { today: 0 },
-  'VP BANK': { today: 0 },
-  'TP BANK': { today: 0 }
-})
 const isStatsLoading = ref(false)
 
 const loadDashboardStats = async () => {
@@ -87,7 +79,6 @@ const loadDashboardStats = async () => {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     statsTodayTotal.value = 0
     statsTodayAppTotal.value = 0
-    Object.keys(statsAppBreakdown.value).forEach(k => statsAppBreakdown.value[k as AppBreakdownKey].today = 0)
     const qBase = query(collection(db, "reports"), where("createdAt", ">=", Timestamp.fromDate(startOfDay)), where("status", "in", ["approved", "collected"]))
     const [countSnap, detailSnap] = await Promise.all([
       getCountFromServer(qBase),
@@ -96,16 +87,7 @@ const loadDashboardStats = async () => {
     statsTodayTotal.value = countSnap.data().count
     detailSnap.forEach(doc => {
       const data = doc.data()
-      if (isAppJob(data.jobName, data.jobId)) {
-        statsTodayAppTotal.value++
-        const nameLower = (data.jobName || '').toLowerCase()
-        if (nameLower.includes('chứng khoán số 1') || nameLower.includes('kafi')) statsAppBreakdown.value['CK SỐ 1 (Kafi)'].today++
-        else if (nameLower.includes('chứng khoán số 2') || nameLower.includes('dnse')) statsAppBreakdown.value['CK SỐ 2 (DNSE)'].today++
-        else if (nameLower.includes('chứng khoán số 3') || nameLower.includes('kis')) statsAppBreakdown.value['CK SỐ 3 (KIS)'].today++
-        else if (nameLower.includes('msb')) statsAppBreakdown.value['MSB BANK'].today++
-        else if (nameLower.includes('vpbank') || nameLower.includes('vp bank')) statsAppBreakdown.value['VP BANK'].today++
-        else if (nameLower.includes('tpbank') || nameLower.includes('tp bank')) statsAppBreakdown.value['TP BANK'].today++
-      }
+      if (isAppJob(data.jobName, data.jobId)) statsTodayAppTotal.value++
     })
   } catch (err) { console.error("Lỗi tải thống kê:", err) }
   finally { isStatsLoading.value = false }
@@ -113,16 +95,7 @@ const loadDashboardStats = async () => {
 
 const updateLocalStatsOnApprove = (jobName: string, jobId?: string) => {
   statsTodayTotal.value++
-  if (isAppJob(jobName, jobId)) {
-    statsTodayAppTotal.value++
-    const n = (jobName || '').toLowerCase()
-    if (n.includes('chứng khoán số 1') || n.includes('kafi')) statsAppBreakdown.value['CK SỐ 1 (Kafi)'].today++
-    else if (n.includes('chứng khoán số 2') || n.includes('dnse')) statsAppBreakdown.value['CK SỐ 2 (DNSE)'].today++
-    else if (n.includes('chứng khoán số 3') || n.includes('kis')) statsAppBreakdown.value['CK SỐ 3 (KIS)'].today++
-    else if (n.includes('msb')) statsAppBreakdown.value['MSB BANK'].today++
-    else if (n.includes('vpbank') || n.includes('vp bank')) statsAppBreakdown.value['VP BANK'].today++
-    else if (n.includes('tpbank') || n.includes('tp bank')) statsAppBreakdown.value['TP BANK'].today++
-  }
+  if (isAppJob(jobName, jobId)) statsTodayAppTotal.value++
 }
 
 // ============================================================================
@@ -132,8 +105,8 @@ const saveDailyNote = async () => {
   const now = new Date()
   const dateStr = `Ngày ${now.getDate()}/${now.getMonth() + 1}`
   let detailArr: string[] = []
-  for (const [name, val] of Object.entries(statsAppBreakdown.value)) {
-    if (val.today > 0) detailArr.push(`${val.today} ${name}`)
+  for (const val of Object.values(statsAppBreakdown.value)) {
+    if (val.today > 0) detailArr.push(`${val.today} ${val.title}`)
   }
   const finalContent = detailArr.length > 0 ? detailArr.join(' - ') : "Chưa có đơn app nào."
   const { isConfirmed } = await Swal.fire({ title: 'CHỐT SỔ HÔM NAY?', text: `${dateStr}: ${finalContent}`, icon: 'question', showCancelButton: true, confirmButtonText: 'LƯU VÀO SỔ TAY', confirmButtonColor: '#10b981' })
@@ -407,7 +380,12 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo', MOMO_REFERRAL_JOB_ID]
+const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
+
+// Doc ID cũ trùng tên hiển thị "GIỚI THIỆU BẠN BÈ ABBANK" với job referral_abbank chuẩn — popup/trang
+// ABBANK ngoài user chỉ đọc doc này khi CHƯA có doc referral_abbank. Sửa ABBANK thì hãy sửa job có
+// ID đúng là "referral_abbank" (không phải "referral-hub") để chắc chắn cập nhật ra ngoài user.
+const LEGACY_VIP_JOB_IDS = ['referral-hub']
 
 const loadVipJobs = () => {
   if (unsubVipJobs) unsubVipJobs()
@@ -415,7 +393,8 @@ const loadVipJobs = () => {
   unsubVipJobs = onSnapshot(
     query(collection(db, 'vip_jobs'), orderBy('order', 'asc')),
     snap => {
-      vipJobs.value = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      // docId Firestore luôn thắng field "id" bên trong data (đề phòng field id cũ lệch doc thật)
+      vipJobs.value = snap.docs.map(d => ({ ...d.data(), id: d.id }))
       // Khởi tạo editingVipJob cho các job mới load
       snap.docs.forEach(d => {
         if (!editingVipJob.value[d.id]) {
@@ -423,14 +402,122 @@ const loadVipJobs = () => {
         }
       })
       isVipJobsLoading.value = false
+      migrateLegacyAbbankDocIfNeeded()
     },
     (e) => { console.error('LỖI VIP JOBS:', e); isVipJobsLoading.value = false }
   )
 }
 
+// Gộp tự động doc ABBANK cũ (vip_jobs/referral-hub, trùng tiêu đề "GIỚI THIỆU BẠN BÈ ABBANK" nhưng
+// sai jobId) sang đúng doc chuẩn vip_jobs/referral_abbank — chạy đúng 1 lần, chỉ khi referral_abbank
+// CHƯA tồn tại, để không mất các chỉnh sửa Admin đã lưu trước đó vào referral-hub. Sau khi chạy xong,
+// vip_jobs/referral_abbank tồn tại nên lần onSnapshot kế tiếp sẽ không chạy lại (idempotent).
+// KHÔNG xóa referral-hub — Admin có thể tự xóa bằng nút "XÓA JOB" sau khi xác nhận đã gộp đúng.
+let isMigratingLegacyAbbankDoc = false
+const migrateLegacyAbbankDocIfNeeded = async () => {
+  if (isMigratingLegacyAbbankDoc) return
+  const legacy = vipJobs.value.find(v => v.id === 'referral-hub')
+  const canonical = vipJobs.value.find(v => v.id === ABBANK_REFERRAL_JOB_ID)
+  if (!legacy || canonical) return
+  isMigratingLegacyAbbankDoc = true
+  try {
+    const migrated = {
+      id: ABBANK_REFERRAL_JOB_ID,
+      jobId: ABBANK_REFERRAL_JOB_ID,
+      title: legacy.title,
+      subtitle: legacy.subtitle || '',
+      reward: legacy.reward,
+      rewardText: legacy.rewardText || '',
+      badge: legacy.badge || 'VIP 💎',
+      color: legacy.color || 'text-orange-500',
+      warning: legacy.warning || '',
+      ageRequirement: legacy.ageRequirement ?? null,
+      status: legacy.status || 'open',
+      order: legacy.order ?? 100,
+      category: 'vip',
+      jobCategory: 'vip',
+      jobType: 'vip',
+      type: 'referral',
+      bankType: 'abbank',
+      referralProgram: 'abbank',
+      isVip: true,
+      migratedFrom: 'referral-hub',
+      updatedAt: serverTimestamp(),
+    }
+    await setDoc(doc(db, 'vip_jobs', ABBANK_REFERRAL_JOB_ID), migrated, { merge: true })
+    if (import.meta.env.DEV) console.log('[Admin] Đã gộp vip_jobs/referral-hub -> vip_jobs/referral_abbank:', migrated)
+  } catch (e) {
+    console.error('LỖI GỘP DOC ABBANK CŨ:', e)
+    isMigratingLegacyAbbankDoc = false
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 7b. CHI TIẾT ĐỐI SOÁT — thống kê job VIP đang "open", realtime theo vip_jobs + reports
+// ----------------------------------------------------------------------------
+const todayStatsReports = ref<any[]>([])
+const isStatsReportsLoading = ref(true)
+let unsubTodayStatsReports: any = null
+
+const startTodayStatsReportsListener = () => {
+  if (unsubTodayStatsReports) unsubTodayStatsReports()
+  isStatsReportsLoading.value = true
+  const now = new Date()
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  unsubTodayStatsReports = onSnapshot(
+    query(collection(db, 'reports'), where('createdAt', '>=', Timestamp.fromDate(startOfDay)), where('status', 'in', ['approved', 'collected'])),
+    snap => {
+      todayStatsReports.value = snap.docs.map(d => d.data())
+      isStatsReportsLoading.value = false
+    },
+    (e) => { console.error('LỖI THỐNG KÊ ĐỐI SOÁT:', e); isStatsReportsLoading.value = false }
+  )
+}
+
+// Khớp report với job VIP theo jobId chuẩn, jobId cũ (job.jobId) hoặc alias (job.aliases[])
+// — tránh trường hợp job đang open nhưng thống kê vẫn 0 do report dùng jobId cũ.
+const matchReportToVipJob = (report: any, job: any) => {
+  const ids = [job.id, job.jobId, ...(Array.isArray(job.aliases) ? job.aliases : [])].filter(Boolean)
+  if (report.jobId) return ids.includes(report.jobId)
+  // Report cũ có thể thiếu jobId — fallback đối chiếu theo tên job chính xác.
+  return !!(report.jobName && job.title && report.jobName.trim().toLowerCase() === String(job.title).trim().toLowerCase())
+}
+
+const visibleVipStatsJobs = computed(() => {
+  return vipJobs.value
+    .filter((job: any) => (job.status || 'open') === 'open')
+    .slice()
+    .sort((a: any, b: any) => (a.order ?? 999) - (b.order ?? 999))
+})
+
+const statsAppBreakdown = computed(() => {
+  const result: Record<string, { jobId: string; title: string; badge?: string; today: number }> = {}
+  for (const job of visibleVipStatsJobs.value) {
+    const jobId = job.jobId || job.id
+    result[jobId] = {
+      jobId,
+      title: job.title || jobId,
+      badge: job.badge || '',
+      today: todayStatsReports.value.filter(r => matchReportToVipJob(r, job)).length
+    }
+  }
+  return result
+})
+
 const saveVipJob = async (jobId: string) => {
-  const data = { ...editingVipJob.value[jobId], updatedAt: serverTimestamp() }
-  delete data.id
+  // Chuẩn hóa: docId Firestore luôn là nguồn sự thật cho id/jobId — không lưu theo id/jobId cũ còn sót
+  // lại trong editingVipJob (vd nếu object đó từng được khởi tạo từ 1 doc id khác trước khi đổi).
+  const data = { ...editingVipJob.value[jobId], id: jobId, jobId, updatedAt: serverTimestamp() }
+  console.log('[Admin save VIP job]', {
+    docId: jobId,
+    id: data.id,
+    jobId: data.jobId,
+    title: data.title,
+    subtitle: data.subtitle,
+    reward: data.reward,
+    rewardText: data.rewardText,
+    status: data.status
+  })
   try {
     await setDoc(doc(db, 'vip_jobs', jobId), data, { merge: true })
     Swal.fire('Đã Lưu!', `Đã cập nhật job "${jobId}"`, 'success')
@@ -465,11 +552,11 @@ const addNewVipJob = async () => {
   if (exists) { alert('Job ID này đã tồn tại!'); return }
   try {
     await setDoc(doc(db, 'vip_jobs', id), {
-      title: id, reward: '0 xu', badge: 'NEW', color: 'text-blue-400',
+      id, jobId: id, title: id, subtitle: '', reward: '0 xu', rewardText: '', badge: 'NEW', color: 'text-blue-400',
       warning: '', status: 'open', order: vipJobs.value.length + 1,
       updatedAt: serverTimestamp()
     })
-    editingVipJob.value[id] = { title: id, reward: '0 xu', badge: 'NEW', color: 'text-blue-400', warning: '', status: 'open', order: vipJobs.value.length + 1 }
+    editingVipJob.value[id] = { id, jobId: id, title: id, subtitle: '', reward: '0 xu', rewardText: '', badge: 'NEW', color: 'text-blue-400', warning: '', status: 'open', order: vipJobs.value.length + 1 }
     newVipJobId.value = ''
     Swal.fire('Đã Thêm!', `Job "${id}" đã được tạo. Hãy chỉnh sửa thông tin.`, 'success')
   } catch (e) { Swal.fire('LỖI!', '' + e, 'error') }
@@ -489,8 +576,11 @@ const seedVipJobs = async () => {
     if (!s) continue
     const newOrder = vipJobs.value.length + idx + 1
     await setDoc(doc(db, 'vip_jobs', id), {
+      jobId: id,
       title: s.title,
+      subtitle: s.subtitle || '',
       reward: s.reward,
+      rewardText: s.rewardText || '',
       badge: s.badge || 'VIP',
       color: s.color || 'text-amber-400',
       warning: s.warning || '',
@@ -500,7 +590,7 @@ const seedVipJobs = async () => {
       updatedAt: serverTimestamp()
     })
     editingVipJob.value[id] = {
-      title: s.title, reward: s.reward,
+      jobId: id, title: s.title, subtitle: s.subtitle || '', reward: s.reward, rewardText: s.rewardText || '',
       badge: s.badge || 'VIP', color: s.color || 'text-amber-400',
       warning: s.warning || '', ageRequirement: s.ageRequirement ?? null,
       status: 'open', order: newOrder
@@ -736,6 +826,7 @@ onMounted(() => {
       loadData(statusFilter.value)
       loadDashboardStats()
       loadVipJobs()
+      startTodayStatsReportsListener()
       loadAppConfig()
       loadSupportConfig()
     } else {
@@ -873,8 +964,8 @@ const approveReport = async (report: any) => {
         approvedBy: auth.currentUser?.email || auth.currentUser?.uid || null
       }
 
-      // Tái khẳng định các field phân loại VIP cho đơn giới thiệu MOMO — đảm bảo đơn luôn
-      // được tính là nhiệm vụ VIP dù report gốc có thiếu field nào đó.
+      // Tái khẳng định các field phân loại VIP cho đơn giới thiệu MOMO/ABBANK/LPBANK PLUS —
+      // đảm bảo đơn luôn được tính là nhiệm vụ VIP dù report gốc có thiếu field nào đó.
       if (report.jobId === MOMO_REFERRAL_JOB_ID) {
         reportUpdates.jobCategory = 'vip'
         reportUpdates.category = 'vip'
@@ -882,6 +973,20 @@ const approveReport = async (report: any) => {
         reportUpdates.isVip = true
         reportUpdates.bankType = 'momo'
         reportUpdates.referralProgram = 'momo'
+      } else if (report.jobId === ABBANK_REFERRAL_JOB_ID) {
+        reportUpdates.jobCategory = 'vip'
+        reportUpdates.category = 'vip'
+        reportUpdates.jobType = 'vip'
+        reportUpdates.isVip = true
+        reportUpdates.bankType = 'abbank'
+        reportUpdates.referralProgram = 'abbank'
+      } else if (report.jobId === LPBANK_PLUS_REFERRAL_JOB_ID) {
+        reportUpdates.jobCategory = 'vip'
+        reportUpdates.category = 'vip'
+        reportUpdates.jobType = 'vip'
+        reportUpdates.isVip = true
+        reportUpdates.bankType = 'lpbank'
+        reportUpdates.referralProgram = 'lpbank'
       }
 
       if (isReferral) {
@@ -1152,15 +1257,21 @@ const handleAdminLogout = async () => {
           <span>CHI TIẾT ĐỐI SOÁT</span>
           <span class="bg-blue-100 text-[var(--admin-primary)] px-2 py-0.5 rounded text-[8px] border border-blue-200">LIVE</span>
         </p>
-        <div class="flex justify-center items-center py-6" v-if="isStatsLoading">
+        <div class="flex justify-center items-center py-6" v-if="isVipJobsLoading || isStatsReportsLoading">
           <div class="w-6 h-6 border-2 border-[var(--admin-primary)] border-t-transparent rounded-full animate-spin"></div>
         </div>
+        <div class="py-6 text-center text-slate-400 text-[10px] tracking-widest" v-else-if="!visibleVipStatsJobs.length">
+          KHÔNG CÓ JOB VIP NÀO ĐANG MỞ.
+        </div>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3" v-else>
-          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-xl p-4 flex flex-col gap-2" v-for="(data, name) in statsAppBreakdown" :key="name">
-            <div class="text-[10px] text-[var(--admin-primary)] font-black tracking-widest uppercase border-b border-[var(--admin-border)] pb-2">{{ name }}</div>
+          <div class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-xl p-4 flex flex-col gap-2" v-for="job in visibleVipStatsJobs" :key="job.id">
+            <div class="text-[10px] text-[var(--admin-primary)] font-black tracking-widest uppercase border-b border-[var(--admin-border)] pb-2 flex items-center justify-between gap-2">
+              <span class="truncate">{{ statsAppBreakdown[job.jobId || job.id]?.title || job.title || job.id }}</span>
+              <span class="bg-amber-100 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded text-[8px] shrink-0 normal-case" v-if="job.badge">{{ job.badge }}</span>
+            </div>
             <div class="flex justify-between items-center mt-1">
               <span class="text-[var(--admin-muted)] text-[10px] uppercase font-bold">Hôm nay:</span>
-              <span :class="['text-base font-black', data.today > 0 ? 'text-[var(--admin-success)]' : 'text-[var(--admin-muted)]']">{{ data.today }}</span>
+              <span :class="['text-base font-black', (statsAppBreakdown[job.jobId || job.id]?.today || 0) > 0 ? 'text-[var(--admin-success)]' : 'text-[var(--admin-muted)]']">{{ statsAppBreakdown[job.jobId || job.id]?.today || 0 }}</span>
             </div>
           </div>
         </div>
@@ -1447,8 +1558,13 @@ const handleAdminLogout = async () => {
         <div class="space-y-4" v-else-if="vipJobs.length">
           <div v-for="job in vipJobs" :key="job.id" class="bg-[var(--admin-card-soft)] border border-[var(--admin-border)] rounded-2xl p-5 space-y-4">
             <!-- Header -->
-            <div class="flex items-center justify-between">
-              <span class="text-[var(--admin-warning)] text-xs font-black tracking-widest uppercase">ID: {{ job.id }}</span>
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[var(--admin-warning)] text-xs font-black tracking-widest uppercase">ID: {{ job.id }}</span>
+                <span v-if="LEGACY_VIP_JOB_IDS.includes(job.id)" class="bg-red-100 text-[var(--admin-danger)] border border-red-200 px-2 py-0.5 rounded text-[8px] normal-case font-sans">
+                  ⚠️ ID CŨ — Sửa job "referral_abbank" mới cập nhật ra ngoài user
+                </span>
+              </div>
               <div class="flex gap-2 flex-wrap">
                 <button @click="setVipJobStatus(job.id, 'open')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'open' ? 'bg-emerald-500 text-white' : 'bg-white text-slate-400 border border-[var(--admin-border)] hover:bg-emerald-50']">OPEN</button>
                 <button @click="setVipJobStatus(job.id, 'paused')" :class="['text-[9px] px-3 py-1.5 rounded-lg font-black transition-all', (editingVipJob[job.id]?.status || job.status) === 'paused' ? 'bg-amber-500 text-white' : 'bg-white text-slate-400 border border-[var(--admin-border)] hover:bg-amber-50']">PAUSED</button>
@@ -1463,8 +1579,16 @@ const handleAdminLogout = async () => {
                 <input v-model="editingVipJob[job.id].title" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
               </div>
               <div>
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">SUBTITLE (mô tả ngắn)</label>
+                <input v-model="editingVipJob[job.id].subtitle" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" placeholder="Vd: Mời bạn bè đăng ký nhận 85.000 xu/lượt" />
+              </div>
+              <div>
                 <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">REWARD (vd: 85.000 xu)</label>
                 <input v-model="editingVipJob[job.id].reward" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" />
+              </div>
+              <div>
+                <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">REWARD TEXT (hiển thị, vd: 85.000 xu / lượt)</label>
+                <input v-model="editingVipJob[job.id].rewardText" class="w-full bg-white text-[var(--admin-text)] text-xs py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none focus:border-[var(--admin-warning)] font-sans normal-case not-italic" placeholder="Để trống = tự dùng REWARD" />
               </div>
               <div>
                 <label class="text-[9px] text-[var(--admin-muted)] tracking-widest block mb-1">BADGE (vd: HOT 🔥)</label>

@@ -2,31 +2,18 @@
 import { ref, computed } from 'vue'
 import Swal from 'sweetalert2'
 import { jobsData } from '@/data/jobs'
-import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
-import MomoReferralProofModal from '@/components/MomoReferralProofModal.vue'
+import { LPBANK_PLUS_REFERRAL_JOB_ID } from '@/utils/referralLpbankPlus'
+import LpbankPlusReferralProofModal from '@/components/LpbankPlusReferralProofModal.vue'
 
-const props = defineProps<{ show: boolean; myReports?: any[]; vipJobs?: any[] }>()
+const props = defineProps<{ show: boolean; myReports?: any[] }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const baseUrl = import.meta.env.BASE_URL
 
-// Đọc cấu hình thật từ Firestore vip_jobs (doc referral_momo) — Admin sửa REWARD/REWARD TEXT
-// trong CẤU HÌNH JOB VIP thì modal này phải đổi theo, không còn hard-code 85.000 XU cố định.
-const momoConfig = computed(() => (props.vipJobs || []).find((v: any) => (v.jobId || v.id) === MOMO_REFERRAL_JOB_ID))
-const momoRewardAmount = computed(() => {
-  const digits = String(momoConfig.value?.reward || '').replace(/\D/g, '')
-  return digits ? Number(digits) : MOMO_REFERRAL_REWARD
-})
-const momoRewardText = computed(() => {
-  if (momoConfig.value?.rewardText) return momoConfig.value.rewardText
-  return `${momoRewardAmount.value.toLocaleString('vi-VN')} XU / LƯỢT HỢP LỆ`
-})
-
-// Hướng dẫn copy nguyên từ job VÍ MOMO gốc (src/data/jobs.ts -> 'momo') — không bịa nội dung mới
-const momoJob = jobsData['momo']
-const momoSteps = momoJob.steps as any[]
-const stepById = (id: number) => momoSteps.find(s => s.id === id)
-const stripStepPrefix = (title: string) => title.replace(/^Bước\s*\d+:\s*/i, '')
+// Hướng dẫn copy nguyên từ job APP LPBANK PLUS gốc (src/data/jobs.ts -> 'lpbank-plus'.quickSteps) — không bịa nội dung mới
+const lpbankJob = jobsData['lpbank-plus']
+const lpbankSteps = lpbankJob.quickSteps as any[]
+const stepById = (id: number) => lpbankSteps.find(s => s.id === id)
 
 type ViewState = 'hub' | 'guide' | 'history'
 const view = ref<ViewState>('hub')
@@ -76,7 +63,6 @@ const copyText = (text: string, toastTitle: string) => {
     document.body.removeChild(textArea)
   })
 }
-const copyReferralCode = () => copyText(stepById(2).referralCode, 'Đã sao chép mã giới thiệu')
 const copyOrderCode = () => { if (lastSubmittedOrder.value) copyText(lastSubmittedOrder.value.orderCode, 'Đã sao chép mã đơn') }
 
 const closeSuccessAndShowHistory = () => { showSuccess.value = false; openHistory() }
@@ -88,9 +74,9 @@ const formatDate = (ts: any) => {
 }
 
 const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()
-const momoHistory = computed(() =>
+const lpbankHistory = computed(() =>
   (props.myReports || [])
-    .filter(r => r.jobId === MOMO_REFERRAL_JOB_ID)
+    .filter(r => r.jobId === LPBANK_PLUS_REFERRAL_JOB_ID)
     .slice()
     .sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
 )
@@ -119,10 +105,10 @@ const statusClass = (rp: any) => {
         </button>
 
         <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-3xl">👥</div>
-        <h2 class="text-xl md:text-2xl text-white tracking-tighter leading-tight mb-2">GIỚI THIỆU BẠN BÈ<br/><span class="text-amber-400">ĐĂNG KÝ APP VÍ MOMO</span></h2>
+        <h2 class="text-xl md:text-2xl text-white tracking-tighter leading-tight mb-2">GIỚI THIỆU BẠN BÈ<br/><span class="text-amber-400">ĐĂNG KÝ APP LPBANK PLUS</span></h2>
         <div class="bg-[#052e1f] border border-[#005c3c] rounded-full px-5 py-2 w-max mx-auto flex items-center gap-2 shadow-inner mb-6">
           <span class="text-[#f59e0b] text-lg">⚡</span>
-          <span class="text-[#00df89] text-[12px] md:text-sm tracking-tighter">THƯỞNG {{ momoRewardText }}</span>
+          <span class="text-[#00df89] text-[12px] md:text-sm tracking-tighter">THƯỞNG 85.000 XU / LƯỢT HỢP LỆ</span>
         </div>
 
         <div class="space-y-2">
@@ -139,10 +125,10 @@ const statusClass = (rp: any) => {
 
         <div class="mt-5 bg-gradient-to-r from-orange-950/80 to-red-950/60 border-2 border-orange-500/60 rounded-2xl p-4 space-y-3 shadow-[0_0_25px_rgba(249,115,22,0.15)] text-left">
           <p class="text-orange-300 text-[13px] md:text-[15px] font-black normal-case leading-snug flex items-start gap-2">
-            <span class="text-lg shrink-0">⚠️</span><span>1 điện thoại chỉ được đăng ký 1 tài khoản Ví MoMo duy nhất.</span>
+            <span class="text-lg shrink-0">⚠️</span><span>1 điện thoại chỉ được đăng ký 1 tài khoản LPBank Plus duy nhất.</span>
           </p>
           <p class="text-orange-300 text-[13px] md:text-[15px] font-black normal-case leading-snug flex items-start gap-2">
-            <span class="text-lg shrink-0">⚠️</span><span>1 CCCD/CMND chỉ được đăng ký 1 tài khoản Ví MoMo duy nhất.</span>
+            <span class="text-lg shrink-0">⚠️</span><span>1 CCCD/CMND chỉ được đăng ký 1 tài khoản LPBank Plus duy nhất.</span>
           </p>
           <p class="text-emerald-300 text-[13px] md:text-[15px] font-black normal-case leading-snug flex items-start gap-2">
             <span class="text-lg shrink-0">✅</span><span>Được giới thiệu bạn bè không giới hạn — 1 người = 1 nhiệm vụ VIP, 10 người = 10 nhiệm vụ VIP.</span>
@@ -150,7 +136,7 @@ const statusClass = (rp: any) => {
         </div>
       </div>
 
-      <!-- HƯỚNG DẪN (copy từ job VÍ MOMO gốc) -->
+      <!-- HƯỚNG DẪN (copy từ job APP LPBANK PLUS gốc) -->
       <div v-else-if="view === 'guide'" class="relative bg-[#111726] border border-slate-800 w-full max-w-lg rounded-[36px] p-6 md:p-8 shadow-2xl max-h-[85vh] overflow-y-auto text-left font-black italic uppercase">
         <div class="flex items-center justify-between mb-5">
           <button @click="backToHub" class="text-[10px] tracking-[3px] text-slate-500 hover:text-white flex items-center gap-1">
@@ -161,7 +147,7 @@ const statusClass = (rp: any) => {
           </button>
         </div>
 
-        <h2 class="text-lg text-white tracking-tight mb-1">📖 HƯỚNG DẪN {{ momoJob.title }}</h2>
+        <h2 class="text-lg text-white tracking-tight mb-1">📖 HƯỚNG DẪN {{ lpbankJob.title }}</h2>
         <p class="text-slate-400 text-[10px] font-medium normal-case leading-relaxed mb-6">
           Hướng dẫn bạn bè làm theo các bước dưới đây để đăng ký thành công, sau đó bạn chụp lại ảnh và gửi bằng chứng.
         </p>
@@ -170,28 +156,33 @@ const statusClass = (rp: any) => {
           <div class="relative pl-9">
             <div class="absolute left-3.5 top-1 bottom-0 w-[2px] bg-slate-700/30"></div>
             <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-xs shadow-lg">1</div>
-            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stripStepPrefix(stepById(1).title) }}</h4>
+            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stepById(1).title }}</h4>
             <p class="text-slate-400 text-[11px] italic normal-case opacity-80 leading-relaxed mb-3 whitespace-pre-line">{{ stepById(1).content }}</p>
-            <a class="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-3 rounded-xl text-[11px] not-italic hover:shadow-lg transition-all active:scale-95"
-               :href="stepById(1).downloadLink" target="_blank">
-              📥 {{ stepById(1).buttonText }}
-            </a>
+            <div class="mb-3 bg-[#1a0f14] border border-red-500/40 rounded-xl p-3.5 flex items-start gap-2 shadow-xl not-italic" v-if="stepById(1).note">
+              <span class="text-red-500 text-base shrink-0">⚠️</span>
+              <p class="text-red-400 text-[10px] font-black normal-case tracking-wide leading-relaxed">{{ stepById(1).note }}</p>
+            </div>
+            <div v-if="stepById(1).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
+                 @click="openImage(baseUrl + stepById(1).img)">
+              <img class="w-full h-auto object-contain" :src="baseUrl + stepById(1).img" />
+            </div>
           </div>
 
           <div class="relative pl-9">
             <div class="absolute left-3.5 top-1 bottom-0 w-[2px] bg-slate-700/30"></div>
             <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-xs shadow-lg">2</div>
-            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stripStepPrefix(stepById(2).title) }}</h4>
+            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stepById(2).title }}</h4>
             <p class="text-slate-400 text-[11px] italic normal-case opacity-80 leading-relaxed mb-3 whitespace-pre-line">{{ stepById(2).content }}</p>
-            <div class="mb-3 bg-[#0d121f] border border-amber-500/40 p-3.5 rounded-xl flex items-center gap-3 shadow-xl not-italic">
-              <div class="flex-1">
-                <p class="text-[8px] text-amber-400 tracking-[2px] uppercase mb-0.5">Mã giới thiệu</p>
-                <p class="text-white text-base tracking-wider select-all">{{ stepById(2).referralCode }}</p>
-              </div>
-              <button class="bg-amber-500 hover:bg-amber-400 text-[#090e17] px-3.5 py-2 rounded-lg text-[10px] active:scale-95 transition-all shrink-0" @click="copyReferralCode">
-                📋 SAO CHÉP
-              </button>
-            </div>
+            <a v-if="lpbankJob.zaloReferralLink" :href="lpbankJob.zaloReferralLink" target="_blank"
+               class="mb-3 inline-flex items-center gap-2 bg-[#0068FF] hover:bg-blue-500 text-white px-5 py-3 rounded-xl text-[11px] not-italic hover:shadow-lg transition-all active:scale-95">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-4 h-4" />
+              THAM GIA NHÓM ZALO
+            </a>
+            <button v-else disabled
+               class="mb-3 inline-flex items-center gap-2 bg-slate-800 text-slate-500 px-5 py-3 rounded-xl text-[11px] not-italic cursor-not-allowed opacity-70">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-4 h-4 grayscale" />
+              THAM GIA NHÓM ZALO (SẮP CÓ)
+            </button>
             <div v-if="stepById(2).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
                  @click="openImage(baseUrl + stepById(2).img)">
               <img class="w-full h-auto object-contain" :src="baseUrl + stepById(2).img" />
@@ -199,23 +190,12 @@ const statusClass = (rp: any) => {
           </div>
 
           <div class="relative pl-9">
-            <div class="absolute left-3.5 top-1 bottom-0 w-[2px] bg-slate-700/30"></div>
             <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-xs shadow-lg">3</div>
-            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stripStepPrefix(stepById(3).title) }}</h4>
+            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stepById(3).title }}</h4>
             <p class="text-slate-400 text-[11px] italic normal-case opacity-80 leading-relaxed mb-3 whitespace-pre-line">{{ stepById(3).content }}</p>
             <div v-if="stepById(3).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
                  @click="openImage(baseUrl + stepById(3).img)">
               <img class="w-full h-auto object-contain" :src="baseUrl + stepById(3).img" />
-            </div>
-          </div>
-
-          <div class="relative pl-9">
-            <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-xs shadow-lg">4</div>
-            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stripStepPrefix(stepById(4).title) }}</h4>
-            <p class="text-slate-400 text-[11px] italic normal-case opacity-80 leading-relaxed mb-3 whitespace-pre-line">{{ stepById(4).content }}</p>
-            <div v-if="stepById(4).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
-                 @click="openImage(baseUrl + stepById(4).img)">
-              <img class="w-full h-auto object-contain" :src="baseUrl + stepById(4).img" />
             </div>
           </div>
         </div>
@@ -231,19 +211,19 @@ const statusClass = (rp: any) => {
           <button @click="backToHub" class="text-[10px] tracking-[3px] text-slate-500 hover:text-white flex items-center gap-1">
             <span class="text-base font-light not-italic font-sans">‹</span> QUAY LẠI
           </button>
-          <h2 class="text-lg text-white tracking-tight">📜 LỊCH SỬ ĐƠN MOMO</h2>
+          <h2 class="text-lg text-white tracking-tight">📜 LỊCH SỬ ĐƠN LPBANK PLUS</h2>
           <button @click="resetAndClose" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        <div v-if="!momoHistory.length" class="text-center py-12">
+        <div v-if="!lpbankHistory.length" class="text-center py-12">
           <div class="text-4xl mb-3">📭</div>
-          <p class="text-slate-500 text-[11px] normal-case font-bold leading-relaxed">Bạn chưa có đơn giới thiệu MoMo nào.</p>
+          <p class="text-slate-500 text-[11px] normal-case font-bold leading-relaxed">Bạn chưa có đơn giới thiệu LPBank Plus nào.</p>
         </div>
 
         <div v-else class="space-y-3">
-          <div v-for="rp in momoHistory" :key="rp.id" class="bg-[#0d121f] border rounded-2xl p-4"
+          <div v-for="rp in lpbankHistory" :key="rp.id" class="bg-[#0d121f] border rounded-2xl p-4"
                :class="rp.status === 'rejected' ? 'border-rose-500/30' : rp.status === 'pending' ? 'border-yellow-500/20' : 'border-emerald-500/20'">
             <div class="flex justify-between items-start gap-3 mb-2">
               <div class="font-sans not-italic normal-case min-w-0">
@@ -270,7 +250,7 @@ const statusClass = (rp: any) => {
           </div>
           <h2 class="text-xl text-white tracking-tight mb-2">NỘP ĐƠN THÀNH CÔNG</h2>
           <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-4">
-            Đơn giới thiệu bạn bè APP VÍ MOMO đã được gửi. Vui lòng chờ admin phê duyệt.
+            Đơn giới thiệu bạn bè APP LPBANK PLUS đã được gửi. Vui lòng chờ admin phê duyệt.
           </p>
 
           <div class="bg-[#0d121f] border border-emerald-500/40 rounded-2xl p-4 mb-4 text-left space-y-2">
@@ -303,7 +283,7 @@ const statusClass = (rp: any) => {
         <img class="max-w-full max-h-[90vh] rounded-2xl object-contain cursor-default" :src="selectedImage" @click.stop />
       </div>
 
-      <MomoReferralProofModal :show="showProof" :vipJobs="vipJobs" @close="showProof = false" @submitted="handleSubmitted" />
+      <LpbankPlusReferralProofModal :show="showProof" @close="showProof = false" @submitted="handleSubmitted" />
     </div>
   </Transition>
 </template>
