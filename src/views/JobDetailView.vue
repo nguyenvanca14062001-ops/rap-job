@@ -113,11 +113,27 @@ const handleCopy = (text: string) => {
           </span>
         </div>
 
-        <div class="mt-6 max-w-xl mx-auto bg-[#1a0f14] border border-red-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-in fade-in zoom-in duration-500" v-if="currentJob.warning">
+        <div class="mt-6 max-w-xl mx-auto bg-[#1a0f14] border border-red-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-in fade-in zoom-in duration-500" v-if="currentJob.warning && jobId !== 'abbank' && jobId !== 'lpbank-plus'">
           <div class="flex items-start gap-3">
             <span class="text-red-500 text-xl animate-pulse">⚠️</span>
             <p class="text-red-500 text-[11px] md:text-xs font-black uppercase italic tracking-[1px] leading-relaxed text-left">
               {{ currentJob.warning }}
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-6 max-w-xl mx-auto bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700 text-left" v-if="jobId === 'abbank' || jobId === 'lpbank-plus'">
+          <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
+          <div class="text-2xl md:text-3xl animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.8)] mt-1">🪝</div>
+          <div>
+            <h4 class="text-yellow-400 font-black italic uppercase text-[12px] md:text-sm tracking-widest mb-1.5 drop-shadow-md">
+              MẸO KIẾM TIỀN:
+            </h4>
+            <p class="text-slate-300 text-[11px] md:text-[13px] font-medium leading-relaxed normal-case">
+              Nếu bạn đã đăng ký APP này rồi, có thể <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">giới thiệu bạn bè / người thân đăng ký</span> và chụp lại ảnh bằng chứng gửi lên hệ thống, bạn <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">vẫn được nhận hoa hồng</span> bình thường nhé! 🚀
+            </p>
+            <p class="mt-2 text-slate-300 text-[11px] md:text-[13px] font-medium leading-relaxed normal-case" v-if="jobId === 'abbank'">
+              Chỉ có thể giới thiệu <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">1 lần duy nhất</span>, vì ABBANK không có chương trình giới thiệu bạn bè.
             </p>
           </div>
         </div>
@@ -187,8 +203,8 @@ const handleCopy = (text: string) => {
                   THAM GIA NHÓM ZALO (SẮP CÓ)
                 </button>
 
-                <div class="rounded-2xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in max-w-sm" v-if="step.img" @click="openImage(baseUrl + step.img)">
-                  <img class="w-full h-auto object-contain" :src="baseUrl + step.img" />
+                <div class="w-full max-w-sm mx-auto flex items-center justify-center rounded-2xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in" v-if="step.img" @click="openImage(baseUrl + step.img)">
+                  <img class="max-w-full max-h-[42vh] sm:max-h-[380px] w-auto h-auto" :src="baseUrl + step.img" />
                 </div>
               </div>
             </div>
@@ -200,7 +216,7 @@ const handleCopy = (text: string) => {
         <div class="text-center space-y-5">
 
          <div class="mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700"
-                v-if="['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'abbank', 'liobank', 'app-chung-khoan-4', 'lpbank-plus'].includes(route.params.id as string)">
+                v-if="['msb-bank', 'vpbank', 'tpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'app-chung-khoan-3', 'liobank', 'app-chung-khoan-4', 'lpbank-plus'].includes(route.params.id as string)">
 
             <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
 
@@ -345,10 +361,10 @@ const handleCopy = (text: string) => {
               </div>
 
               <div class="flex flex-col md:flex-row gap-6 items-start">
-                <div class="w-full md:max-w-[400px] rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
+                <div class="w-full md:max-w-[400px] flex items-center justify-center rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
                      v-if="step.img"
                      @click="openImage(baseUrl + step.img)">
-                  <img class="w-full h-auto object-contain hover:scale-105 transition-transform duration-500" :src="baseUrl + step.img" />
+                  <img class="max-w-full max-h-[42vh] sm:max-h-[400px] w-auto h-auto hover:scale-105 transition-transform duration-500" :src="baseUrl + step.img" />
                   <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">🔍 CHẠM ĐỂ PHÓNG TO</div>
                 </div>
 

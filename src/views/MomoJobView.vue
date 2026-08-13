@@ -145,9 +145,9 @@ const handleCopy = (text: string) => {
 
           <div v-if="stepById(2).img">
             <p class="text-blue-400 text-[10px] font-black tracking-[2px] mb-2 uppercase not-italic">Ảnh hướng dẫn nhập mã giới thiệu</p>
-            <div class="w-full sm:max-w-sm rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
+            <div class="w-full sm:max-w-sm mx-auto flex items-center justify-center rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
                  @click="openImage(baseUrl + stepById(2).img)">
-              <img class="w-full h-auto object-contain hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(2).img" />
+              <img class="max-w-full max-h-[42vh] sm:max-h-[380px] w-auto h-auto hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(2).img" />
               <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">🔍 CHẠM ĐỂ PHÓNG TO</div>
             </div>
           </div>
@@ -165,9 +165,9 @@ const handleCopy = (text: string) => {
             <p class="text-amber-300 text-[11px] md:text-xs font-black uppercase not-italic tracking-[0.5px] leading-relaxed">{{ stepById(3).note }}</p>
           </div>
 
-          <div v-if="stepById(3).img" class="w-full sm:max-w-sm rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
+          <div v-if="stepById(3).img" class="w-full sm:max-w-sm mx-auto flex items-center justify-center rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
                @click="openImage(baseUrl + stepById(3).img)">
-            <img class="w-full h-auto object-contain hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(3).img" />
+            <img class="max-w-full max-h-[42vh] sm:max-h-[380px] w-auto h-auto hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(3).img" />
             <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">🔍 CHẠM ĐỂ PHÓNG TO</div>
           </div>
         </div>
@@ -178,9 +178,9 @@ const handleCopy = (text: string) => {
           <h4 class="text-sky-400 text-base md:text-lg font-black not-italic mb-2 uppercase tracking-tight">{{ stripStepPrefix(stepById(4).title) }}</h4>
           <p class="text-slate-400 text-xs italic normal-case opacity-80 leading-relaxed mb-5 whitespace-pre-line">{{ stepById(4).content }}</p>
 
-          <div v-if="stepById(4).img" class="w-full sm:max-w-sm rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
+          <div v-if="stepById(4).img" class="w-full sm:max-w-sm mx-auto flex items-center justify-center rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl bg-slate-900 cursor-zoom-in group relative"
                @click="openImage(baseUrl + stepById(4).img)">
-            <img class="w-full h-auto object-contain hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(4).img" />
+            <img class="max-w-full max-h-[42vh] sm:max-h-[380px] w-auto h-auto hover:scale-105 transition-transform duration-500" :src="baseUrl + stepById(4).img" />
             <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">🔍 CHẠM ĐỂ PHÓNG TO</div>
           </div>
         </div>

@@ -53,9 +53,9 @@ const handleOpenProof = () => emit('openProof')
               THAM GIA NHÓM ZALO (SẮP CÓ)
             </button>
 
-            <div v-if="step.img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative mt-1"
+            <div v-if="step.img" class="w-full sm:max-w-xs flex items-center justify-center rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative mt-1"
                  @click="openImage(baseUrl + step.img)">
-              <img class="w-full h-auto object-contain" :src="baseUrl + step.img" />
+              <img class="max-w-full max-h-[35vh] w-auto h-auto" :src="baseUrl + step.img" />
               <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded">🔍 CHẠM ĐỂ PHÓNG TO</div>
             </div>
           </div>
