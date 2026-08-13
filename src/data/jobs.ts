@@ -157,9 +157,9 @@ export const jobsData: Record<string, any> = {
         id: 2,
         title: "TẢI MÃ QR VÀ GHIM VÀO BÌNH LUẬN ĐẦU TIÊN",
         content: "Sau khi đăng bài, vào phần bình luận → Tải QR về máy → Đăng ảnh QR làm bình luận đầu tiên để mọi người dễ truy cập đăng ký.",
-        downloadLink: "images/anh-ma-qr14.jpg",
+        downloadLink: "images/anh-ma-qr15.jpg",
         buttonText: "📥 TẢI MÃ QR VỀ MÁY",
-        img: "images/anh-ma-qr14.jpg",
+        img: "images/anh-ma-qr15.jpg",
         note: "BẮT BUỘC: Phải ghim QR làm bình luận đầu tiên bên dưới bài đăng."
       },
       {
