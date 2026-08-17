@@ -7,6 +7,9 @@ import Swal from 'sweetalert2'
 import LpbankPlusGuideModal from '@/components/LpbankPlusGuideModal.vue'
 import LpbankPlusProofModal from '@/components/LpbankPlusProofModal.vue'
 import LpbankPlusHistoryModal from '@/components/LpbankPlusHistoryModal.vue'
+import VietcombankGuideModal from '@/components/VietcombankGuideModal.vue'
+import VietcombankProofModal from '@/components/VietcombankProofModal.vue'
+import VietcombankHistoryModal from '@/components/VietcombankHistoryModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,6 +31,22 @@ const openLpGuide = () => { showLpGuide.value = true }
 const openLpProof = () => { showLpGuide.value = false; showLpProof.value = true }
 const openLpHistory = () => { showLpHistory.value = true }
 const handleLpSubmitted = () => { showLpProof.value = false; showLpSuccess.value = true }
+
+// Job VIETCOMBANK — clone của khối APP LPBANK PLUS ở trên, dùng giao diện popup riêng tương tự
+const isVietcombank = jobId === 'vietcombank'
+const isPopupJob = isLpbankPlus || isVietcombank
+const showVcGuide = ref(false)
+const showVcProof = ref(false)
+const showVcHistory = ref(false)
+const showVcSuccess = ref(false)
+const openVcGuide = () => { showVcGuide.value = true }
+const openVcProof = () => { showVcGuide.value = false; showVcProof.value = true }
+const openVcHistory = () => { showVcHistory.value = true }
+const handleVcSubmitted = () => { showVcProof.value = false; showVcSuccess.value = true }
+
+const openPopupGuide = () => { isLpbankPlus ? openLpGuide() : openVcGuide() }
+const openPopupProof = () => { isLpbankPlus ? openLpProof() : openVcProof() }
+const openPopupHistory = () => { isLpbankPlus ? openLpHistory() : openVcHistory() }
 
 const currentJob = computed((): any => {
   const override = vipJobs.value.find((v: any) => v.id === jobId)
@@ -113,7 +132,7 @@ const handleCopy = (text: string) => {
           </span>
         </div>
 
-        <div class="mt-6 max-w-xl mx-auto bg-[#1a0f14] border border-red-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-in fade-in zoom-in duration-500" v-if="currentJob.warning && jobId !== 'abbank' && jobId !== 'lpbank-plus'">
+        <div class="mt-6 max-w-xl mx-auto bg-[#1a0f14] border border-red-500/40 rounded-2xl p-4 shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-in fade-in zoom-in duration-500" v-if="currentJob.warning && jobId !== 'abbank' && !isPopupJob">
           <div class="flex items-start gap-3">
             <span class="text-red-500 text-xl animate-pulse">⚠️</span>
             <p class="text-red-500 text-[11px] md:text-xs font-black uppercase italic tracking-[1px] leading-relaxed text-left">
@@ -122,7 +141,7 @@ const handleCopy = (text: string) => {
           </div>
         </div>
 
-        <div class="mt-6 max-w-xl mx-auto bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700 text-left" v-if="jobId === 'abbank' || jobId === 'lpbank-plus'">
+        <div class="mt-6 max-w-xl mx-auto bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700 text-left" v-if="jobId === 'abbank' || isPopupJob">
           <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
           <div class="text-2xl md:text-3xl animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.8)] mt-1">🪝</div>
           <div>
@@ -146,21 +165,21 @@ const handleCopy = (text: string) => {
           </a>
         </div>
 
-        <p v-if="isLpbankPlus && currentJob.shortDesc" class="mt-5 max-w-xl mx-auto text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed">
+        <p v-if="isPopupJob && currentJob.shortDesc" class="mt-5 max-w-xl mx-auto text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed">
           {{ currentJob.shortDesc }}
         </p>
       </div>
 
-      <!-- KHỐI RIÊNG CHO APP LPBANK PLUS: 3 nút CTA mở popup tại chỗ -->
-      <template v-if="isLpbankPlus">
+      <!-- KHỐI RIÊNG CHO APP LPBANK PLUS / VIETCOMBANK: 3 nút CTA mở popup tại chỗ -->
+      <template v-if="isPopupJob">
         <section class="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button @click="openLpGuide" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
+          <button @click="openPopupGuide" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
             📖 XEM HƯỚNG DẪN
           </button>
-          <button @click="openLpProof" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#00df89] hover:bg-[#00c578] text-[#090e17] shadow-lg active:scale-95 transition-all">
+          <button @click="openPopupProof" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#00df89] hover:bg-[#00c578] text-[#090e17] shadow-lg active:scale-95 transition-all">
             📥 GỬI BẰNG CHỨNG
           </button>
-          <button @click="openLpHistory" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
+          <button @click="openPopupHistory" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
             📜 LỊCH SỬ NỘP ĐƠN
           </button>
         </section>
@@ -212,7 +231,7 @@ const handleCopy = (text: string) => {
         </section>
       </template>
 
-      <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative" v-if="!isLpbankPlus">
+      <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative" v-if="!isPopupJob">
         <div class="text-center space-y-5">
 
          <div class="mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700"
@@ -388,7 +407,7 @@ const handleCopy = (text: string) => {
         </div>
       </div>
 
-      <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20" v-if="!isLpbankPlus">
+      <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20" v-if="!isPopupJob">
         <h2 class="text-lg text-slate-400 font-black italic mb-6 tracking-wide uppercase opacity-60">BẠN ĐÃ LÀM XONG?</h2>
 
         <button class="w-full bg-[#00df89] hover:bg-[#00c578] text-[#090e17] py-5 rounded-2xl text-xl font-black italic uppercase shadow-[0_10px_40px_rgba(0,223,137,0.25)] transition-all active:scale-95" @click="router.push(`/submit-report?job=${route.params.id}`)">
@@ -419,6 +438,35 @@ const handleCopy = (text: string) => {
                 XEM LỊCH SỬ NỘP ĐƠN
               </button>
               <button @click="showLpSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
+    <template v-if="isVietcombank">
+      <VietcombankGuideModal :show="showVcGuide" @close="showVcGuide = false" @openProof="openVcProof" />
+      <VietcombankProofModal :show="showVcProof" @close="showVcProof = false" @submitted="handleVcSubmitted" />
+      <VietcombankHistoryModal :show="showVcHistory" @close="showVcHistory = false" />
+
+      <Transition name="fade">
+        <div v-if="showVcSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showVcSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng VIETCOMBANK thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showVcSuccess = false; openVcHistory()" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showVcSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
                 ĐÓNG
               </button>
             </div>

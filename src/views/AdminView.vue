@@ -87,15 +87,15 @@ const loadDashboardStats = async () => {
     statsTodayTotal.value = countSnap.data().count
     detailSnap.forEach(doc => {
       const data = doc.data()
-      if (isAppJob(data.jobName, data.jobId)) statsTodayAppTotal.value++
+      if (isAppJob(data)) statsTodayAppTotal.value++
     })
   } catch (err) { console.error("Lỗi tải thống kê:", err) }
   finally { isStatsLoading.value = false }
 }
 
-const updateLocalStatsOnApprove = (jobName: string, jobId?: string) => {
+const updateLocalStatsOnApprove = (report: Record<string, any>) => {
   statsTodayTotal.value++
-  if (isAppJob(jobName, jobId)) statsTodayAppTotal.value++
+  if (isAppJob(report)) statsTodayAppTotal.value++
 }
 
 // ============================================================================
@@ -244,7 +244,7 @@ const bulkApproveOtherJobs = async () => {
         const reward = Number(String(rp.reward || '0').replace(/\D/g, '')) || 0
         await setDoc(doc(db, "users", rp.uid), { balance: increment(reward) }, { merge: true })
         await updateDoc(doc(db, "reports", id), { status: 'approved', approvedAt: serverTimestamp() })
-        updateLocalStatsOnApprove(rp.jobName, rp.jobId)
+        updateLocalStatsOnApprove(rp)
       }
       selectedOtherJobs.value = []
       Swal.fire('THÀNH CÔNG!', 'Đã duyệt xong!', 'success')
@@ -380,7 +380,7 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
+const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
 
 // Doc ID cũ trùng tên hiển thị "GIỚI THIỆU BẠN BÈ ABBANK" với job referral_abbank chuẩn — popup/trang
 // ABBANK ngoài user chỉ đọc doc này khi CHƯA có doc referral_abbank. Sửa ABBANK thì hãy sửa job có
@@ -575,6 +575,17 @@ const seedVipJobs = async () => {
     const s = (jobsData as Record<string, any>)[id]
     if (!s) continue
     const newOrder = vipJobs.value.length + idx + 1
+    // Field phân loại VIP/bank — mọi job trong VIP_JOB_IDS đều là job VIP nên mặc định true/'vip';
+    // bankType/appType/campaignType chỉ ghi nếu static job (jobs.ts) có khai báo, tránh field rác.
+    const classification = {
+      category: s.category || 'vip',
+      jobCategory: s.jobCategory || 'vip',
+      jobType: s.jobType || 'vip',
+      isVip: s.isVip ?? true,
+      ...(s.bankType ? { bankType: s.bankType } : {}),
+      ...(s.appType ? { appType: s.appType } : {}),
+      ...(s.campaignType ? { campaignType: s.campaignType } : {}),
+    }
     await setDoc(doc(db, 'vip_jobs', id), {
       jobId: id,
       title: s.title,
@@ -587,13 +598,15 @@ const seedVipJobs = async () => {
       ageRequirement: s.ageRequirement ?? null,
       status: 'open',
       order: newOrder,
+      ...classification,
       updatedAt: serverTimestamp()
     })
     editingVipJob.value[id] = {
       jobId: id, title: s.title, subtitle: s.subtitle || '', reward: s.reward, rewardText: s.rewardText || '',
       badge: s.badge || 'VIP', color: s.color || 'text-amber-400',
       warning: s.warning || '', ageRequirement: s.ageRequirement ?? null,
-      status: 'open', order: newOrder
+      status: 'open', order: newOrder,
+      ...classification
     }
     created++
   }
@@ -836,12 +849,21 @@ onMounted(() => {
   })
 })
 
-const isAppJob = (jobName: string, jobId?: string) => {
-  // Ưu tiên đối chiếu jobId với danh sách VIP_JOB_IDS chuẩn — tránh sót các job VIP
-  // có tên không chứa từ khóa "app"/"ngân hàng"/... (vd: VÍ MOMO).
-  if (jobId && VIP_JOB_IDS.includes(jobId)) return true
-  if (!jobName) return false
-  const n = jobName.toLowerCase()
+// Nhận diện đơn thuộc nhóm "APP NGÂN HÀNG / CHỨNG KHOÁN" (tab JOB VIP trong Admin).
+// Nhận cả report object đầy đủ lẫn { jobName, jobId } tối thiểu (để tương thích các nơi gọi cũ).
+// Thứ tự ưu tiên: field phân loại lưu thẳng trên report (không phụ thuộc 1 danh sách jobId duy nhất,
+// tránh sót job mới nếu quên đồng bộ VIP_JOB_IDS ở đâu đó) → jobId nằm trong VIP_JOB_IDS (fallback cho
+// report cũ chỉ có jobId, không có field phân loại) → từ khóa trong tên job.
+const isAppJob = (jobNameOrReport: string | Record<string, any>, jobIdArg?: string) => {
+  const report: Record<string, any> = typeof jobNameOrReport === 'string'
+    ? { jobName: jobNameOrReport, jobId: jobIdArg }
+    : (jobNameOrReport || {})
+
+  if (report.jobCategory === 'vip' || report.category === 'vip' || report.jobType === 'vip' || report.isVip === true) return true
+  if (report.appType === 'bank' || report.campaignType === 'bank' || report.bankType) return true
+  if (report.jobId && VIP_JOB_IDS.includes(report.jobId)) return true
+  if (!report.jobName) return false
+  const n = String(report.jobName).toLowerCase()
   return ['app', 'ngân hàng', 'chứng khoán', 'vpbank', 'tpbank', 'mbbank', 'msb', 'cake', 'tnex', 'kafi', 'dnse', 'kis'].some(kw => n.includes(kw))
 }
 
@@ -856,8 +878,8 @@ const checkReportStatus = (status: string) => {
   return status === statusFilter.value
 }
 
-const filteredAppReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r.jobName, r.jobId)))
-const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r.jobName, r.jobId)))
+const filteredAppReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r)))
+const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r)))
 const filteredWithdrawals = computed(() => withdrawals.value.filter(w => (siteFilter.value === 'all' || w.site === siteFilter.value) && (searchQuery.value.trim() ? true : (statusFilter.value === 'all' || w.status === statusFilter.value))))
 
 const getXuAmount = (wd: any) => { let x = wd.amountXu || wd.amount || wd.xu || 0; if (typeof x === 'string') x = Number(x.replace(/\D/g, '')); return Number(x) || 0 }
@@ -1014,7 +1036,7 @@ const approveReport = async (report: any) => {
       }
     }
     Swal.fire('ĐÃ CỘNG XU!', `+${amount.toLocaleString()} XU${isReferral ? ` — Lần giới thiệu #${newSuccessNumber}` : ''}`, 'success')
-    updateLocalStatsOnApprove(report.jobName, report.jobId)
+    updateLocalStatsOnApprove(report)
   } catch (e: any) {
     Swal.fire('LỖI!', e.message || String(e), 'error')
   }

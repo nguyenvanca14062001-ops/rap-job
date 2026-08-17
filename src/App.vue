@@ -28,10 +28,10 @@ const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
-  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦',
+  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦',
   'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥', 'referral-friends': '👥',
 }
-const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'momo', 'referral_momo']
+const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'vietcombank', 'momo', 'referral_momo']
 // 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_IDS/jobsData
 // (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
 const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_lpbank_plus']

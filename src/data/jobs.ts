@@ -552,6 +552,90 @@ export const jobsData: Record<string, any> = {
     ]
   },
 
+  // Job VIP mới VIETCOMBANK — clone gần như y hệt cấu trúc/hướng dẫn của 'lpbank-plus' theo yêu cầu,
+  // ảnh/bước hướng dẫn/mã giới thiệu tạm thời vẫn là của LPBank Plus, chờ chỉnh sửa nội dung thật sau.
+  'vietcombank': {
+    title: "VIETCOMBANK",
+    subtitle: "Đăng ký Vietcombank nhận thưởng",
+    reward: "65.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    ageRequirement: 15,
+    zaloGuideUrl: "",
+    // Field phân loại — dùng khi seed vào Firestore vip_jobs và để nhận diện report là job VIP/bank
+    category: "vip",
+    jobCategory: "vip",
+    jobType: "vip",
+    isVip: true,
+    bankType: "vietcombank",
+    appType: "bank",
+    campaignType: "bank",
+    // Text ngắn hiển thị dưới khối tiêu đề ở trang chi tiết
+    shortDesc: "Hoàn thành đăng ký VIETCOMBANK theo hướng dẫn để nhận thưởng.",
+    warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    // Link nhóm Zalo để lấy mã giới thiệu
+    zaloReferralLink: "https://zalo.me/g/iobklj13hk0wxwvt85ru",
+    // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
+    proofSampleImages: [
+      "images/anh-vcb1.jpg",
+      "images/anh-vcb2.jpg",
+      "images/anh-vcb3.jpg"
+    ],
+    // 3 bước hướng dẫn rút gọn — dùng chung cho khối "CÁC BƯỚC THỰC HIỆN" ở trang chi tiết và popup "XEM HƯỚNG DẪN"
+    quickSteps: [
+      {
+        id: 1,
+        title: "TẢI APP VIETCOMBANK",
+        content: "Tải APP về điện thoại để đăng ký.",
+        note: "CHÚ Ý: TẢI ĐÚNG APP CHÍNH THỨC, KHÔNG CHỌN NHẦM APP KHÁC.",
+        img: "images/anh-vcb.jpg"
+      },
+      {
+        id: 2,
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU",
+        content: "Tham gia nhóm Zalo để lấy mã giới thiệu.",
+        referralCode: "0366045803",
+        img: "images/anh-vcb1.jpg"
+      },
+      {
+        id: 3,
+        title: "ĐĂNG KÝ THÀNH CÔNG VÀ HOÀN TẤT THEO HƯỚNG DẪN",
+        content: "Sau khi đăng ký thành công, chuyển 15.000đ vào tài khoản VCB, sau đó chuyển ra lại 3 lần, mỗi lần 5.000đ. Sau khi hoàn thành đầy đủ, chụp lại 3 ảnh bằng chứng rồi gửi nộp đơn.",
+        img: "images/anh-vcb3.jpg"
+      }
+    ],
+    steps: [
+      {
+        id: 1,
+        title: "TẢI ĐÚNG APP VIETCOMBANK",
+        content: "Tên APP: VIETCOMBANK hoặc chọn TẢI ỨNG DỤNG.",
+        downloadLink: "https://content.lpbank.com.vn/share/down_app/index.html",
+        buttonText: "🚀 TẢI ỨNG DỤNG",
+        img: "images/anh-vcb.jpg"
+      },
+      {
+        id: 2,
+        title: "NHẬP MÃ GIỚI THIỆU : 0366045803",
+        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU 0366045803 VÀ CHỤP LẠI ẢNH.",
+        img: "images/anh-vcb1.jpg",
+        note: "NHẬP MÃ GIỚI THIỆU: 0366045803 (BẮT BUỘC)",
+        referralCode: "0366045803"
+      },
+      {
+        id: 3,
+        title: "CHUYỂN VÀO TÀI KHOẢN 50K VÀ CHUYỂN RA",
+        content: "CHỤP LẠI ẢNH CHUYỂN TIỀN RA VÀ GỬI BẰNG CHỨNG.",
+        img: "images/anh-vcb3.jpg"
+      },
+      {
+        id: 4,
+        title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
+        content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
+
+      }
+    ]
+  },
+
   'momo': {
     title: "VÍ MOMO",
     subtitle: "Đăng ký ví MoMo nhận thưởng",
