@@ -382,6 +382,11 @@ let unsubVipJobs: any = null
 
 const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
 
+// Các job VIP ngân hàng/chứng khoán không tự điền họ tên/SĐT từ hồ sơ web — report của các job này
+// tách riêng "thông tin chủ tài khoản ngân hàng" (bankAccountHolderName/bankRegisteredPhone) khỏi
+// "hồ sơ web thật" (userFullName/userPhoneRef) để admin đối soát rõ ràng.
+const BANK_ACCOUNT_JOB_IDS = ['vietcombank', 'lpbank-plus', 'abbank']
+
 // Doc ID cũ trùng tên hiển thị "GIỚI THIỆU BẠN BÈ ABBANK" với job referral_abbank chuẩn — popup/trang
 // ABBANK ngoài user chỉ đọc doc này khi CHƯA có doc referral_abbank. Sửa ABBANK thì hãy sửa job có
 // ID đúng là "referral_abbank" (không phải "referral-hub") để chắc chắn cập nhật ra ngoài user.
@@ -948,8 +953,8 @@ const approveReport = async (report: any) => {
     title: '💰 CỘNG XU ĐƠN NÀY',
     html: `
       <div style="text-align:left;font-size:12.5px;line-height:1.8">
-        <b>Tên user:</b> ${user.fullName || user.username || report.fullName || '—'}<br/>
-        <b>SĐT:</b> ${report.phoneRef || user.phoneRef || user.phone || '—'}<br/>
+        <b>Tên user:</b> ${user.fullName || user.username || report.bankAccountHolderName || report.fullName || '—'}<br/>
+        <b>SĐT:</b> ${report.bankRegisteredPhone || report.phoneRef || user.phoneRef || user.phone || '—'}<br/>
         <b>UID:</b> ${targetUid || '—'}<br/>
         <b>Tên job:</b> ${report.jobName || '—'}<br/>
         <b>Mã đơn:</b> ${report.id}<br/>
@@ -1393,6 +1398,10 @@ const handleAdminLogout = async () => {
                     <div class="text-[var(--admin-text)] text-sm font-black truncate max-w-[200px]">{{ usersMap[effUid(rp)]?.username || usersMap[effUid(rp)]?.fullName || 'CHƯA CẬP NHẬT' }}</div>
                     <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">Ví: <span class="text-[var(--admin-warning)] font-black">{{ usersMap[effUid(rp)]?.balance }} XU</span></div>
                     <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">Ngày sinh: <span class="text-[var(--admin-success)] font-bold">{{ usersMap[effUid(rp)]?.dateOfBirth || usersMap[effUid(rp)]?.dob || usersMap[effUid(rp)]?.ngaysinh || '—' }}</span></div>
+                    <template v-if="BANK_ACCOUNT_JOB_IDS.includes(rp.jobId)">
+                      <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">UID: <span class="text-[var(--admin-text)] font-bold break-all">{{ effUid(rp) }}</span></div>
+                      <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">SĐT tài khoản web: <span class="text-[var(--admin-text)] font-bold">{{ usersMap[effUid(rp)]?.phone || usersMap[effUid(rp)]?.phoneRef || rp.userPhoneRef || '—' }}</span></div>
+                    </template>
                     <div class="text-[9px] text-slate-400 font-sans not-italic" v-if="rp.repairedUserUid">UID gốc: {{ rp.uid?.slice(0, 8) }}… · Ví gắn: {{ rp.repairedUserUid?.slice(0, 8) }}…</div>
                   </div>
                   <div class="flex flex-col items-end gap-1">
@@ -1403,7 +1412,16 @@ const handleAdminLogout = async () => {
                     <button class="bg-emerald-50 text-[var(--admin-success)] hover:bg-[var(--admin-success)] hover:text-white border border-emerald-200 px-2 py-1 rounded-lg text-[8px]" @click="addXuToUser(effUid(rp))">💰 CỘNG XU</button>
                   </div>
                 </div>
-                <div>
+                <div v-if="BANK_ACCOUNT_JOB_IDS.includes(rp.jobId)" class="bg-amber-50 border border-amber-200 rounded-lg p-2">
+                  <span class="text-[9px] text-[var(--admin-warning)] tracking-widest block mb-0.5">CHỦ TK NGÂN HÀNG NGƯỜI DÙNG NHẬP ({{ formatDate(rp.createdAt) }}):</span>
+                  <div class="text-[var(--admin-text)] text-xs font-black truncate max-w-[200px]">{{ rp.bankAccountHolderName || rp.fullName || 'N/A' }}</div>
+                  <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">SĐT đăng ký NH: {{ rp.bankRegisteredPhone || rp.phoneRef || '—' }}</div>
+                  <div class="mt-1" v-if="!usersMap[effUid(rp)]">
+                    <span class="inline-block bg-red-50 text-[var(--admin-danger)] border border-red-200 text-[9px] px-2 py-0.5 rounded-full font-sans not-italic normal-case font-bold">⚠️ Chưa có hồ sơ ví</span>
+                    <button class="ml-1 bg-blue-50 text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white border border-blue-200 px-2 py-0.5 rounded-lg text-[9px] font-sans not-italic normal-case font-bold" @click="openWalletLinkModal(rp)">Gắn hồ sơ ví</button>
+                  </div>
+                </div>
+                <div v-else>
                   <span class="text-[9px] text-[var(--admin-primary)] tracking-widest block mb-0.5">ĐƠN NỘP ({{ formatDate(rp.createdAt) }}):</span>
                   <div class="text-[var(--admin-text)] text-xs font-black truncate max-w-[200px]">{{ rp.fullName || 'N/A' }}</div>
                   <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">SĐT: {{ rp.phoneRef || '—' }}</div>

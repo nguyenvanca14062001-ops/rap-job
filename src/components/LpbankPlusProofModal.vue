@@ -23,6 +23,9 @@ const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
 
 const username = ref('')
+// Hồ sơ web thật (KHÔNG dùng để tự điền form) — chỉ lưu snapshot vào report để admin đối soát.
+const profileFullName = ref('')
+const profilePhone = ref('')
 const fullName = ref('')
 const phoneRef = ref('')
 const images = ref<string[]>([])
@@ -39,8 +42,8 @@ const loadProfile = async () => {
   if (!userSnap.exists()) return
   const userDoc: any = userSnap.data()
   username.value = userDoc.username || ''
-  if (!fullName.value) fullName.value = userDoc.fullName || ''
-  if (!phoneRef.value) phoneRef.value = userDoc.phoneRef || userDoc.phone || ''
+  profileFullName.value = userDoc.fullName || ''
+  profilePhone.value = userDoc.phoneRef || userDoc.phone || ''
 }
 
 onMounted(loadProfile)
@@ -144,9 +147,19 @@ const submitProof = async () => {
     const reportData = {
       uid,
       username: username.value,
+
+      // Thông tin chủ tài khoản LPBANK Plus do user tự nhập trong form (không tự điền từ hồ sơ web).
       fullName: name,
       phoneRef: phone,
       phoneNormalized: normalizePhone(phone),
+      bankAccountHolderName: name,
+      bankRegisteredPhone: phone,
+      bankRegisteredPhoneNormalized: normalizePhone(phone),
+
+      // Snapshot hồ sơ web thật của user, dùng để admin đối soát — không liên quan tới ô nhập trên.
+      userFullName: profileFullName.value,
+      userPhoneRef: profilePhone.value,
+      userPhoneNormalized: normalizePhone(profilePhone.value),
 
       jobId: JOB_ID,
       jobName: 'APP LPBANK PLUS',
@@ -201,13 +214,13 @@ const submitProof = async () => {
           </div>
 
           <div class="space-y-2">
-            <label class="text-amber-400 text-[11px] tracking-widest ml-1">HỌ VÀ TÊN XÁC THỰC *</label>
-            <input v-model="fullName" type="text" placeholder="Nguyễn Văn A"
+            <label class="text-amber-400 text-[11px] tracking-widest ml-1">HỌ TÊN CHỦ TÀI KHOẢN LPBANK PLUS *</label>
+            <input v-model="fullName" type="text" placeholder="Nhập họ tên đúng trên tài khoản LPBANK Plus"
                    class="w-full bg-[#0d121f] border border-slate-800 focus:border-amber-500 rounded-2xl py-3.5 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[14px] transition-colors" />
           </div>
           <div class="space-y-2">
-            <label class="text-amber-400 text-[11px] tracking-widest ml-1">SỐ ĐIỆN THOẠI ĐỐI SOÁT *</label>
-            <input v-model="phoneRef" type="text" placeholder="VD: 0987654321"
+            <label class="text-amber-400 text-[11px] tracking-widest ml-1">SĐT ĐĂNG KÝ LPBANK PLUS *</label>
+            <input v-model="phoneRef" type="text" placeholder="Nhập SĐT đã dùng đăng ký LPBANK Plus"
                    class="w-full bg-[#0d121f] border border-slate-800 focus:border-amber-500 rounded-2xl py-3.5 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[14px] transition-colors" />
           </div>
 

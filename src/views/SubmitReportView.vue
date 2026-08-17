@@ -10,11 +10,13 @@ import exifr from 'exifr'
 import { useVipJobs } from '@/composables/useVipJobs'
 import { jobsData } from '@/data/jobs'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
+import { normalizePhone } from '@/utils/phone'
 
 const props = defineProps<{
   userFullName?: string
   userPhone?: string
   userBirthYear?: string
+  username?: string
 }>()
 
 const router = useRouter()
@@ -34,6 +36,10 @@ const { vipJobs, ready: vipJobsReady } = useVipJobs()
 
 const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'post-threads', 'join-zalo']
 const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'momo']
+
+// VIP ngân hàng dùng chung form này nhưng KHÔNG được tự điền họ tên/SĐT từ hồ sơ web —
+// user phải tự nhập thông tin chủ tài khoản ngân hàng để admin đối soát tách biệt với hồ sơ web.
+const NO_PREFILL_BANK_JOB_IDS = ['abbank']
 
 type JobOption = { id: string; name: string; reward: string }
 
@@ -86,8 +92,12 @@ watch(
     if (profileApplied.value) return
     if (!name && !phone && !year) return
     profileApplied.value = true
-    if (!fullName.value && name) fullName.value = name
-    if (!phoneNumber.value && phone) phoneNumber.value = phone
+    // Job VIP ngân hàng (VD: ABBANK) không được tự điền họ tên/SĐT từ hồ sơ web — user phải tự nhập.
+    const skipNamePhonePrefill = NO_PREFILL_BANK_JOB_IDS.includes((route.query.job as string) || '')
+    if (!skipNamePhonePrefill) {
+      if (!fullName.value && name) fullName.value = name
+      if (!phoneNumber.value && phone) phoneNumber.value = phone
+    }
     if (!birthYear.value && year) birthYear.value = year
   },
   { immediate: true }
@@ -135,6 +145,16 @@ watch(dynamicJobOptions, (options) => {
 const isFanpageTask = computed(() =>
   ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank'].includes(selectedJob.value.id)
 )
+
+const isBankAccountJob = computed(() => NO_PREFILL_BANK_JOB_IDS.includes(selectedJob.value.id))
+
+const fullNameLabel = computed(() => isBankAccountJob.value ? 'HỌ TÊN CHỦ TÀI KHOẢN ABBANK *' : 'HỌ VÀ TÊN XÁC THỰC')
+const fullNamePlaceholder = computed(() => isBankAccountJob.value ? 'Nhập họ tên đúng trên tài khoản ABBANK' : 'Nhập họ tên chính xác của bạn...')
+const phoneLabel = computed(() => {
+  if (isBankAccountJob.value) return 'SĐT ĐĂNG KÝ ABBANK *'
+  return selectedJob.value.id === 'app-chung-khoan-4' ? 'SĐT CỦA NGƯỜI ĐĂNG KÝ APP' : 'SĐT ĐỐI SOÁT'
+})
+const phonePlaceholder = computed(() => isBankAccountJob.value ? 'Nhập SĐT đã dùng đăng ký ABBANK' : 'Số điện thoại đăng ký / làm việc...')
 
 const fourImageJobs: string[] = []
 const threeImageJobs = ['app-chung-khoan', 'app-chung-khoan-3', 'app-chung-khoan-4', 'liobank', 'abbank', 'momo']
@@ -356,7 +376,7 @@ const submitReport = async () => {
 
     submitStage.value = 'saving'
 
-    const reportData = {
+    const reportData: Record<string, any> = {
       uid: userUid.value,
       jobId: selectedJob.value.id,
       jobName: selectedJob.value.name,
@@ -373,6 +393,18 @@ const submitReport = async () => {
       storageCleaned: false,
       status: 'pending',
       createdAt: serverTimestamp()
+    }
+
+    if (isBankAccountJob.value) {
+      // Thông tin chủ tài khoản ngân hàng do user tự nhập trong form (không tự điền từ hồ sơ web).
+      reportData.bankAccountHolderName = fullName.value.toUpperCase()
+      reportData.bankRegisteredPhone = phoneNumber.value
+      reportData.bankRegisteredPhoneNormalized = normalizePhone(phoneNumber.value)
+      // Snapshot hồ sơ web thật của user, dùng để admin đối soát — không liên quan tới ô nhập trên.
+      reportData.username = props.username || ''
+      reportData.userFullName = props.userFullName || ''
+      reportData.userPhoneRef = props.userPhone || ''
+      reportData.userPhoneNormalized = normalizePhone(props.userPhone || '')
     }
 
     console.log("Creating report without base64:", {
@@ -449,21 +481,21 @@ const openFanpage = () => {
         </div>
 
         <div class="space-y-2 text-left mt-4">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">HỌ VÀ TÊN XÁC THỰC</label>
+          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">{{ fullNameLabel }}</label>
           <input
             v-model="fullName"
             type="text"
-            placeholder="Nhập họ tên chính xác của bạn..."
+            :placeholder="fullNamePlaceholder"
             class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
           />
         </div>
 
         <div class="space-y-2 text-left">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">{{ selectedJob.id === 'app-chung-khoan-4' ? 'SĐT CỦA NGƯỜI ĐĂNG KÝ APP' : 'SĐT ĐỐI SOÁT' }}</label>
+          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">{{ phoneLabel }}</label>
           <input
             v-model="phoneNumber"
             type="text"
-            placeholder="Số điện thoại đăng ký / làm việc..."
+            :placeholder="phonePlaceholder"
             class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
           />
         </div>

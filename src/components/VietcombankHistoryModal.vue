@@ -82,8 +82,8 @@ const statusClass = (rp: any) => {
                :class="rp.status === 'rejected' ? 'border-rose-500/30' : rp.status === 'pending' ? 'border-yellow-500/20' : 'border-emerald-500/20'">
             <div class="flex justify-between items-start gap-3 mb-2">
               <div class="font-sans not-italic normal-case min-w-0">
-                <p class="text-white text-[12px] font-bold truncate">{{ rp.fullName || rp.username }}</p>
-                <p class="text-slate-500 text-[10px]">SĐT: {{ rp.phoneRef }}</p>
+                <p class="text-white text-[12px] font-bold truncate">{{ rp.bankAccountHolderName || rp.fullName || rp.username }}</p>
+                <p class="text-slate-500 text-[10px]">SĐT: {{ rp.bankRegisteredPhone || rp.phoneRef }}</p>
                 <p class="text-slate-600 text-[9px] mt-1">{{ formatDate(rp.createdAt) }}</p>
               </div>
               <span class="shrink-0 text-[9px] px-2 py-1 rounded-full font-sans not-italic normal-case" :class="statusClass(rp)">
