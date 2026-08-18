@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { onAuthStateChanged, signOut } from "firebase/auth"
-import { doc, onSnapshot, collection, query, where, orderBy, limit, updateDoc, increment, arrayUnion } from "firebase/firestore"
+import { doc, onSnapshot, collection, query, where, orderBy, limit, updateDoc } from "firebase/firestore"
 import { useVipJobs } from '@/composables/useVipJobs'
 import { startAppConfigListener } from '@/composables/useAppConfig'
 import { startSupportListener, supportConfig, supportBadge, shouldAutoPopup, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
@@ -15,7 +15,6 @@ import Sidebar from '@/components/home/Sidebar.vue'
 import JobSection from '@/components/home/JobSection.vue'
 import HistorySection from '@/components/home/HistorySection.vue'
 import InfoSection from '@/components/home/InfoSection.vue'
-import TreasureChest from '@/components/TreasureChest.vue'
 import ProfileCard from '@/components/home/ProfileCard.vue'
 import Logo from '@/components/Logo.vue'
 import MomoReferralHubModal from '@/components/MomoReferralHubModal.vue'
@@ -160,8 +159,7 @@ const isLoggedIn = ref(false)
 const isAuthChecking = ref(true) 
 const isMenuOpen = ref(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true)
 const isDataLoading = ref(true)
-const windowWidth = ref(0) 
-const showWelcomePopup = ref(false)
+const windowWidth = ref(0)
 const showBankModal = ref(false)
 const showMomoReferralHub = ref(false)
 const showLpbankPlusReferralHub = ref(false)
@@ -217,23 +215,16 @@ const dismissApproval = (id: string) => {
   localStorage.setItem('mmo_dismissed_approvals', JSON.stringify(dismissedApprovals.value))
 }
 
-const handleThuTienVeVi = async (report: any) => {
-  if (!auth.currentUser) return;
-  try {
-    // 🛑 ĐÃ XÓA LỆNH CỘNG TIỀN Ở ĐÂY ĐỂ CHỐNG HACK VÀ CHỐNG CỘNG ĐÚP 🛑
-    // Tiền CHỈ ĐƯỢC CỘNG 1 LẦN DUY NHẤT ở trang Admin khi sếp bấm Duyệt.
-    
-    // Đổi trạng thái sang collected để đóng popup vĩnh viễn cho đơn này
-    await updateDoc(doc(db, "reports", report.id), { status: 'collected' });
-    dismissApproval(report.id); 
-  } catch (e) { 
-    console.error("LỖI ĐÓNG POPUP:", e); 
-    alert("Lỗi xử lý! Sếp nhấn F12 xem tab Console báo đỏ chữ gì nhé."); 
-  }
+// Đóng popup nhận thưởng — CHỈ ẩn UI phía client (đánh dấu đã xem, lưu localStorage).
+// Không ghi Firestore, không đụng balance, không đổi status report.
+// Tiền đã được cộng 1 lần duy nhất ở AdminView.approveReport() ngay lúc Admin bấm Duyệt.
+const closeApprovalPopup = (report: any) => {
+  if (!report) return;
+  dismissApproval(report.id);
 }
 
-const handleRutXuNgay = async (report: any) => {
-  await handleThuTienVeVi(report);
+const handleRutXuNgay = (report: any) => {
+  closeApprovalPopup(report);
   router.push('/withdraw');
 }
 // ============================================================================
@@ -302,44 +293,89 @@ const startLiveFeed = () => {
   rotate()
 }
 
-const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 const fmtXu = (n: number) => n.toLocaleString('vi-VN')
 
-const triggerNotice = (type: 'withdraw' | 'chest') => {
-  const name = names[Math.floor(Math.random() * names.length)]
-  if (type === 'withdraw') {
-    const bank = banks[Math.floor(Math.random() * banks.length)]
-    const withdrawAmounts = ['250.000', '500.000', '650.000', '800.000', '1.000.000', ]
+// Pool rút tiền THẬT (status === 'approved') lấy từ Firestore — không dùng dữ liệu giả.
+const approvedWithdrawalsFeed = ref<{ uid: string; name: string; amount: number }[]>([])
+let unsubscribeApprovedWithdrawals: (() => void) | null = null
+
+const startApprovedWithdrawalsFeed = () => {
+  unsubscribeApprovedWithdrawals = onSnapshot(
+    query(
+      collection(db, "withdrawals"),
+      where("site", "==", "rapjob"),
+      where("status", "==", "approved"),
+      limit(200)
+    ),
+    (snapshot) => {
+      approvedWithdrawalsFeed.value = snapshot.docs
+        .map(d => {
+          const data: any = d.data()
+          const name = String(data.fullName || data.username || '').trim()
+          const amount = Number(data.amount) || 0
+          return { uid: d.id, name, amount }
+        })
+        .filter(w => w.name && w.amount > 0)
+    },
+    (error) => {
+      if (import.meta.env.DEV) console.error('[Firestore] Lỗi tải feed withdrawal approved (ticker):', error)
+    }
+  )
+}
+
+// Ưu tiên hiển thị các mốc rút phổ biến, mốc lớn (1.000.000+) chỉ thỉnh thoảng xuất hiện —
+// nhưng luôn chọn trong danh sách withdrawal approved thật, không tự tạo mốc giả.
+const PRIORITY_WITHDRAW_AMOUNTS = [250000, 500000, 650000]
+const pickWeightedWithdrawal = () => {
+  const pool = approvedWithdrawalsFeed.value
+  if (!pool.length) return null
+  const priorityPool = pool.filter(w => PRIORITY_WITHDRAW_AMOUNTS.includes(w.amount))
+  const otherPool = pool.filter(w => !PRIORITY_WITHDRAW_AMOUNTS.includes(w.amount))
+  const useOther = otherPool.length > 0 && (priorityPool.length === 0 || Math.random() < 0.2)
+  const src = useOther ? otherPool : (priorityPool.length ? priorityPool : otherPool)
+  return src[Math.floor(Math.random() * src.length)] ?? null
+}
+
+// Dữ liệu mô phỏng cục bộ — CHỈ dùng khi chưa có withdrawal approved thật nào, không ghi Firestore,
+// không đại diện cho giao dịch có thật. Luôn gắn cờ isSimulated + dòng chú thích "Dữ liệu mô phỏng"
+// để không bị hiểu nhầm là giao dịch thật.
+const pickSimulatedAmount = () => {
+  if (Math.random() < 0.05) return 1000000
+  return PRIORITY_WITHDRAW_AMOUNTS[Math.floor(Math.random() * PRIORITY_WITHDRAW_AMOUNTS.length)] ?? 250000
+}
+
+let lastNoticeUid: string | null = null
+const triggerNotice = () => {
+  // Ưu tiên tuyệt đối withdrawal approved thật nếu đã có
+  if (approvedWithdrawalsFeed.value.length) {
+    let pick = pickWeightedWithdrawal()
+    if (!pick) return
+    if (approvedWithdrawalsFeed.value.length > 1 && pick.uid === lastNoticeUid) {
+      pick = pickWeightedWithdrawal() ?? pick
+    }
+    lastNoticeUid = pick.uid
     randomNotice.value = {
-      type: 'withdraw', name, title: 'Vừa rút thành công',
-      amount: withdrawAmounts[Math.floor(Math.random() * withdrawAmounts.length)], sub: `Về Ngân hàng ${bank}`
+      type: 'withdraw', name: pick.name.toUpperCase(), title: 'Vừa rút thành công',
+      amount: fmtXu(pick.amount), isSimulated: false
     }
   } else {
-    const chestList = [
-      { name: 'Hòm Bạc',       min: 20000,  max: 100000  },
-      { name: 'Hòm Vàng',      min: 50000,  max: 300000  },
-      { name: 'Hòm Kim Cương', min: 200000, max: 1000000 },
-    ]
-    const c = chestList[Math.floor(Math.random() * chestList.length)]
-    const xu = randInt(c.min, c.max)
+    // Chưa có withdrawal approved thật → hiện dữ liệu mô phỏng, đánh dấu rõ ràng là dữ liệu mẫu
+    const name = names[Math.floor(Math.random() * names.length)]
     randomNotice.value = {
-      type: 'chest', name, title: `Vừa nhận ${fmtXu(xu)} XU`,
-      amount: '', sub: `Từ ${c.name}`
+      type: 'withdraw', name, title: 'Vừa rút thành công',
+      amount: fmtXu(pickSimulatedAmount()), isSimulated: true, sub: 'Dữ liệu mô phỏng'
     }
   }
   setTimeout(() => { randomNotice.value = null }, 2500)
 }
 
 const startToasting = () => {
+  startApprovedWithdrawalsFeed()
   const withdrawLoop = () => {
     const next = Math.floor(Math.random() * (6000 - 3500 + 1) + 3500)
-    setTimeout(() => { if (!randomNotice.value) triggerNotice('withdraw'); withdrawLoop() }, next)
+    setTimeout(() => { if (!randomNotice.value) triggerNotice(); withdrawLoop() }, next)
   }
-  const chestLoop = () => {
-    const next = Math.floor(Math.random() * (7000 - 4000 + 1) + 4000)
-    setTimeout(() => { if (!randomNotice.value) triggerNotice('chest'); chestLoop() }, next)
-  }
-  withdrawLoop(); chestLoop()
+  withdrawLoop()
 }
 
 // ============================================================
@@ -361,26 +397,6 @@ function playRewardSound() {
       gain.gain.linearRampToValueAtTime(0.28, t + 0.06)
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
       osc.start(t); osc.stop(t + 0.4)
-    })
-  } catch (_) {}
-}
-
-function playChestSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    // Shimmer ma thuật: G4 → B4 → D5 → F#5 → B5
-    const notes = [392, 494, 587, 740, 988]
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain); gain.connect(ctx.destination)
-      osc.type = 'sine'
-      osc.frequency.value = freq
-      const t = ctx.currentTime + i * 0.09
-      gain.gain.setValueAtTime(0, t)
-      gain.gain.linearRampToValueAtTime(0.22, t + 0.04)
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32)
-      osc.start(t); osc.stop(t + 0.32)
     })
   } catch (_) {}
 }
@@ -409,79 +425,6 @@ const combinedHistory = computed(() => {
   }).sort((a, b) => b.sortTime - a.sortTime)
 })
 
-// === VIP PROGRESS (dùng myReports đã có, không cần backend mới) ===
-const vipTiers = [
-  { min: 0,  max: 9,   key: '',         rewardXu: 0,      btnBg: '',            bar: '',             name: 'THƯỜNG',        icon: '🎖️', chest: null,               chestDesc: null,                               color: 'text-slate-400', bg: 'bg-slate-500/20', border: 'border-slate-500/40' },
-  { min: 10, max: 11,  key: 'bac',      rewardXu: 10000,  btnBg: 'bg-slate-600',bar: 'bg-slate-400', name: 'VIP BẠC',       icon: '🥈', chest: '🎁 Hòm Bạc',      chestDesc: '20.000 – 100.000 XU',  color: 'text-slate-300', bg: 'bg-slate-400/20', border: 'border-slate-400/60' },
-  { min: 12, max: 15,  key: 'vang',     rewardXu: 50000,  btnBg: 'bg-amber-600',bar: 'bg-amber-500', name: 'VIP VÀNG',      icon: '🥇', chest: '🎁 Hòm Vàng',     chestDesc: '50.000 – 300.000 XU',  color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/60' },
-  { min: 16, max: 999, key: 'kimcuong', rewardXu: 200000, btnBg: 'bg-cyan-600', bar: 'bg-cyan-500',  name: 'VIP KIM CƯƠNG', icon: '💎', chest: '🎁 Hòm Kim Cương', chestDesc: '200.000 – 1.000.000 XU',color: 'text-cyan-400',  bg: 'bg-cyan-500/20',  border: 'border-cyan-500/60'  },
-]
-
-const expandedChest = ref<number | null>(null)
-const selectedChestTier = computed(() =>
-  expandedChest.value !== null ? vipTiers[expandedChest.value + 1] : null
-)
-
-const vipProgress = computed(() => {
-  const count = myReports.value.filter((r: any) => r.status === 'approved' || r.status === 'collected').length
-  let tierIdx = 0
-  for (let i = vipTiers.length - 1; i >= 0; i--) {
-    if (count >= vipTiers[i].min) { tierIdx = i; break }
-  }
-  const tier = vipTiers[tierIdx]
-  const nextTier = tierIdx < vipTiers.length - 1 ? vipTiers[tierIdx + 1] : null
-  const rangeSize = nextTier ? nextTier.min - tier.min : 1
-  const progress = nextTier ? Math.min(100, ((count - tier.min) / rangeSize) * 100) : 100
-  return { count, tier, nextTier, progress, tierIdx }
-})
-
-// Track hòm đã nhận (đọc từ Firestore)
-const claimedChests = ref<string[]>([])
-const claimingChest = ref(false)
-
-const claimChest = async (key: string, rewardXu: number) => {
-  if (claimingChest.value || claimedChests.value.includes(key)) return
-  const user = auth.currentUser
-  if (!user) return
-  claimingChest.value = true
-  try {
-    await updateDoc(doc(db, 'users', user.uid), {
-      balance: increment(rewardXu),
-      claimedChests: arrayUnion(key)
-    })
-  } catch (e) { console.error('Lỗi nhận thưởng:', e) }
-  finally { claimingChest.value = false }
-}
-
-// Claim popup
-const showClaimPopup = ref(false)
-const claimPopupOpening = ref(false)
-const claimPopupParticles = ref<{ id: number; x: number; delay: number }[]>([])
-
-function openClaimPopup() {
-  if (!selectedChestTier.value) return
-  playChestSound()
-  showClaimPopup.value = true
-  claimPopupOpening.value = false
-  claimPopupParticles.value = []
-  setTimeout(() => {
-    claimPopupOpening.value = true
-    claimPopupParticles.value = Array.from({ length: 10 }, (_, i) => ({
-      id: i,
-      x: (Math.random() - 0.5) * 140,
-      delay: i * 65,
-    }))
-  }, 280)
-}
-
-async function confirmClaim() {
-  if (!selectedChestTier.value) return
-  await claimChest(selectedChestTier.value.key, selectedChestTier.value.rewardXu)
-  showClaimPopup.value = false
-  claimPopupOpening.value = false
-  claimPopupParticles.value = []
-}
-
 // === LOGIC ĐỒNG BỘ THỜI GIAN THỰC CHỐNG LỖI ===
 const initFirebaseSync = (user: any) => {
   if (unsubscribeUser) { if (import.meta.env.DEV) console.log('[Firestore] STOP user/reports/withdrawals listeners'); unsubscribeUser() }
@@ -494,30 +437,15 @@ const initFirebaseSync = (user: any) => {
   isLoggedIn.value = true
   setUserContext(user.uid)
 
-  unsubscribeUser = onSnapshot(doc(db, "users", user.uid), async (docSnap) => {
+  unsubscribeUser = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data()
-      claimedChests.value = Array.isArray(data.claimedChests) ? data.claimedChests : []
       username.value = data.username || data.fullName || 'Member'
       userFullName.value = data.fullName || ''
       userPhone.value = data.phone || ''
       userBirthYear.value = data.dob || ''
       const realBalance = data.balance ? Number(data.balance) : 0;
       userBalance.value = realBalance;
-      
-      if (data.receivedWelcomeGift !== true) {
-         if (realBalance === 0) {
-           try {
-             await updateDoc(doc(db, "users", user.uid), { 
-               balance: increment(10000),
-               receivedWelcomeGift: true 
-             })
-             showWelcomePopup.value = true
-           } catch (e) { console.error("Lỗi cộng tiền:", e) }
-         } else if (realBalance > 0) {
-           updateDoc(doc(db, "users", user.uid), { receivedWelcomeGift: true }).catch(e => {})
-         }
-      }
 
       localStorage.setItem('mmo_username', username.value)
       localStorage.setItem('mmo_balance', String(realBalance))
@@ -706,97 +634,6 @@ watch(activePopup, (val) => {
     </svg>
 
     <Transition name="fade">
-      <div v-if="showWelcomePopup" class="fixed inset-0 z-[4000] flex items-center justify-center px-6">
-        <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showWelcomePopup = false"></div>
-        <div class="relative bg-[#150f0d] border border-red-700/30 w-full max-w-md p-8 rounded-[40px] shadow-[0_0_50px_rgba(185,28,28,0.2)] text-center">
-          <div class="relative z-10 space-y-6">
-            <div class="w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-3xl mx-auto flex items-center justify-center text-4xl animate-bounce">🎁</div>
-            <h2 class="text-3xl text-white font-black italic uppercase tracking-tighter leading-none">Chào mừng <br/><span class="text-red-500">Tân Thủ!</span></h2>
-            <p class="text-slate-400 text-sm font-bold italic leading-relaxed uppercase">Hệ thống đã cộng 10,000 XU vào ví.</p>
-            <button @click="showWelcomePopup = false" class="w-full py-5 bg-red-700 text-white rounded-2xl font-black italic uppercase shadow-lg shadow-red-600/30 active:scale-95">Bắt đầu ngay</button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- ===== CLAIM CHEST POPUP ===== -->
-    <Transition name="fade">
-      <div v-if="showClaimPopup && selectedChestTier" class="fixed inset-0 z-[5000] flex items-center justify-center px-6">
-        <div class="absolute inset-0 bg-black/92 backdrop-blur-md" @click="showClaimPopup = false"></div>
-        <div class="relative w-full max-w-sm rounded-[36px] overflow-hidden shadow-2xl border"
-             :class="[selectedChestTier.bg, selectedChestTier.border]"
-             :style="{ boxShadow: `0 0 60px ${selectedChestTier.key === 'kimcuong' ? 'rgba(6,182,212,0.35)' : selectedChestTier.key === 'vang' ? 'rgba(245,158,11,0.35)' : 'rgba(148,163,184,0.25)'}` }">
-
-          <!-- Inner glow top -->
-          <div class="absolute top-0 left-0 right-0 h-32 pointer-events-none"
-               :style="{ background: `radial-gradient(ellipse at 50% -20%, ${selectedChestTier.key === 'kimcuong' ? 'rgba(6,182,212,0.25)' : selectedChestTier.key === 'vang' ? 'rgba(245,158,11,0.25)' : 'rgba(148,163,184,0.2)'} 0%, transparent 70%)` }"></div>
-
-          <div class="relative z-10 p-7 space-y-5 text-center">
-
-            <!-- Animated chest + particles -->
-            <div class="relative flex justify-center items-center h-28">
-
-              <!-- XU Particles bay lên -->
-              <div v-for="p in claimPopupParticles" :key="p.id"
-                   class="popup-xu-particle absolute font-black text-[11px] text-amber-400 pointer-events-none"
-                   :style="{ '--ppx': p.x + 'px', animationDelay: p.delay + 'ms' }">
-                +XU
-              </div>
-
-              <!-- Light burst -->
-              <div v-if="claimPopupOpening"
-                   class="absolute inset-0 rounded-full pointer-events-none popup-light-burst"
-                   :style="{ background: `radial-gradient(circle, ${selectedChestTier.key === 'kimcuong' ? 'rgba(6,182,212,0.6)' : selectedChestTier.key === 'vang' ? 'rgba(251,191,36,0.6)' : 'rgba(148,163,184,0.5)'} 0%, transparent 65%)` }"></div>
-
-              <!-- Big chest emoji -->
-              <span class="text-[72px] leading-none relative z-10 select-none"
-                    :class="claimPopupOpening ? 'popup-chest-open' : 'popup-chest-idle'">
-                🎁
-              </span>
-            </div>
-
-            <!-- Tier + reward info -->
-            <div class="space-y-1.5">
-              <p class="font-black italic uppercase text-base tracking-wide" :class="selectedChestTier.color">
-                {{ selectedChestTier.chest }} 🎉
-              </p>
-              <p class="text-white font-black text-sm">{{ selectedChestTier.chestDesc }}</p>
-              <p class="text-emerald-400 text-[10px] font-bold">Bạn đã đủ điều kiện nhận thưởng!</p>
-            </div>
-
-            <!-- Reward highlight -->
-            <div class="rounded-2xl border py-3 px-4"
-                 :class="[selectedChestTier.bg, selectedChestTier.border]">
-              <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">PHẦN THƯỞNG</p>
-              <p class="font-black text-2xl italic" :class="selectedChestTier.color">
-                +{{ selectedChestTier.rewardXu.toLocaleString('vi-VN') }}
-                <span class="text-amber-400">XU</span>
-              </p>
-            </div>
-
-            <!-- Buttons -->
-            <div class="space-y-2.5">
-              <button
-                @click="confirmClaim"
-                :disabled="claimingChest"
-                class="w-full py-4 rounded-2xl font-black italic uppercase text-sm text-white transition-all active:scale-95 disabled:opacity-60 shadow-xl"
-                :class="selectedChestTier.btnBg">
-                <span v-if="claimingChest">⏳ Đang xử lý...</span>
-                <span v-else>🎁 NHẬN NGAY +{{ selectedChestTier.rewardXu.toLocaleString('vi-VN') }} XU</span>
-              </button>
-              <button @click="showClaimPopup = false"
-                      class="w-full py-2 text-slate-500 text-[10px] font-black uppercase tracking-widest hover:text-slate-400 transition-colors">
-                Để sau
-              </button>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </Transition>
-    <!-- ===== END CLAIM CHEST POPUP ===== -->
-
-    <Transition name="fade">
       <div v-if="unreadRejectedReport" class="fixed inset-0 z-[99999] flex items-center justify-center px-6">
         <div class="absolute inset-0 bg-black/95 backdrop-blur-md"></div>
         <div class="relative bg-[#150f0d] border-2 border-red-500/50 w-full max-w-md p-8 rounded-[30px] shadow-[0_0_80px_rgba(239,68,68,0.4)] text-center">
@@ -845,7 +682,11 @@ watch(activePopup, (val) => {
       </div>
 
         <div class="relative bg-gradient-to-b from-[#261208] to-[#120b0a] border-[3px] border-emerald-500 reward-popup-card w-full max-w-[420px] p-6 sm:p-8 rounded-[40px] text-center animate-in zoom-in-95 duration-500 z-[99999] overflow-hidden">
-          
+
+          <button @click="closeApprovalPopup(unreadApprovedReport)" aria-label="Đóng" class="absolute top-3 right-3 sm:top-4 sm:right-4 z-20 w-9 h-9 flex items-center justify-center rounded-full bg-black/40 text-white/70 hover:bg-black/60 hover:text-white transition-all active:scale-95 text-xl leading-none font-black">
+            ×
+          </button>
+
           <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-emerald-500/20 blur-[80px] rounded-full"></div>
 
           <div class="relative z-10 space-y-6 sm:space-y-8">
@@ -883,8 +724,8 @@ watch(activePopup, (val) => {
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2">
-              <button @click="handleThuTienVeVi(unreadApprovedReport)" class="w-full py-4 bg-[#1a0f0d] text-slate-300 rounded-2xl font-black italic uppercase text-xs hover:bg-slate-700 hover:text-white transition-all active:scale-95 border border-slate-600 hover:border-slate-400 shadow-md">
-                THU TIỀN VỀ VÍ
+              <button @click="closeApprovalPopup(unreadApprovedReport)" class="w-full py-4 bg-[#1a0f0d] text-slate-300 rounded-2xl font-black italic uppercase text-xs hover:bg-slate-700 hover:text-white transition-all active:scale-95 border border-slate-600 hover:border-slate-400 shadow-md">
+                ĐÓNG
               </button>
               
               <button @click="handleRutXuNgay(unreadApprovedReport)" class="relative w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white rounded-2xl font-black italic uppercase text-[14px] hover:from-orange-400 hover:to-red-500 shadow-[0_0_30px_rgba(239,68,68,0.6)] active:scale-95 transition-all overflow-hidden btn-glow-effect">
@@ -958,84 +799,11 @@ watch(activePopup, (val) => {
              <ProfileCard
                :username="username"
                :myReports="myReports"
-               :vipProgress="vipProgress"
-               :vipTiers="vipTiers"
-               :claimedChests="claimedChests"
                :isLoggedIn="isLoggedIn"
                :isDataLoading="isDataLoading"
                :userBalance="userBalance"
              />
            </div>
-
-           <!-- Mobile: 3 Hòm Rương -->
-           <div v-if="isLoggedIn" class="lg:hidden space-y-3">
-             <!-- Grid hòm -->
-             <div class="grid grid-cols-3 gap-2.5">
-               <TreasureChest
-                 v-for="(t, i) in vipTiers.slice(1)" :key="t.key"
-                 :tier="t"
-                 :unlocked="vipProgress.count >= t.min"
-                 :claimed="claimedChests.includes(t.key)"
-                 :count="vipProgress.count"
-                 @toggle="expandedChest = expandedChest === i ? null : i"
-               />
-             </div>
-
-             <!-- Detail panel khi click hòm -->
-             <div v-if="selectedChestTier" class="relative rounded-2xl border p-4 space-y-2"
-                  :class="[selectedChestTier.bg, selectedChestTier.border]">
-
-               <!-- ĐÃ MỞ -->
-               <template v-if="vipProgress.count >= selectedChestTier.min">
-                 <p class="text-center font-black italic uppercase text-sm" :class="selectedChestTier.color">
-                   {{ selectedChestTier.chest }} 🎉
-                 </p>
-                 <p class="text-center text-white text-[11px] font-black">{{ selectedChestTier.chestDesc }}</p>
-                 <p class="text-center text-emerald-400 text-[9px] font-bold">Chúc mừng! Bạn đã đủ điều kiện nhận thưởng.</p>
-
-                 <!-- ĐÃ NHẬN -->
-                 <div v-if="claimedChests.includes(selectedChestTier.key)"
-                      class="w-full py-2 text-center text-emerald-400 text-[10px] font-black uppercase tracking-wide border border-emerald-500/20 rounded-xl bg-emerald-500/5">
-                   ✅ ĐÃ NHẬN THƯỞNG
-                 </div>
-                 <!-- CHƯA NHẬN -->
-                 <button v-else
-                         @click="openClaimPopup()"
-                         :disabled="claimingChest"
-                         class="w-full py-3 rounded-xl font-black italic uppercase text-sm text-white transition-all active:scale-95 disabled:opacity-60 shadow-lg"
-                         :class="selectedChestTier.btnBg">
-                   <span v-if="claimingChest">⏳ Đang xử lý...</span>
-                   <span v-else>🎁 NHẬN THƯỞNG +{{ selectedChestTier.rewardXu.toLocaleString('vi-VN') }} XU</span>
-                 </button>
-               </template>
-
-               <!-- CÒN KHÓA -->
-               <template v-else>
-                 <p class="text-center font-black italic uppercase text-sm" :class="selectedChestTier.color">
-                   {{ selectedChestTier.chest }}
-                 </p>
-                 <p class="text-center text-slate-400 text-[10px] font-bold">
-                   Cần hoàn thành {{ selectedChestTier.min }} công việc
-                 </p>
-                 <div class="space-y-1">
-                   <div class="flex justify-between">
-                     <span class="text-slate-600 text-[8px] font-black uppercase">TIẾN ĐỘ</span>
-                     <span class="text-[9px] font-black" :class="selectedChestTier.color">
-                       {{ vipProgress.count }}/{{ selectedChestTier.min }}
-                     </span>
-                   </div>
-                   <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                     <div class="h-full rounded-full transition-all duration-700"
-                          :class="selectedChestTier.bar"
-                          :style="{ width: Math.min(100, (vipProgress.count / selectedChestTier.min) * 100) + '%' }"></div>
-                   </div>
-                 </div>
-                 <p class="text-center text-[9px] font-black italic" :class="selectedChestTier.color">
-                   Phần thưởng: {{ selectedChestTier.chestDesc }}
-                 </p>
-               </template>
-             </div>
-           </div><!-- /3 hòm rương -->
 
            <JobSection
              :username="username"
@@ -1611,23 +1379,20 @@ watch(activePopup, (val) => {
           'w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-md shrink-0',
           randomNotice.type === 'withdraw'
             ? 'bg-gradient-to-tr from-emerald-600 to-teal-400 shadow-emerald-500/40'
-            : randomNotice.type === 'chest'
-            ? 'bg-gradient-to-tr from-amber-500 to-yellow-300 shadow-amber-400/50'
             : 'bg-gradient-to-tr from-orange-600 to-red-500 shadow-red-500/40'
         ]">
            <svg v-if="randomNotice.type === 'withdraw'" class="w-5 h-5 drop-shadow-md" viewBox="0 0 24 24" fill="none">
              <circle cx="12" cy="12" r="10" fill="url(#finalGoldCoin)" />
              <path d="M12 7v10M9 10h6M9 14h6" stroke="#854d0e" stroke-width="2" stroke-linecap="round" />
            </svg>
-           <span v-else-if="randomNotice.type === 'chest'" class="text-lg">🎁</span>
            <span v-else class="text-lg">🔥</span>
         </div>
         <div class="flex flex-col text-left leading-tight min-w-0">
           <span class="text-white text-[12px] font-black italic tracking-tighter uppercase truncate">{{ randomNotice.name }}</span>
-          <span :class="['text-[13px] font-black italic truncate', randomNotice.type === 'withdraw' ? 'text-emerald-400' : randomNotice.type === 'chest' ? 'text-amber-300' : 'text-orange-400']">
-            {{ randomNotice.title }}{{ randomNotice.amount ? ' ' + randomNotice.amount : '' }}{{ randomNotice.type === 'job' ? ' XU' : '' }}
+          <span :class="['text-[13px] font-black italic truncate', randomNotice.type === 'withdraw' ? 'text-emerald-400' : 'text-orange-400']">
+            {{ randomNotice.title }}{{ randomNotice.amount ? ' ' + randomNotice.amount : '' }}
           </span>
-          <span class="text-slate-500 text-[9px] font-bold uppercase tracking-widest italic opacity-70 truncate">{{ randomNotice.sub }}</span>
+          <span v-if="randomNotice.sub" class="text-slate-500 text-[9px] font-bold uppercase tracking-widest italic opacity-70 truncate">{{ randomNotice.sub }}</span>
         </div>
       </div>
     </Transition>
@@ -1896,45 +1661,7 @@ watch(activePopup, (val) => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* ===== CLAIM CHEST POPUP ANIMATIONS ===== */
-/* Chest idle float */
-@keyframes chestIdle {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-6px) scale(1.02); }
-}
-/* Chest opening burst */
-@keyframes chestOpenAnim {
-  0%   { transform: scale(0.85) rotate(-8deg); }
-  25%  { transform: scale(1.25) rotate(5deg); }
-  50%  { transform: scale(1.1) rotate(-3deg); }
-  75%  { transform: scale(1.18) rotate(2deg); }
-  100% { transform: scale(1.12) rotate(0deg); }
-}
-.popup-chest-idle { animation: chestIdle 2.4s ease-in-out infinite; }
-.popup-chest-open { animation: chestOpenAnim 0.8s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
-
-/* Light burst */
-@keyframes popupLightBurst {
-  0%   { opacity: 0; transform: scale(0.4); }
-  30%  { opacity: 0.9; transform: scale(1.2); }
-  100% { opacity: 0; transform: scale(2.2); }
-}
-.popup-light-burst { animation: popupLightBurst 1.4s ease-out forwards; }
-
-/* XU particles */
-@keyframes popupXuFloat {
-  0%   { opacity: 1; transform: translateX(var(--ppx)) translateY(0) scale(1.1); }
-  100% { opacity: 0; transform: translateX(var(--ppx)) translateY(-70px) scale(0.7); }
-}
-.popup-xu-particle {
-  top: 35%;
-  left: 50%;
-  transform: translateX(-50%);
-  animation: popupXuFloat 1.4s ease-out forwards;
-}
-/* ===== END CLAIM CHEST POPUP ===== */
-
-@keyframes jump-cycle { 
+@keyframes jump-cycle {
   0%, 40%, 100% { transform: translateY(0); opacity: 1; } 
   5%, 15%, 25% { transform: translateY(-10px); } 
   10%, 20%, 30% { transform: translateY(0); } 

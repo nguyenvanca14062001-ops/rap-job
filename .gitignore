@@ -39,3 +39,6 @@ __screenshots__/
 
 # Environment variables
 .env*
+
+# Firebase service account keys (dùng cho scripts/migrate-usernames.mjs) — không commit
+serviceAccountKey*.json

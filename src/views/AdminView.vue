@@ -8,9 +8,9 @@ import Swal from 'sweetalert2'
 import { jobsData } from '@/data/jobs'
 import { getReportImages } from '@/utils/reportImages'
 import { normalizePhone } from '@/utils/phone'
-import { ABBANK_REFERRAL_JOB_ID } from '@/utils/referralAbbank'
-import { MOMO_REFERRAL_JOB_ID } from '@/utils/referralMomo'
-import { LPBANK_PLUS_REFERRAL_JOB_ID } from '@/utils/referralLpbankPlus'
+import { ABBANK_REFERRAL_JOB_ID, ABBANK_REFERRAL_REWARD } from '@/utils/referralAbbank'
+import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
+import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/utils/referralLpbankPlus'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
@@ -238,13 +238,26 @@ const bulkApproveOtherJobs = async () => {
   if (isConfirmed) {
     try {
       Swal.fire({ title: 'ĐANG XỬ LÝ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
+
       for (const id of selectedOtherJobs.value) {
         const rp = reports.value.find(r => r.id === id)
         if (!rp || rp.status !== 'pending') continue
-        const reward = Number(String(rp.reward || '0').replace(/\D/g, '')) || 0
-        await setDoc(doc(db, "users", rp.uid), { balance: increment(reward) }, { merge: true })
-        await updateDoc(doc(db, "reports", id), { status: 'approved', approvedAt: serverTimestamp() })
-        updateLocalStatsOnApprove(rp)
+        // Lấy từ cấu hình job đáng tin cậy — không dùng rp.reward (client-submitted).
+        const reward = getTrustedReward(rp.jobId)
+
+        let committed = false
+        await runTransaction(db, async (tx) => {
+          const reportRef = doc(db, "reports", id)
+          const reportSnap = await tx.get(reportRef)
+          if (!reportSnap.exists() || reportSnap.data().status !== 'pending') return
+
+          const userRef = doc(db, "users", rp.uid)
+          tx.set(userRef, { balance: increment(reward) }, { merge: true })
+          tx.update(reportRef, { status: 'approved', approvedAt: serverTimestamp() })
+          committed = true
+        })
+
+        if (committed) updateLocalStatsOnApprove(rp)
       }
       selectedOtherJobs.value = []
       Swal.fire('THÀNH CÔNG!', 'Đã duyệt xong!', 'success')
@@ -936,6 +949,23 @@ const addXuToUser = async (uid: string) => {
 }
 
 // ============================================================================
+// Reward ĐÁNG TIN CẬY cho 1 jobId, lấy từ cấu hình job — KHÔNG BAO GIỜ từ report.reward
+// (field do chính user ghi lúc submit, có thể bị sửa nếu user gọi thẳng Firestore SDK).
+// Thứ tự ưu tiên: override trong vip_jobs (Admin tự cấu hình, realtime) → hằng số referral
+// cố định compile-sẵn trong code (ABBANK/LPBANK PLUS/MOMO) → jobsData tĩnh (job thường/VIP bank).
+// ============================================================================
+const getTrustedReward = (jobId: string): number => {
+  const override = vipJobs.value.find((v: any) => v.id === jobId)?.reward
+  const fixedReferral =
+    jobId === ABBANK_REFERRAL_JOB_ID ? ABBANK_REFERRAL_REWARD :
+    jobId === LPBANK_PLUS_REFERRAL_JOB_ID ? LPBANK_PLUS_REFERRAL_REWARD :
+    jobId === MOMO_REFERRAL_JOB_ID ? MOMO_REFERRAL_REWARD : undefined
+  const staticReward = (jobsData as Record<string, any>)[jobId]?.reward
+  const source = override ?? fixedReferral ?? staticReward
+  return Number(String(source ?? '0').replace(/\D/g, '')) || 0
+}
+
+// ============================================================================
 // CỘNG XU CHO ĐƠN reports (job thường / VIP / referral ABBANK) — bấm 1 nút duy nhất.
 // Dùng Firestore transaction: đọc lại report + user ngay trước khi ghi, chặn cộng trùng
 // nếu report không còn 'pending', và chỉ update field balance (increment) — không bao giờ
@@ -946,8 +976,9 @@ const approveReport = async (report: any) => {
   const isReferral = report.jobId === ABBANK_REFERRAL_JOB_ID
   const user = usersMap.value[targetUid] || {}
 
-  // Referral ABBANK dùng thưởng cố định (đã lưu sẵn ở report.reward lúc submit), không còn tính tăng dần theo số lần.
-  const suggestedReward = Number(String(report.reward || report.suggestedReward || '0').replace(/\D/g, '')) || 0
+  // Số đề xuất LUÔN lấy từ cấu hình job đáng tin cậy — không dùng report.reward (client-submitted)
+  // để tránh user tự sửa reward lúc gửi đơn. Admin vẫn có thể sửa số trước khi xác nhận nếu cần.
+  const suggestedReward = getTrustedReward(report.jobId)
 
   const { value: rewardInput, isConfirmed } = await Swal.fire({
     title: '💰 CỘNG XU ĐƠN NÀY',
@@ -962,7 +993,7 @@ const approveReport = async (report: any) => {
       </div>`,
     input: 'number',
     inputValue: suggestedReward,
-    inputLabel: `Số xu cộng (đề xuất ${suggestedReward.toLocaleString()} xu)`,
+    inputLabel: `Số xu cộng (đề xuất ${suggestedReward.toLocaleString()} xu — lấy từ cấu hình job)`,
     showCancelButton: true,
     confirmButtonText: 'Xác nhận cộng xu ✅',
     confirmButtonColor: '#10b981',
@@ -1051,26 +1082,54 @@ const deleteReport = async (id: string) => {
   if (confirm("XÓA VĨNH VIỄN?")) try { await deleteDoc(doc(db, "reports", id)) } catch (e) { alert("LỖI: " + e) }
 }
 
+// Balance của user CHỈ bị trừ ở đây, lúc Admin duyệt — KHÔNG còn bị trừ lúc user gửi yêu cầu
+// (xem WithdrawView.vue). Dùng transaction: đọc lại withdrawal + user ngay trước khi ghi,
+// chặn duyệt trùng (không còn 'pending'), và chặn duyệt nếu balance hiện tại không đủ —
+// kể cả khi user có nhiều lệnh rút pending cộng dồn vượt quá số dư thật.
 const approveWithdrawal = async (item: any) => {
   const { isConfirmed } = await Swal.fire({ title: 'XÁC NHẬN ĐÃ CHUYỂN KHOẢN?', text: `${getVndAmount(item).toLocaleString('vi-VN')} VNĐ`, icon: 'warning', showCancelButton: true, confirmButtonText: 'ĐÃ CHUYỂN', confirmButtonColor: '#10b981', cancelButtonText: 'HỦY' })
-  if (isConfirmed) {
-    try {
-      await updateDoc(doc(db, "withdrawals", item.id), { status: 'approved', paidAt: serverTimestamp() })
-      await updateDoc(doc(db, "users", item.uid), { hasPendingWithdraw: false })
-      Swal.fire('HOÀN TẤT! 🎉', 'Duyệt rút tiền thành công!', 'success')
-    } catch (e: any) { Swal.fire('Lỗi!', e.message, 'error') }
-  }
+  if (!isConfirmed) return
+  try {
+    await runTransaction(db, async (tx) => {
+      const withdrawalRef = doc(db, "withdrawals", item.id)
+      const withdrawalSnap = await tx.get(withdrawalRef)
+      if (!withdrawalSnap.exists()) throw new Error('Yêu cầu rút tiền không tồn tại.')
+      if (withdrawalSnap.data().status !== 'pending') throw new Error('Yêu cầu này đã được xử lý trước đó.')
+
+      const amount = getXuAmount(withdrawalSnap.data())
+      // Chặn amount âm/0/NaN/dữ liệu hỏng — không được trừ (hay cộng ngược) balance với số tiền rác.
+      if (!Number.isFinite(amount) || amount <= 0) throw new Error('Số tiền rút không hợp lệ (phải là số dương).')
+
+      const userRef = doc(db, "users", item.uid)
+      const userSnap = await tx.get(userRef)
+      if (!userSnap.exists()) throw new Error('User chưa có hồ sơ ví.')
+      const currentBalance = Number(userSnap.data()?.balance) || 0
+      if (currentBalance < amount) throw new Error('Số dư hiện tại của user không đủ để duyệt lệnh rút này.')
+
+      tx.update(userRef, { balance: increment(-amount), hasPendingWithdraw: false })
+      tx.update(withdrawalRef, { status: 'approved', paidAt: serverTimestamp() })
+    })
+    Swal.fire('HOÀN TẤT! 🎉', 'Duyệt rút tiền thành công!', 'success')
+  } catch (e: any) { Swal.fire('LỖI!', e.message || String(e), 'error') }
 }
 
+// Balance chưa từng bị trừ lúc user gửi yêu cầu, nên từ chối KHÔNG cần hoàn xu nữa —
+// chỉ đổi trạng thái. Vẫn check 'pending' trong transaction để chặn xử lý trùng.
 const rejectWithdrawal = async (item: any) => {
   const { value: note, isConfirmed } = await Swal.fire({ title: 'TỪ CHỐI RÚT TIỀN', input: 'text', inputPlaceholder: 'Lý do...', showCancelButton: true, confirmButtonColor: '#ef4444' })
-  if (isConfirmed) {
-    try {
-      await updateDoc(doc(db, "withdrawals", item.id), { status: 'rejected', adminNote: note || 'Từ chối' })
-      await updateDoc(doc(db, "users", item.uid), { balance: increment(getXuAmount(item)), hasPendingWithdraw: false })
-      Swal.fire('Đã hủy & Hoàn xu!', `Hoàn ${getXuAmount(item).toLocaleString()} XU.`, 'success')
-    } catch (e: any) { Swal.fire('Lỗi!', e.message, 'error') }
-  }
+  if (!isConfirmed) return
+  try {
+    await runTransaction(db, async (tx) => {
+      const withdrawalRef = doc(db, "withdrawals", item.id)
+      const withdrawalSnap = await tx.get(withdrawalRef)
+      if (!withdrawalSnap.exists()) throw new Error('Yêu cầu rút tiền không tồn tại.')
+      if (withdrawalSnap.data().status !== 'pending') throw new Error('Yêu cầu này đã được xử lý trước đó.')
+
+      tx.update(withdrawalRef, { status: 'rejected', adminNote: note || 'Từ chối' })
+      tx.update(doc(db, "users", item.uid), { hasPendingWithdraw: false })
+    })
+    Swal.fire('Đã từ chối!', 'Yêu cầu rút tiền đã bị từ chối.', 'success')
+  } catch (e: any) { Swal.fire('LỖI!', e.message || String(e), 'error') }
 }
 
 const deleteWithdrawal = async (id: string) => {

@@ -3,7 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { auth, db, storage } from '@/firebase'
 import { collection, doc, setDoc, getDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
+import { compressImage, MAX_UPLOAD_BYTES, perfMark, perfLog } from '@/utils/imageCompress'
 import { normalizePhone } from '@/utils/phone'
 import { VIP_JOB_IDS } from '@/utils/vipJobs'
 import { jobsData } from '@/data/jobs'
@@ -34,6 +34,7 @@ const imageError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
 const isSubmitting = ref(false)
 const submitStage = ref<'idle' | 'uploading' | 'saving'>('idle')
+const uploadedCount = ref(0)
 
 const loadProfile = async () => {
   const uid = auth.currentUser?.uid
@@ -72,23 +73,32 @@ const handleFileUpload = async (event: Event) => {
   }
   imageError.value = ''
 
-  for (const file of files) {
+  const tBatchStart = perfMark()
+  // Nén song song (Promise.all) thay vì tuần tự — các ảnh độc lập nhau nên xử lý đồng thời.
+  const results = await Promise.all(files.map(async (file) => {
     if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
       alert(`⚠️ LỖI ĐỊNH DẠNG: Bức ảnh "${file.name}" là ảnh HEIC của iPhone nên hệ thống không nhận diện được. Vui lòng CHỤP MÀN HÌNH lại bức ảnh đó rồi tải lên!`)
-      continue
+      return null
     }
-    if (!file.type.startsWith('image/')) continue
+    if (!file.type.startsWith('image/')) return null
     try {
       const compressed = await compressImage(file)
       if (compressed.blob.size > MAX_UPLOAD_BYTES) {
         alert('⚠️ Ảnh quá lớn, vui lòng chọn ảnh khác hoặc chụp lại rõ hơn.')
-        continue
+        return null
       }
-      images.value.push(compressed.dataUrl)
-      imageBlobs.value.push(compressed.blob)
+      return compressed
     } catch (err: any) {
       alert('⚠️ LỖI XỬ LÝ ẢNH: ' + (err?.message || 'Vui lòng thử ảnh khác.'))
+      return null
     }
+  }))
+  perfLog(`Tổng nén ${files.length} ảnh vừa chọn (D)`, tBatchStart)
+
+  for (const compressed of results) {
+    if (!compressed) continue
+    images.value.push(compressed.dataUrl)
+    imageBlobs.value.push(compressed.blob)
   }
   target.value = ''
 }
@@ -113,6 +123,7 @@ const submitProof = async () => {
   }
 
   isSubmitting.value = true
+  const tSubmitStart = perfMark()
   try {
     const pendingSnap = await getDocs(query(collection(db, 'reports'), where('uid', '==', uid), where('status', '==', 'pending')))
     const pendingVipCount = pendingSnap.docs.filter(d => VIP_JOB_IDS.includes(d.data().jobId)).length
@@ -126,13 +137,19 @@ const submitProof = async () => {
     const reportId = reportRef.id
 
     submitStage.value = 'uploading'
+    uploadedCount.value = 0
     let proofImages: { url: string; path: string }[] = []
+    const tUploadStart = perfMark()
     try {
+      // Upload + getDownloadURL của cả 3 ảnh chạy song song, không chờ tuần tự từng ảnh.
       proofImages = await Promise.all(imageBlobs.value.map(async (blob, index) => {
         const path = `proofs/${uid}/${reportId}/image_${index}.jpg`
         const imgRef = storageRef(storage, path)
+        const tImg = perfMark()
         await uploadBytes(imgRef, blob, { contentType: 'image/jpeg' })
         const url = await getDownloadURL(imgRef)
+        perfLog(`Upload ảnh ${index + 1}/${imageBlobs.value.length} (uploadBytes+getDownloadURL)`, tImg)
+        uploadedCount.value++
         return { url, path: imgRef.fullPath }
       }))
     } catch (uploadError: any) {
@@ -141,6 +158,7 @@ const submitProof = async () => {
       submitStage.value = 'idle'
       return
     }
+    perfLog(`Tổng upload ${imageBlobs.value.length} ảnh (E+F+G)`, tUploadStart)
 
     submitStage.value = 'saving'
 
@@ -184,13 +202,16 @@ const submitProof = async () => {
       updatedAt: serverTimestamp()
     }
 
+    const tSave = perfMark()
     await setDoc(reportRef, reportData)
+    perfLog('Tạo report Firestore (H)', tSave)
 
     resetForm()
     emit('submitted')
   } catch (error: any) {
     alert('❌ LỖI HỆ THỐNG: ' + error.message)
   } finally {
+    perfLog('TỔNG THỜI GIAN TỪ LÚC BẤM GỬI (I)', tSubmitStart)
     isSubmitting.value = false
     submitStage.value = 'idle'
   }
@@ -270,7 +291,7 @@ const submitProof = async () => {
 
           <button @click="submitProof" :disabled="isSubmitting"
                   class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-2xl text-[13px] md:text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50">
-            {{ submitStage === 'uploading' ? 'ĐANG TẢI ẢNH LÊN...' : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isSubmitting ? 'ĐANG XỬ LÝ...' : 'GỬI BẰNG CHỨNG 📥' }}
+            {{ submitStage === 'uploading' ? `ĐANG TẢI ẢNH ${uploadedCount}/${imageBlobs.length}...` : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isSubmitting ? 'ĐANG XỬ LÝ...' : 'GỬI BẰNG CHỨNG 📥' }}
           </button>
         </div>
       </div>

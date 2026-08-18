@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db, storage } from '@/firebase'
-import { collection, doc, runTransaction, serverTimestamp } from "firebase/firestore"
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore"
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from 'sweetalert2'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
@@ -200,6 +200,21 @@ const handleConfirmWithdraw = async () => {
     return
   }
 
+  // Chặn cứng amount — phải là số dương hợp lệ và đúng 1 trong các mốc rút tiền được hỗ trợ.
+  // amount chỉ có thể đến từ selectAmount() (nút bấm cố định) nên về lý thuyết luôn hợp lệ,
+  // nhưng vẫn validate tường minh ở đây để không phụ thuộc hoàn toàn vào state UI phía trên.
+  if (!Number.isFinite(amount.value) || amount.value <= 0 || !withdrawOptions.includes(amount.value)) {
+    showConfirmModal.value = false
+    Swal.fire({
+      title: 'SỐ TIỀN KHÔNG HỢP LỆ!',
+      text: 'Vui lòng chọn đúng 1 trong các mốc rút tiền được hỗ trợ.',
+      icon: 'error',
+      confirmButtonColor: '#ef4444',
+      customClass: { popup: 'rounded-[30px]' }
+    })
+    return
+  }
+
   isLoading.value = true
 
   // Tạo trước withdrawalId để dùng làm path Storage
@@ -234,58 +249,38 @@ const handleConfirmWithdraw = async () => {
   }
   console.log("Uploaded withdrawal QR:", qrImage)
 
+  // Chỉ tạo document withdrawals (status: pending) — KHÔNG đụng users/{uid}.balance ở đây.
+  // Trừ tiền thật sự chỉ xảy ra khi Admin duyệt (AdminView.approveWithdrawal, transaction,
+  // check số dư ngay tại thời điểm duyệt). Số dư hiển thị ở đây (props.userBalance) và
+  // hasPendingWithdraw (tính từ props.myWithdrawals) chỉ để hiện cảnh báo UI, không phải
+  // nguồn sự thật cho việc trừ tiền.
   try {
-    await runTransaction(db, async (transaction) => {
-      const userRef = doc(db, "users", user.uid)
-      const userSnap = await transaction.get(userRef)
-      const currentBalance = Number(userSnap.data()?.balance || 0)
-
-      if (currentBalance < withdrawAmount) {
-        throw new Error('INSUFFICIENT_BALANCE')
-      }
-
-      transaction.update(userRef, {
-        balance: currentBalance - withdrawAmount,
-        hasPendingWithdraw: true
-      })
-
-      transaction.set(withdrawalRef, {
-        uid: user.uid,
-        username: props.username || '',
-        fullName: props.userFullName || '',
-        phoneRef: props.userPhone || '',
-        amount: withdrawAmount,
-        realMoney: Math.floor(withdrawAmount / 12),
-        bankInfo: '',
-        status: 'pending',
-        qrImage,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        note: '',
-        rejectReason: '',
-        paidAt: null,
-        paidBy: null
-      })
+    await setDoc(withdrawalRef, {
+      uid: user.uid,
+      username: props.username || '',
+      fullName: props.userFullName || '',
+      phoneRef: props.userPhone || '',
+      amount: withdrawAmount,
+      realMoney: Math.floor(withdrawAmount / 12),
+      bankInfo: '',
+      status: 'pending',
+      qrImage,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      note: '',
+      rejectReason: '',
+      paidAt: null,
+      paidBy: null
     })
   } catch (txError: any) {
-    if (txError?.message === 'INSUFFICIENT_BALANCE') {
-      Swal.fire({
-        title: 'SỐ DƯ KHÔNG ĐỦ!',
-        text: 'Số dư của bạn không đủ để rút mốc này.',
-        icon: 'error',
-        confirmButtonColor: '#ef4444',
-        customClass: { popup: 'rounded-[30px]' }
-      })
-    } else {
-      console.error("Lỗi khi rút tiền: ", txError)
-      Swal.fire({
-        title: 'LỖI HỆ THỐNG!',
-        text: 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.',
-        icon: 'error',
-        confirmButtonColor: '#ef4444',
-        customClass: { popup: 'rounded-[30px]' }
-      })
-    }
+    console.error("Lỗi khi rút tiền: ", txError)
+    Swal.fire({
+      title: 'LỖI HỆ THỐNG!',
+      text: 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.',
+      icon: 'error',
+      confirmButtonColor: '#ef4444',
+      customClass: { popup: 'rounded-[30px]' }
+    })
     isLoading.value = false
     showConfirmModal.value = false
     return

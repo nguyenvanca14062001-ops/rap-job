@@ -9,7 +9,7 @@ import Swal from 'sweetalert2'
 import exifr from 'exifr'
 import { useVipJobs } from '@/composables/useVipJobs'
 import { jobsData } from '@/data/jobs'
-import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
+import { compressImage, MAX_UPLOAD_BYTES, perfMark, perfLog } from '@/utils/imageCompress'
 import { normalizePhone } from '@/utils/phone'
 
 const props = defineProps<{
@@ -108,7 +108,8 @@ const images = ref<string[]>([]) // base64 preview only, không lưu vào Firest
 const imageBlobs = ref<Blob[]>([]) // song song với `images`, dùng để upload lên Storage
 const imageError = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
-const submitStage = ref<'idle' | 'uploading' | 'saving'>('idle')
+const submitStage = ref<'idle' | 'processing' | 'uploading' | 'saving'>('idle')
+const uploadedCount = ref(0)
 
 onMounted(() => {
   onAuthStateChanged(auth, (user) => {
@@ -182,29 +183,38 @@ const handleFileUpload = async (event: Event) => {
   }
   imageError.value = ''
 
-  for (const file of files) {
+  const shouldReadExif = images.value.length === 0
+  const tBatchStart = perfMark()
+
+  // Nén song song (Promise.all) thay vì tuần tự — không có phụ thuộc giữa các ảnh nên xử lý
+  // đồng thời giảm tổng thời gian chờ khi chọn nhiều ảnh cùng lúc, đặc biệt trên mobile.
+  const results = await Promise.all(files.map(async (file) => {
     if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
       alert(`⚠️ LỖI ĐỊNH DẠNG: Bức ảnh "${file.name}" là ảnh HEIC của iPhone nên hệ thống không nhận diện được. Vui lòng CHỤP MÀN HÌNH lại bức ảnh đó rồi tải lên!`)
-      continue
+      return null
     }
-    if (!file.type.startsWith('image/')) continue
+    if (!file.type.startsWith('image/')) return null
     try {
       const compressed = await compressImage(file)
-      console.log("Image compressed:", {
-        originalSizeKB: Math.round(file.size / 1024),
-        compressedSizeKB: Math.round(compressed.blob.size / 1024),
-        type: compressed.blob.type
-      })
       if (compressed.blob.size > MAX_UPLOAD_BYTES) {
         alert('⚠️ Ảnh quá lớn, vui lòng chọn ảnh khác hoặc chụp lại rõ hơn.')
-        continue
+        return null
       }
-      if (images.value.length === 0) await readExif(file)
-      images.value.push(compressed.dataUrl)
-      imageBlobs.value.push(compressed.blob)
+      return { file, compressed }
     } catch (err: any) {
       alert('⚠️ LỖI XỬ LÝ ẢNH: ' + (err?.message || 'Vui lòng thử ảnh khác.'))
+      return null
     }
+  }))
+
+  perfLog(`Tổng nén ${files.length} ảnh vừa chọn (D)`, tBatchStart)
+
+  const validResults = results.filter((r): r is { file: File; compressed: Awaited<ReturnType<typeof compressImage>> } => r !== null)
+  const firstValid = validResults[0]
+  if (shouldReadExif && firstValid) await readExif(firstValid.file)
+  for (const { compressed } of validResults) {
+    images.value.push(compressed.dataUrl)
+    imageBlobs.value.push(compressed.blob)
   }
   target.value = ''
 }
@@ -274,6 +284,7 @@ const submitReport = async () => {
   }
 
   isLoading.value = true
+  const tSubmitStart = perfMark()
   try {
     // Chặn spam: chỉ giới hạn tổng đơn VIP pending (tối đa 3 đơn cùng lúc).
     // Job cơ bản không giới hạn tổng — chỉ giữ nguyên rule "1 lần/job" ở bước bên dưới.
@@ -346,6 +357,7 @@ const submitReport = async () => {
     }
 
     submitStage.value = 'uploading'
+    uploadedCount.value = 0
     console.log("Uploading proof images to Storage:", {
       uid: userUid.value,
       reportId,
@@ -353,12 +365,18 @@ const submitReport = async () => {
     })
 
     let proofImages: { url: string; path: string }[] = []
+    const tUploadStart = perfMark()
     try {
+      // Upload + getDownloadURL của cả 3 ảnh chạy song song (Promise.all) — không chờ ảnh
+      // trước xong mới bắt đầu ảnh sau.
       proofImages = await Promise.all(imageBlobs.value.map(async (blob, index) => {
         const path = `proofs/${userUid.value}/${reportId}/image_${index}.jpg`
         const imgRef = storageRef(storage, path)
+        const tImg = perfMark()
         await uploadBytes(imgRef, blob, { contentType: 'image/jpeg' })
         const url = await getDownloadURL(imgRef)
+        perfLog(`Upload ảnh ${index + 1}/${imageBlobs.value.length} (uploadBytes+getDownloadURL)`, tImg)
+        uploadedCount.value++
         return { url, path: imgRef.fullPath }
       }))
     } catch (uploadError: any) {
@@ -367,6 +385,7 @@ const submitReport = async () => {
       submitStage.value = 'idle'
       return
     }
+    perfLog(`Tổng upload ${imageBlobs.value.length} ảnh (E+F+G)`, tUploadStart)
     console.log("Uploaded proof images:", proofImages)
 
     // Không tạo report nếu vì lý do gì đó vượt giới hạn ảnh sau upload
@@ -413,12 +432,15 @@ const submitReport = async () => {
       hasBase64Images: Boolean((reportData as any).images?.some?.((x: any) => String(x).startsWith('data:image')))
     })
 
+    const tSave = perfMark()
     await setDoc(reportRef, reportData)
+    perfLog('Tạo report Firestore (H)', tSave)
 
     showSuccessModal.value = true
   } catch (error: any) {
     alert('❌ LỖI HỆ THỐNG: ' + error.message)
   } finally {
+    perfLog('TỔNG THỜI GIAN TỪ LÚC BẤM GỬI (I)', tSubmitStart)
     isLoading.value = false
     submitStage.value = 'idle'
   }
@@ -578,7 +600,7 @@ const openFanpage = () => {
           :disabled="isLoading"
           class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-[20px] text-xl font-black italic shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all active:scale-95 disabled:opacity-50"
         >
-          {{ submitStage === 'uploading' ? 'ĐANG TẢI ẢNH LÊN...' : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN GỬI ĐƠN' }}
+          {{ submitStage === 'uploading' ? `ĐANG TẢI ẢNH ${uploadedCount}/${imageBlobs.length}...` : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN GỬI ĐƠN' }}
         </button>
 
       </div>

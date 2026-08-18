@@ -86,7 +86,7 @@ The special job ID `'APP NGÂN HÀNG'` is intercepted in `App.vue`'s `handleRece
 **Tabs:**
 - `app_jobs` — VIP jobs (bank/stock apps), classified by `isAppJob()` which matches keywords: `app`, `ngân hàng`, `chứng khoán`, `vpbank`, `tpbank`, `msb`, `kafi`, `dnse`, `kis`
 - `other_jobs` — basic interaction jobs; supports bulk approve (checkbox + batch write)
-- `withdrawals` — approve marks `status: 'approved'`; reject refunds XU via `increment()` and clears `hasPendingWithdraw` flag
+- `withdrawals` — user's request only creates the `withdrawals` doc (`status: 'pending'`); balance is untouched until Admin acts. `approveWithdrawal()` debits `users/{uid}.balance` (transaction: re-checks `pending` status and sufficient balance) and marks `status: 'approved'`. `rejectWithdrawal()` just marks `status: 'rejected'` — no refund needed since nothing was deducted at request time.
 
 **Other admin features:**
 - Search by username or phone (`phoneRef` field)

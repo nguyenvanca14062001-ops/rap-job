@@ -2,9 +2,10 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
-import { createUserWithEmailAndPassword } from "firebase/auth"
-import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore"
+import { createUserWithEmailAndPassword, deleteUser, signOut } from "firebase/auth"
+import { doc, getDoc, writeBatch } from "firebase/firestore"
 import Swal from 'sweetalert2'
+import { normalizeUsername } from '@/utils/username'
 
 const router = useRouter()
 const fullName = ref('')
@@ -37,12 +38,13 @@ const handleRegister = async () => {
 
   loading.value = true
   try {
-    const usernameToCheck = username.value.toLowerCase().trim()
-    const usersRef = collection(db, "users")
-    const q = query(usersRef, where("username", "==", usernameToCheck))
-    const querySnapshot = await getDocs(q)
+    // Không còn query collection("users") để check trùng username — /users giờ chỉ cho
+    // owner/admin đọc. Thay bằng lookup 1 document trong index usernames/{normalizedUsername}
+    // (collection này chỉ lưu { uid }, không chứa dữ liệu nhạy cảm nên có thể đọc công khai).
+    const normalizedUsername = normalizeUsername(username.value)
+    const usernameSnap = await getDoc(doc(db, "usernames", normalizedUsername))
 
-    if (!querySnapshot.empty) {
+    if (usernameSnap.exists()) {
       Swal.fire({
         title: 'TRÙNG TÊN ĐĂNG NHẬP!',
         text: 'Tên đăng nhập này đã có người sử dụng. Vui lòng chọn tên khác!',
@@ -121,7 +123,12 @@ const handleRegister = async () => {
 
     const user = userCredential.user
 
-    await setDoc(doc(db, "users", user.uid), {
+    // Tạo usernames/{normalizedUsername} + users/{uid} cùng lúc trong 1 batch — nếu 1 trong 2
+    // ghi thất bại thì cả batch đều không được ghi (Firestore batch atomic), tránh trường hợp
+    // có users/{uid} mà thiếu index usernames hoặc ngược lại.
+    const batch = writeBatch(db)
+    batch.set(doc(db, "usernames", normalizedUsername), { uid: user.uid })
+    batch.set(doc(db, "users", user.uid), {
       username: username.value,
       fullName: fullName.value,
       phone: phone.value,
@@ -131,8 +138,24 @@ const handleRegister = async () => {
       balance: 0,
       site: 'rapjob',
       role: 'user',
+      vipCompletedCount: 0,
       createdAt: new Date()
-    });
+    })
+
+    try {
+      await batch.commit()
+    } catch (profileError) {
+      // Firestore profile tạo thất bại ngay sau khi Firebase Auth đã tạo xong — rollback tài
+      // khoản Auth để không để lại tài khoản "mồ côi" (có Auth nhưng không có users/{uid}),
+      // và để user không tưởng nhầm là đã đăng ký thành công.
+      try {
+        await deleteUser(user)
+      } catch (rollbackError) {
+        console.error('Rollback tài khoản Auth thất bại sau khi tạo hồ sơ Firestore lỗi:', rollbackError)
+        try { await signOut(auth) } catch { /* best-effort */ }
+      }
+      throw new Error('Không thể hoàn tất tạo hồ sơ tài khoản. Vui lòng thử đăng ký lại. Nếu lỗi lặp lại nhiều lần, hãy liên hệ hỗ trợ.')
+    }
 
     Swal.fire({
       title: 'ĐĂNG KÝ THÀNH CÔNG!',

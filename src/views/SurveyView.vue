@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
-import { doc, updateDoc, increment, serverTimestamp, collection, addDoc, query, where, getDocs } from 'firebase/firestore'
+import { serverTimestamp, collection, addDoc, query, where, getDocs } from 'firebase/firestore'
 
 const router = useRouter()
 
@@ -89,19 +89,15 @@ const submitSurvey = async () => {
   if (!user) { router.push('/login'); return }
 
   try {
-    // 1. Cộng xu vào ví
-    await updateDoc(doc(db, 'users', user.uid), {
-      balance: increment(REWARD)
-    })
-
-    // 2. Ghi vào reports — vừa hiện trong lịch sử, vừa dùng để kiểm tra one-time
-    //    Kết quả khảo sát lưu trong field surveyAnswers để admin có thể xem
+    // Gửi đơn ở trạng thái 'pending' như mọi job khác — không tự cộng balance, không tự
+    // set status='approved'. Admin duyệt và cộng thưởng qua approveReport() (AdminView.vue).
+    // Kết quả khảo sát lưu trong field surveyAnswers để admin có thể xem khi duyệt.
     await addDoc(collection(db, 'reports'), {
       uid: user.uid,
       jobId: SURVEY_ID,
       jobName: 'KHẢO SÁT THÓI QUEN XEM PHIM',
       reward: REWARD,
-      status: 'approved',
+      status: 'pending',
       surveyAnswers: answers.value.map((ans, i) => ({
         question: questions[i].question,
         answer: ans
@@ -157,7 +153,7 @@ const submitSurvey = async () => {
       <div class="text-7xl mb-2 animate-bounce">🎬</div>
       <h2 class="text-3xl text-white tracking-tighter">CẢM ƠN BẠN!</h2>
       <div class="bg-[#1a0f2e] border border-violet-700/40 rounded-[25px] p-7 shadow-[0_0_30px_rgba(139,92,246,0.2)]">
-        <p class="text-slate-400 text-[10px] tracking-widest mb-4">PHẦN THƯỞNG ĐÃ VÀO VÍ</p>
+        <p class="text-slate-400 text-[10px] tracking-widest mb-4">PHẦN THƯỞNG CHỜ ADMIN DUYỆT</p>
         <div class="flex items-center justify-center gap-3">
           <span class="text-4xl font-black text-violet-400 tracking-tighter">+30.000</span>
           <div class="flex flex-col items-center">

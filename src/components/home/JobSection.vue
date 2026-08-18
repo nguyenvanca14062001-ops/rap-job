@@ -155,7 +155,7 @@ function getAgeBadgeClass(age: number): string {
 
     <!-- HERO SECTION -->
     <div class="flex flex-col lg:flex-row gap-3">
-      <section class="lg:w-2/3 relative bg-gradient-to-br from-[#1a1100] via-[#130d00] to-[#0c0800] rounded-[30px] border border-yellow-600/25 p-6 md:p-10 overflow-hidden flex items-center min-h-[200px] md:min-h-[400px] shadow-[0_0_60px_rgba(234,179,8,0.12),0_20px_80px_rgba(0,0,0,0.6)]">
+      <section class="welcome-hero-mobile lg:w-2/3 relative bg-gradient-to-br from-[#1a1100] via-[#130d00] to-[#0c0800] rounded-[30px] border border-yellow-600/25 p-6 md:p-10 overflow-hidden flex items-center min-h-[200px] md:min-h-[400px] shadow-[0_0_60px_rgba(234,179,8,0.12),0_20px_80px_rgba(0,0,0,0.6)]">
 
         <!-- Gold glow orbs -->
         <div class="absolute inset-0 pointer-events-none hero-shimmer rounded-[30px]"></div>
@@ -170,7 +170,7 @@ function getAgeBadgeClass(age: number): string {
         </div>
 
         <!-- LEFT SIDE — không đổi logic -->
-        <div class="relative z-10 space-y-4 w-full md:w-[55%]">
+        <div class="welcome-left-mobile relative z-10 space-y-4 w-full md:w-[55%]">
           <!-- Logo — chỉ mobile -->
           <div class="lg:hidden">
             <Logo size="lg" />
@@ -182,15 +182,15 @@ function getAgeBadgeClass(age: number): string {
 
           <!-- Heading + circular buttons -->
           <div class="flex items-start justify-between gap-2">
-            <h1 class="text-xl md:text-4xl text-white leading-tight tracking-tighter uppercase font-black italic">
-              CHÀO MỪNG,<br/>
-              <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-400 text-2xl md:text-5xl">
+            <h1 class="welcome-heading-mobile text-xl md:text-4xl text-white leading-tight tracking-tighter uppercase font-black italic">
+              <span class="welcome-greeting-mobile">CHÀO MỪNG,</span><br/>
+              <span class="welcome-username-mobile text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-400 text-2xl md:text-5xl">
                 {{ username.toUpperCase() }}
               </span>
             </h1>
 
             <!-- Nút tròn FB + Zalo (chỉ khi logged in) -->
-            <div v-if="isLoggedIn" class="flex flex-col gap-2 flex-shrink-0 mt-1">
+            <div v-if="isLoggedIn" class="welcome-social-mobile flex flex-col gap-2 flex-shrink-0 mt-1">
               <button @click="emit('contactSupport', 'facebook')"
                       class="w-11 h-11 rounded-full bg-[#1877F2] hover:bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-900/50 active:scale-90 transition-all hover:scale-110 border border-white/10"
                       title="Facebook Fanpage">
@@ -212,7 +212,7 @@ function getAgeBadgeClass(age: number): string {
             ĐĂNG KÝ / ĐĂNG NHẬP NGAY
           </button>
 
-          <div class="border-l-4 border-yellow-600 pl-4 max-w-2xl space-y-2">
+          <div class="welcome-desc-wrap-mobile border-l-4 border-yellow-600 pl-4 max-w-2xl space-y-2">
             <p class="hidden md:block text-slate-300 text-[12px] md:text-[15px] font-medium leading-relaxed">
               Nền tảng kiếm tiền Online minh bạch. Rút xu nhanh gọn 24/7 về mọi ngân hàng.
             </p>
@@ -222,20 +222,20 @@ function getAgeBadgeClass(age: number): string {
           </div>
 
           <!-- Trust badge pills -->
-          <div class="space-y-2">
-            <div class="flex flex-wrap gap-2">
-              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
+          <div class="welcome-badges-mobile space-y-2">
+            <div class="welcome-badge-row-mobile flex flex-wrap gap-2">
+              <span class="welcome-badge-mobile inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
                 ✅ Không thu phí
               </span>
-              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
+              <span class="welcome-badge-mobile inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
                 ✅ Không nạp tiền
               </span>
-              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
+              <span class="welcome-badge-mobile inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-black uppercase tracking-wide">
                 ✅ Công việc miễn phí
               </span>
             </div>
-            <div>
-              <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/40 text-indigo-300 text-[11px] font-black uppercase tracking-wide">
+            <div class="welcome-cta-wrap-mobile">
+              <span class="welcome-cta-badge-mobile inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-400/40 text-indigo-300 text-[11px] font-black uppercase tracking-wide">
                 ⚡ Rút tiền trong 24h
               </span>
             </div>
@@ -243,7 +243,7 @@ function getAgeBadgeClass(age: number): string {
         </div>
 
         <!-- RIGHT SIDE — Maneki Neko + coins -->
-        <div class="absolute right-0 top-0 bottom-0 w-[42%] flex items-end justify-center pointer-events-none opacity-40 md:opacity-100 overflow-hidden">
+        <div class="welcome-mascot-mobile absolute right-0 top-0 bottom-0 w-[42%] flex items-end justify-center pointer-events-none opacity-40 md:opacity-100 overflow-hidden">
 
           <!-- Coin particles (CSS divs — không dùng emoji) -->
           <div class="coin-fx coin-shape" style="--tx:-28px;--ty:-75px;--tx2:-18px;--dur:2.1s;--delay:0s;right:52%;bottom:55%"></div>
@@ -685,5 +685,102 @@ function getAgeBadgeClass(age: number): string {
 }
 .highlight-text {
   animation: textShimmer 2.8s ease-in-out infinite;
+}
+
+/* ============================================================
+   MOBILE-ONLY "CHÀO MỪNG" WELCOME CARD REDESIGN (<= 768px)
+   Không đụng tới style desktop — chỉ override bên trong media query này.
+   ============================================================ */
+@media (max-width: 768px) {
+  .welcome-hero-mobile {
+    border-radius: 22px;
+    padding: 18px 16px 20px;
+    min-height: 0;
+    background:
+      radial-gradient(120% 140% at 100% 0%, rgba(234,179,8,0.16) 0%, rgba(26,17,0,0) 45%),
+      linear-gradient(155deg, #1c1300 0%, #140d00 55%, #0c0800 100%);
+    border-color: rgba(234,179,8,0.32);
+    box-shadow:
+      0 0 0 1px rgba(234,179,8,0.08) inset,
+      0 10px 30px rgba(0,0,0,0.55),
+      0 0 36px rgba(220,38,38,0.10),
+      0 0 50px rgba(234,179,8,0.12);
+  }
+
+  .welcome-left-mobile {
+    row-gap: 10px;
+  }
+  .welcome-left-mobile > * + * {
+    margin-top: 10px;
+  }
+
+  /* Ô mô tả chỉ chứa nội dung hidden md:block → rỗng trên mobile, ẩn để tránh khoảng trống thừa */
+  .welcome-desc-wrap-mobile {
+    display: none;
+  }
+
+  .welcome-heading-mobile br {
+    display: none;
+  }
+
+  .welcome-greeting-mobile {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #e4e4e7;
+    margin-bottom: 2px;
+  }
+
+  .welcome-username-mobile {
+    display: block;
+    font-size: 27px !important;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .welcome-social-mobile {
+    flex-direction: row;
+    gap: 8px;
+    margin-top: 0;
+  }
+  .welcome-social-mobile button {
+    width: 38px;
+    height: 38px;
+  }
+  .welcome-social-mobile img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .welcome-badges-mobile {
+    row-gap: 8px;
+  }
+
+  .welcome-badge-row-mobile {
+    gap: 6px;
+  }
+
+  .welcome-badge-mobile {
+    font-size: 9px;
+    padding: 4px 9px;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .welcome-cta-badge-mobile {
+    font-size: 10px;
+    padding: 6px 12px;
+    box-shadow: 0 0 14px rgba(99,102,241,0.28);
+  }
+
+  .welcome-mascot-mobile {
+    width: 32%;
+    opacity: 0.5;
+  }
+  .welcome-mascot-mobile .neko-cat {
+    width: 88px !important;
+  }
 }
 </style>
