@@ -912,6 +912,32 @@ const fixUserWallet = async (uid: string) => {
   }
 }
 
+// Tính lại users/{uid}.vipCompletedCount từ lịch sử report đã duyệt thật (approved/collected + isAppJob).
+// Dùng cho các tài khoản đã hoàn thành VIP TRƯỚC KHI field vipCompletedCount tồn tại (approveReport()
+// chỉ +1 kể từ khi có field này) — admin bấm 1 lần để đồng bộ lại, không ảnh hưởng balance hay field khác.
+const recomputeUserVipCount = async (uid: string) => {
+  if (!uid) { Swal.fire('LỖI!', 'Không tìm thấy UID user.', 'error'); return }
+  try {
+    const approvedStatuses = ['approved', 'collected']
+    const [byUid, byRepaired] = await Promise.all([
+      getDocs(query(collection(db, 'reports'), where('uid', '==', uid), where('status', 'in', approvedStatuses))),
+      getDocs(query(collection(db, 'reports'), where('repairedUserUid', '==', uid), where('status', 'in', approvedStatuses)))
+    ])
+    const seenIds = new Set<string>()
+    let count = 0
+    for (const d of [...byUid.docs, ...byRepaired.docs]) {
+      if (seenIds.has(d.id)) continue
+      seenIds.add(d.id)
+      if (isAppJob(d.data())) count++
+    }
+    await updateDoc(doc(db, 'users', uid), { vipCompletedCount: count })
+    usersMap.value = { ...usersMap.value, [uid]: { ...usersMap.value[uid], vipCompletedCount: count } }
+    Swal.fire('ĐÃ CẬP NHẬT!', `vipCompletedCount mới của user: ${count}`, 'success')
+  } catch (e: any) {
+    Swal.fire('LỖI!', e.message || String(e), 'error')
+  }
+}
+
 // Cộng xu tự do vào ví user — độc lập với mọi report/job, admin muốn cộng bao nhiêu cũng được.
 // Luôn dùng increment() (không setDoc/ghi đè balance) để không làm mất số xu hiện có của user.
 const addXuToUser = async (uid: string) => {
@@ -1004,6 +1030,7 @@ const approveReport = async (report: any) => {
 
   try {
     let newSuccessNumber = 0
+    let isVipReport = false
     await runTransaction(db, async (tx) => {
       const reportRef = doc(db, "reports", report.id)
       const reportSnap = await tx.get(reportRef)
@@ -1013,6 +1040,11 @@ const approveReport = async (report: any) => {
       const userRef = doc(db, "users", targetUid)
       const userSnap = await tx.get(userRef)
       if (!userSnap.exists()) throw new Error('User chưa có hồ sơ ví.')
+
+      // Đơn VIP (bank/chứng khoán/giới thiệu, bao gồm momo/vietcombank/abbank/lpbank-plus/referral_*)
+      // → tính +1 nhiệm vụ VIP cho điều kiện mở khóa rút tiền. Guard "status !== 'pending'" phía trên
+      // đã đảm bảo 1 đơn chỉ được duyệt đúng 1 lần nên không cần cờ chống trùng riêng.
+      isVipReport = isAppJob(reportSnap.data())
 
       const reportUpdates: any = {
         status: 'approved',
@@ -1047,27 +1079,34 @@ const approveReport = async (report: any) => {
         reportUpdates.referralProgram = 'lpbank'
       }
 
+      // Chỉ update/increment field cần thiết — không bao giờ setDoc ghi đè toàn bộ users/{uid}.
+      const userUpdates: any = { balance: increment(amount) }
+      if (isVipReport) userUpdates.vipCompletedCount = increment(1)
+
       if (isReferral) {
         const rawCount = Number(userSnap.data()?.abbankReferralPaidCount)
         const successCountBefore = Number.isFinite(rawCount) && rawCount >= 0 ? rawCount : 0
         newSuccessNumber = successCountBefore + 1
         reportUpdates.referralSuccessNumber = newSuccessNumber
         reportUpdates.referralProgram = 'abbank'
-        // merge:true — chỉ ghi 2 field này, không đụng tới phần còn lại của user doc
-        tx.set(userRef, { balance: increment(amount), abbankReferralPaidCount: newSuccessNumber }, { merge: true })
+        userUpdates.abbankReferralPaidCount = newSuccessNumber
+        // merge:true — chỉ ghi các field trong userUpdates, không đụng tới phần còn lại của user doc
+        tx.set(userRef, userUpdates, { merge: true })
       } else {
-        tx.update(userRef, { balance: increment(amount) })
+        tx.update(userRef, userUpdates)
       }
 
       tx.update(reportRef, reportUpdates)
     })
 
     const curBal = Number(usersMap.value[targetUid]?.balance) || 0
+    const curVipCount = Number(usersMap.value[targetUid]?.vipCompletedCount) || 0
     usersMap.value = {
       ...usersMap.value,
       [targetUid]: {
         ...usersMap.value[targetUid],
         balance: curBal + amount,
+        ...(isVipReport ? { vipCompletedCount: curVipCount + 1 } : {}),
         ...(isReferral ? { abbankReferralPaidCount: newSuccessNumber } : {})
       }
     }
@@ -1469,6 +1508,7 @@ const handleAdminLogout = async () => {
                     <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
                     <button class="bg-amber-50 text-[var(--admin-warning)] hover:bg-[var(--admin-warning)] hover:text-white border border-amber-200 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(effUid(rp))">SỬA VÍ</button>
                     <button class="bg-emerald-50 text-[var(--admin-success)] hover:bg-[var(--admin-success)] hover:text-white border border-emerald-200 px-2 py-1 rounded-lg text-[8px]" @click="addXuToUser(effUid(rp))">💰 CỘNG XU</button>
+                    <button v-if="activeTab === 'app_jobs'" class="bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white border border-violet-200 px-2 py-1 rounded-lg text-[8px]" @click="recomputeUserVipCount(effUid(rp))" title="Tính lại vipCompletedCount từ lịch sử đơn VIP đã duyệt">SỬA VIP ({{ usersMap[effUid(rp)]?.vipCompletedCount ?? 0 }})</button>
                   </div>
                 </div>
                 <div v-if="BANK_ACCOUNT_JOB_IDS.includes(rp.jobId)" class="bg-amber-50 border border-amber-200 rounded-lg p-2">
@@ -1865,6 +1905,7 @@ const handleAdminLogout = async () => {
       </div>
 
     </div>
+
   </div>
 </template>
 

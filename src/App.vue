@@ -176,6 +176,9 @@ const userBalance = ref(Number(localStorage.getItem('mmo_balance')) || 0)
 const userFullName = ref('')
 const userPhone = ref('')
 const userBirthYear = ref('')
+// Nguồn sự thật cho điều kiện mở khóa rút tiền (>= 3 nhiệm vụ VIP) — đồng bộ với Firestore Rules
+// mới trên withdrawals, KHÔNG tự đếm từ myReports ở client nữa (dễ lệch với field thật trên server).
+const vipCompletedCount = ref(0)
 
 const myReports = ref<any[]>([])
 const myWithdrawals = ref<any[]>([])
@@ -446,6 +449,7 @@ const initFirebaseSync = (user: any) => {
       userBirthYear.value = data.dob || ''
       const realBalance = data.balance ? Number(data.balance) : 0;
       userBalance.value = realBalance;
+      vipCompletedCount.value = Number(data.vipCompletedCount) || 0
 
       localStorage.setItem('mmo_username', username.value)
       localStorage.setItem('mmo_balance', String(realBalance))
@@ -485,7 +489,7 @@ onMounted(() => {
       initFirebaseSync(user)
     } else {
       isLoggedIn.value = false; isDataLoading.value = false; username.value = 'Member'; userBalance.value = 0;
-      userFullName.value = ''; userPhone.value = ''; userBirthYear.value = ''
+      userFullName.value = ''; userPhone.value = ''; userBirthYear.value = ''; vipCompletedCount.value = 0
       setUserContext(null)
       myReports.value = []; myWithdrawals.value = []; localStorage.clear()
     }
@@ -922,6 +926,7 @@ watch(activePopup, (val) => {
             :userBirthYear="userBirthYear"
             :isDataLoading="isDataLoading"
             :vipJobs="vipJobs"
+            :vipCompletedCount="vipCompletedCount"
           />
         </Transition>
       </main>

@@ -160,6 +160,14 @@ const lastSubmitted = ref<{ threadNick: string; qrViews: number; createdAt: Date
 const submitDailyThread = async () => {
   if (!userUid.value || isSubmitting.value) return
 
+  if (!auth.currentUser) {
+    Swal.fire({ icon: 'warning', title: 'VUI LÒNG ĐĂNG NHẬP LẠI', confirmButtonColor: '#f59e0b' })
+    return
+  }
+  // Luôn lấy uid trực tiếp từ auth.currentUser tại thời điểm submit — không dùng userUid.value đã lưu trước đó,
+  // tránh lệch uid nếu phiên đăng nhập đổi/refresh giữa lúc mount và lúc bấm gửi.
+  const currentUid = auth.currentUser.uid
+
   const nick = threadNick.value.trim()
   const url = postUrl.value.trim()
   const viewsNum = Number(qrViews.value)
@@ -172,12 +180,20 @@ const submitDailyThread = async () => {
   isSubmitting.value = true
   try {
     const today = getDateKey()
-    const pendingSnap = await getDocs(query(
-      collection(db, DAILY_THREAD_COLLECTION),
-      where('uid', '==', userUid.value),
-      where('status', '==', 'pending'),
-      where('dateKey', '==', today)
-    ))
+    let pendingSnap
+    try {
+      pendingSnap = await getDocs(query(
+        collection(db, DAILY_THREAD_COLLECTION),
+        where('uid', '==', currentUid),
+        where('status', '==', 'pending'),
+        where('dateKey', '==', today)
+      ))
+    } catch (queryError: any) {
+      console.error('[DailyThreads pending-query error]', {
+        stage: 'pending-query', code: queryError.code, message: queryError.message, uid: currentUid
+      })
+      throw queryError
+    }
     if (pendingSnap.docs.length >= DAILY_THREAD_MAX_PENDING_PER_DAY) {
       Swal.fire({
         icon: 'warning',
@@ -189,7 +205,7 @@ const submitDailyThread = async () => {
       return
     }
 
-    const userSnap = await getDoc(doc(db, 'users', userUid.value))
+    const userSnap = await getDoc(doc(db, 'users', currentUid))
     const userDoc: any = userSnap.exists() ? userSnap.data() : {}
     const name = (userDoc.fullName || props.userFullName || '').toString().trim()
     const phone = (userDoc.phoneRef || userDoc.phone || props.userPhone || '').toString().trim()
@@ -197,7 +213,7 @@ const submitDailyThread = async () => {
 
     const reportRef = doc(collection(db, DAILY_THREAD_COLLECTION))
     const reportData = {
-      uid: userUid.value,
+      uid: currentUid,
       username: userDoc.username || userDoc.fullName || '',
       fullName: name,
       phoneRef: phone,
@@ -222,17 +238,22 @@ const submitDailyThread = async () => {
       status: 'pending',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      dateKey: today,
-
-      approvedAt: null,
-      approvedBy: null,
-      rejectedAt: null,
-      rejectedBy: null,
-      rejectReason: '',
-      rejectNote: ''
+      dateKey: today
+      // Không gửi kèm field admin (approvedAt/approvedBy/rejectedAt/rejectedBy/rejectReason/rejectNote/paidAt)
+      // trong payload create — Rules mới chỉ cho user tạo đơn với đúng field của mình (uid/jobId/status...),
+      // các field admin chỉ được ghi bởi admin lúc duyệt/từ chối (DailyThreadReportsTab.vue updateDoc/tx.update).
     }
 
-    await setDoc(reportRef, reportData)
+    console.log('[DailyThreads submit payload]', { authUid: auth.currentUser?.uid, payload: reportData })
+
+    try {
+      await setDoc(reportRef, reportData)
+    } catch (writeError: any) {
+      console.error('[DailyThreads submit error]', {
+        stage: 'setDoc', code: writeError.code, message: writeError.message, uid: currentUid, payload: reportData
+      })
+      throw writeError
+    }
 
     lastSubmitted.value = { threadNick: nick, qrViews: viewsNum, createdAt: new Date() }
     showSubmitModal.value = false

@@ -2,11 +2,10 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db, storage } from '@/firebase'
-import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore"
+import { collection, doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore"
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage"
 import Swal from 'sweetalert2'
 import { compressImage, MAX_UPLOAD_BYTES } from '@/utils/imageCompress'
-import { VIP_JOB_IDS } from '@/utils/vipJobs'
 
 const router = useRouter()
 
@@ -17,6 +16,7 @@ const props = defineProps<{
   username?: string
   userFullName?: string
   userPhone?: string
+  vipCompletedCount?: number
 }>()
 
 const amount = ref<number | null>(null)
@@ -34,18 +34,19 @@ const closeImage = () => { selectedImage.value = null }
 const historySectionRef = ref<HTMLElement | null>(null)
 
 const hasPendingWithdraw = computed(() => props.myWithdrawals.some(w => w.status === 'pending'))
-// Điều kiện rút tiền: cần đủ số nhiệm vụ VIP (bank/chứng khoán/giới thiệu) đã được admin duyệt.
-const approvedJobsCount = computed(() =>
-  props.myReports.filter(r => (r.status === 'approved' || r.status === 'collected') && VIP_JOB_IDS.includes(r.jobId)).length
-)
+// Điều kiện rút tiền: dùng đúng field users/{uid}.vipCompletedCount — nguồn sự thật duy nhất, khớp với
+// Firestore Rules (allow create withdrawals yêu cầu users/{uid}.vipCompletedCount >= 3). KHÔNG tự đếm
+// từ myReports/VIP_JOB_IDS ở client nữa vì có thể lệch với field thật trên server → tạo đơn vẫn bị
+// permission-denied dù UI tưởng đã đủ điều kiện.
+const vipCompletedCount = computed(() => Number(props.vipCompletedCount) || 0)
 const showConfirmModal = ref(false)
 const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuối cùng
 
 const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
 
 const requiredJobs = computed(() => 3)
-const tasksUnlocked = computed(() => approvedJobsCount.value >= requiredJobs.value)
-const taskErrorMessage = computed(() => `Bạn cần hoàn thành đủ ${requiredJobs.value} nhiệm vụ VIP để rút tiền. Hiện tại bạn đã hoàn thành: ${approvedJobsCount.value}/${requiredJobs.value} nhiệm vụ VIP.`)
+const tasksUnlocked = computed(() => vipCompletedCount.value >= requiredJobs.value)
+const taskErrorMessage = computed(() => `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} nhiệm vụ VIP để rút tiền. Hiện tại bạn đã hoàn thành: ${vipCompletedCount.value}/${requiredJobs.value} nhiệm vụ VIP.`)
 
 const formatNumber = (num: number) => {
   return Math.floor(num).toLocaleString('vi-VN')
@@ -187,12 +188,30 @@ const handleConfirmWithdraw = async () => {
     return
   }
 
-  // Chặn cứng lần cuối trước khi tạo withdrawal, phòng trường hợp state bị lệch với UI
-  if (approvedJobsCount.value < requiredJobs.value) {
+  // Chặn cứng lần cuối trước khi tạo withdrawal — đọc lại users/{uid} MỚI NHẤT từ Firestore (không
+  // dùng props có thể chưa kịp đồng bộ), vì Rules thật sự kiểm tra field vipCompletedCount tại thời
+  // điểm ghi. Log ra để soát lỗi permission-denied khi field này bị lệch/0/null trên tài khoản user.
+  let liveUserData: Record<string, any> = {}
+  try {
+    const userSnap = await getDoc(doc(db, 'users', user.uid))
+    liveUserData = userSnap.exists() ? userSnap.data() : {}
+  } catch (e) {
+    console.error('[Withdraw user check] Lỗi đọc user doc:', e)
+  }
+  console.log('[Withdraw user check]', {
+    uid: auth.currentUser?.uid,
+    balance: liveUserData.balance,
+    coins: liveUserData.coins,
+    vipCompletedCount: liveUserData.vipCompletedCount,
+    selectedAmount: amount.value
+  })
+
+  const liveVipCompletedCount = Number(liveUserData.vipCompletedCount) || 0
+  if (liveVipCompletedCount < requiredJobs.value) {
     showConfirmModal.value = false
     Swal.fire({
       title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
-      text: taskErrorMessage.value,
+      text: `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} nhiệm vụ VIP để rút tiền. Hiện tại bạn đã hoàn thành: ${liveVipCompletedCount}/${requiredJobs.value} nhiệm vụ VIP.`,
       icon: 'warning',
       confirmButtonColor: '#eab308',
       customClass: { popup: 'rounded-[30px]' }
@@ -254,26 +273,30 @@ const handleConfirmWithdraw = async () => {
   // check số dư ngay tại thời điểm duyệt). Số dư hiển thị ở đây (props.userBalance) và
   // hasPendingWithdraw (tính từ props.myWithdrawals) chỉ để hiện cảnh báo UI, không phải
   // nguồn sự thật cho việc trừ tiền.
+  const withdrawalPayload = {
+    uid: user.uid,
+    username: props.username || '',
+    fullName: props.userFullName || '',
+    phoneRef: props.userPhone || '',
+    amount: withdrawAmount,
+    realMoney: Math.floor(withdrawAmount / 12),
+    bankInfo: '',
+    status: 'pending',
+    qrImage,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    note: '',
+    rejectReason: '',
+    paidAt: null,
+    paidBy: null
+  }
+
   try {
-    await setDoc(withdrawalRef, {
-      uid: user.uid,
-      username: props.username || '',
-      fullName: props.userFullName || '',
-      phoneRef: props.userPhone || '',
-      amount: withdrawAmount,
-      realMoney: Math.floor(withdrawAmount / 12),
-      bankInfo: '',
-      status: 'pending',
-      qrImage,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      note: '',
-      rejectReason: '',
-      paidAt: null,
-      paidBy: null
-    })
+    await setDoc(withdrawalRef, withdrawalPayload)
   } catch (txError: any) {
-    console.error("Lỗi khi rút tiền: ", txError)
+    console.error("[Withdraw submit error]", {
+      code: txError?.code, message: txError?.message, uid: user.uid, payload: withdrawalPayload
+    })
     Swal.fire({
       title: 'LỖI HỆ THỐNG!',
       text: 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.',
