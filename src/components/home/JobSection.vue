@@ -32,7 +32,11 @@ const sortedVipJobIds = computed(() =>
 
 const handleJobClick = (id: string) => {
   const job = jobList.value[id];
-  if (!job || job.paused || job.soldout) return;
+  if (!job) return;
+  // Job "ĐĂNG BÀI THREADS" (post-threads) khi tạm dừng: vẫn cho bấm để hiện thông báo tạm dừng ở App.vue,
+  // không chặn im lặng như các job VIP paused khác.
+  if (job.paused && id !== 'post-threads') return;
+  if (job.soldout) return;
   if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(50);
   emit('receiveJob', id);
 };
@@ -337,9 +341,15 @@ function getAgeBadgeClass(age: number): string {
                   : id === 'google-map'   ? 'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/80 shadow-[0_0_30px_rgba(217,70,239,0.45)]'
                   : id === 'join-zalo'    ? 'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/80 shadow-[0_0_30px_rgba(99,102,241,0.45)]'
                   : id === 'daily_threads'? 'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/80 shadow-[0_0_30px_rgba(20,184,166,0.45)]'
-                  : 'bg-[#120b0a] border-slate-800'
+                  : 'bg-[#120b0a] border-slate-800',
+                  (id === 'post-threads' && j.paused) ? 'opacity-60 grayscale' : ''
                 ]">
                 <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[26px]"></div>
+
+                <!-- Overlay TẠM DỪNG — chỉ riêng job ĐĂNG BÀI THREADS (post-threads) -->
+                <div v-if="id === 'post-threads' && j.paused" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                  <span class="bg-black/70 text-white text-[10px] md:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-white/20">⏸ TẠM DỪNG</span>
+                </div>
 
                 <!-- BADGE -->
                 <div class="absolute -top-0 -right-0 z-20 flex items-center gap-1 text-[9px] md:text-[10px] tracking-widest px-3 py-1.5 rounded-bl-2xl rounded-tr-[26px] font-black italic uppercase border-b border-l border-white/20 shadow-lg"
@@ -423,7 +433,7 @@ function getAgeBadgeClass(age: number): string {
                 </div>
                 <button @click.stop="handleJobClick(id as string)"
                   class="w-full py-3 md:py-4 rounded-xl text-[10px] md:text-[11px] font-black italic uppercase transition-all shadow-lg relative z-10 border-t border-white/20"
-                  :class="[
+                  :class="(id === 'post-threads' && j.paused) ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : [
                     id === 'follow-cgv'    ? 'bg-gradient-to-r from-red-700 to-red-600 text-white' :
                     id === 'review-cinema' ? 'bg-gradient-to-r from-amber-600 to-yellow-500 text-white' :
                     id === 'checkin-cinema'? 'bg-gradient-to-r from-rose-600 to-pink-500 text-white' :
@@ -433,7 +443,7 @@ function getAgeBadgeClass(age: number): string {
                     id === 'daily_threads' ? 'bg-gradient-to-r from-teal-600 to-cyan-500 text-white' :
                     'bg-[#1a0f0d] text-white'
                   ]">
-                  BẮT ĐẦU ⚡
+                  {{ (id === 'post-threads' && j.paused) ? 'TẠM DỪNG ⏸' : 'BẮT ĐẦU ⚡' }}
                 </button>
               </div>
             </template>

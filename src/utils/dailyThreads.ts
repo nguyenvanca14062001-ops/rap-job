@@ -8,14 +8,9 @@ export const DAILY_THREAD_COLLECTION = 'daily_thread_reports'
 export const DAILY_THREAD_MAX_PENDING_PER_DAY = 5
 export const DAILY_THREAD_LOW_VIEW_THRESHOLD = 50
 
-// Bảng mức thưởng công khai cho user (khớp với getDailyThreadSuggestedReward bên dưới)
-export const DAILY_THREAD_REWARD_TABLE = [
-  { postViews: '500', qrViews: 50, reward: 20000 },
-  { postViews: '500', qrViews: 200, reward: 40000 },
-  { postViews: '500', qrViews: 400, reward: 60000 },
-  { postViews: '500', qrViews: 600, reward: 80000 },
-  { postViews: '500', qrViews: 1000, reward: 100000 },
-]
+// Mức thưởng công khai cho user — cố định, không còn tăng theo lượt xem QR (khớp với getDailyThreadSuggestedReward bên dưới)
+export const DAILY_THREAD_POST_VIEW_REQUIREMENT = 500
+export const DAILY_THREAD_FLAT_REWARD = 20000
 
 export const DAILY_THREAD_REJECT_REASONS = [
   'Link sai',
@@ -52,16 +47,12 @@ export function isValidThreadsUrl(url: any): boolean {
   return /(^|\/\/|\.)threads\.(net|com)(\/|$)/.test(u)
 }
 
-// Gợi ý reward theo BẢNG MỨC THƯỞNG công khai (DAILY_THREAD_REWARD_TABLE). Chỉ là số đề xuất — admin vẫn là người
-// quyết định số xu thật khi duyệt (actualReward), có thể sửa tay trước khi cộng.
+// Gợi ý reward — cố định DAILY_THREAD_FLAT_REWARD một khi đạt ngưỡng tối thiểu, không còn tăng theo lượt xem QR.
+// Chỉ là số đề xuất — admin vẫn là người quyết định số xu thật khi duyệt (actualReward), có thể sửa tay trước khi cộng.
 export function getDailyThreadSuggestedReward(qrViews: any): number {
   const views = Number(qrViews) || 0
-  if (views < 50) return 0
-  if (views < 200) return 20000
-  if (views < 400) return 40000
-  if (views < 600) return 60000
-  if (views < 1000) return 80000
-  return 100000
+  if (views < DAILY_THREAD_LOW_VIEW_THRESHOLD) return 0
+  return DAILY_THREAD_FLAT_REWARD
 }
 
 export function dailyThreadStatusLabel(status: string): string {

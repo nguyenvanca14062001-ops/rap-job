@@ -5,6 +5,8 @@ import { auth, db } from '@/firebase'
 import { onAuthStateChanged, signOut } from "firebase/auth"
 import { doc, onSnapshot, collection, query, where, orderBy, limit, updateDoc } from "firebase/firestore"
 import { useVipJobs } from '@/composables/useVipJobs'
+import { usePostThreadsConfig } from '@/composables/usePostThreadsConfig'
+import { POST_THREADS_JOB_ID } from '@/utils/postThreadsConfig'
 import { startAppConfigListener } from '@/composables/useAppConfig'
 import { startSupportListener, supportConfig, supportBadge, shouldAutoPopup, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
 import SupportPanel from '@/components/SupportPanel.vue'
@@ -37,6 +39,8 @@ const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
+// Cấu hình riêng bật/tắt/tạm dừng/ẩn job "ĐĂNG BÀI THREADS" (post-threads) — KHÔNG liên quan daily_threads
+const { config: postThreadsConfig } = usePostThreadsConfig()
 startAppConfigListener()
 startSupportListener()
 
@@ -46,13 +50,27 @@ watch(shouldAutoPopup, (val) => { if (val) showSupportPanel.value = true })
 
 const handleSupportClose = () => { markSupportSeen() }
 
+// Áp dụng cấu hình riêng bật/tắt/tạm dừng/ẩn job "ĐĂNG BÀI THREADS" (post-threads) lên kết quả merge.
+// Không đụng tới job nào khác — chỉ đọc/gắn cờ đúng key POST_THREADS_JOB_ID.
+// Doc config chưa tồn tại → mặc định open/visible (usePostThreadsConfig đã tự fallback) để không làm mất job.
+function applyPostThreadsConfig(result: Record<string, any>): Record<string, any> {
+  if (!(POST_THREADS_JOB_ID in result)) return result
+  const cfg = postThreadsConfig.value
+  if (cfg.status === 'hidden' || !cfg.visible) {
+    delete result[POST_THREADS_JOB_ID]
+  } else if (cfg.status === 'paused') {
+    result[POST_THREADS_JOB_ID] = { ...result[POST_THREADS_JOB_ID], paused: true }
+  }
+  return result
+}
+
 // Merge vip_jobs Firestore lên static jobs.ts
 // - Trước snapshot đầu tiên: {} → không flash job list
 // - Sau snapshot: vip_jobs rỗng → dùng nguyên jobsData
 // - Nếu có: override field-level, lọc hidden, gắn cờ paused/soldout
 const mergedJobs = computed((): Record<string, any> => {
   if (!vipJobsReady.value) return {}
-  if (vipJobs.value.length === 0) return { ...jobsData }
+  if (vipJobs.value.length === 0) return applyPostThreadsConfig({ ...jobsData })
   const result: Record<string, any> = {}
   for (const [id, staticJob] of Object.entries(jobsData)) {
     const override = vipJobs.value.find(v => v.id === id)
@@ -78,6 +96,7 @@ const mergedJobs = computed((): Record<string, any> => {
     const allChildrenHidden = childIds.every(cid => vipJobs.value.find(v => v.id === cid)?.status === 'hidden')
     if (allChildrenHidden) delete result['referral-friends']
   }
+  applyPostThreadsConfig(result)
   return result
 })
 
@@ -523,6 +542,10 @@ const handleNav = (path: string) => {
 
 const handleReceiveJob = (jobId: string) => {
   if (!isLoggedIn.value) { router.push('/login'); return; }
+  if (jobId === POST_THREADS_JOB_ID && mergedJobs.value[jobId]?.paused) {
+    alert('Công việc này đang tạm dừng, vui lòng quay lại sau.')
+    return
+  }
   if (mergedJobs.value[jobId]?.paused || mergedJobs.value[jobId]?.soldout) {
     alert('⏸️ CÔNG VIỆC TẠM DỪNG\nChương trình đang được cập nhật. Vui lòng quay lại sau!')
     return
@@ -1065,10 +1088,15 @@ watch(activePopup, (val) => {
                 <button v-if="!VIP_IDS.includes(id as string)"
                   @click="handleReceiveJob(id as string)"
                   class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left"
-                  :class="jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700'">
+                  :class="[jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700', (id === 'post-threads' && j.paused) ? 'opacity-60 grayscale' : '']">
 
                   <!-- Highlight layer -->
                   <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
+
+                  <!-- Overlay TẠM DỪNG — chỉ riêng job ĐĂNG BÀI THREADS (post-threads) -->
+                  <div v-if="id === 'post-threads' && j.paused" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">⏸ TẠM DỪNG</span>
+                  </div>
 
                   <!-- Badge top-right -->
                   <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-white/15 text-white z-10"
@@ -1105,8 +1133,8 @@ watch(activePopup, (val) => {
 
                   <!-- CTA button -->
                   <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10"
-                       :class="jobBtnClass[id as string] || 'bg-slate-700'">
-                    BẮT ĐẦU ⚡
+                       :class="(id === 'post-threads' && j.paused) ? 'bg-slate-700 text-slate-400' : (jobBtnClass[id as string] || 'bg-slate-700')">
+                    {{ (id === 'post-threads' && j.paused) ? 'TẠM DỪNG ⏸' : 'BẮT ĐẦU ⚡' }}
                   </div>
                 </button>
               </template>

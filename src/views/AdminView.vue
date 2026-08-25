@@ -14,6 +14,7 @@ import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/util
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
+import PostThreadsJobConfigTab from '@/components/admin/PostThreadsJobConfigTab.vue'
 
 const dailyThreadReportsCount = ref(0)
 
@@ -1449,11 +1450,14 @@ const handleAdminLogout = async () => {
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'storage_clean' ? 'bg-rose-700 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'storage_clean'">
         🧹 DỌN ẢNH STORAGE
       </button>
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'post_threads_config' ? 'bg-fuchsia-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'post_threads_config'">
+        🧵 CẤU HÌNH ĐĂNG BÀI THREADS
+      </button>
     </div>
 
     <!-- BẢNG CHÍNH -->
     <div class="admin-theme bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-[30px] overflow-hidden shadow-sm">
-      <div class="p-20 text-center text-[var(--admin-primary)] animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean'">ĐANG TẢI...</div>
+      <div class="p-20 text-center text-[var(--admin-primary)] animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean' && activeTab !== 'post_threads_config'">ĐANG TẢI...</div>
 
       <!-- APP JOBS & OTHER JOBS -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'app_jobs' || activeTab === 'other_jobs'">
@@ -1678,6 +1682,8 @@ const handleAdminLogout = async () => {
       </div>
 
       <StorageCleanupTab v-else-if="activeTab === 'storage_clean'" />
+
+      <PostThreadsJobConfigTab v-else-if="activeTab === 'post_threads_config'" />
 
       <!-- VIP JOBS TAB -->
       <div v-else-if="activeTab === 'vip_jobs'" class="p-6">

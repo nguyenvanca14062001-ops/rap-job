@@ -8,7 +8,7 @@ import Swal from 'sweetalert2'
 import { normalizePhone } from '@/utils/phone'
 import {
   DAILY_THREAD_JOB_ID, DAILY_THREAD_JOB_NAME, DAILY_THREAD_COLLECTION, DAILY_THREAD_MAX_PENDING_PER_DAY,
-  DAILY_THREAD_REWARD_TABLE, getDateKey, normalizeThreadNick, normalizePostUrl, isValidThreadsUrl,
+  DAILY_THREAD_POST_VIEW_REQUIREMENT, DAILY_THREAD_FLAT_REWARD, getDateKey, normalizeThreadNick, normalizePostUrl, isValidThreadsUrl,
   dailyThreadStatusLabel, getDailyThreadSuggestedReward,
   DAILY_THREAD_GUIDE_COLLECTION, DAILY_THREAD_GUIDE_DOC_ID, DAILY_THREAD_GUIDE_DEFAULT,
   normalizeDailyThreadGuideConfig, type DailyThreadGuideConfig
@@ -21,8 +21,6 @@ const props = defineProps<{
   userFullName?: string
   userPhone?: string
 }>()
-
-const rewardTiers = DAILY_THREAD_REWARD_TABLE
 
 const router = useRouter()
 const isLoggedIn = ref(false)
@@ -294,83 +292,54 @@ const statusBadgeClass = (status: string) => {
       </div>
 
       <!-- HERO -->
-      <div class="bg-gradient-to-br from-[#042a2e] to-[#021617] border border-teal-500/40 rounded-[36px] p-6 md:p-10 text-center shadow-2xl relative overflow-hidden">
+      <div class="bg-gradient-to-br from-[#042a2e] to-[#021617] border border-teal-500/40 rounded-[28px] md:rounded-[36px] p-4 md:p-10 text-center shadow-2xl relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-40 h-40 bg-teal-500/10 rounded-full blur-[60px] pointer-events-none"></div>
-        <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-teal-500/15 border border-teal-400/30 flex items-center justify-center text-3xl relative z-10">🧵</div>
-        <h1 class="text-2xl md:text-4xl text-white tracking-tighter leading-tight mb-3 relative z-10">
-          ĐĂNG BÀI THREAD<br/>HẰNG NGÀY
-        </h1>
-        <div class="bg-[#052e1f] border border-[#005c3c] rounded-full px-6 py-2.5 w-max mx-auto flex items-center gap-2 shadow-inner relative z-10">
-          <span class="text-[#f59e0b] text-xl">⚡</span>
-          <span class="text-[#00df89] text-sm md:text-base tracking-tighter">THƯỞNG: 20.000 - 100.000 XU</span>
+        <div class="flex items-center justify-center gap-2 md:gap-4 mb-2 md:mb-3 relative z-10">
+          <div class="w-9 h-9 md:w-16 md:h-16 shrink-0 rounded-lg md:rounded-2xl bg-teal-500/15 border border-teal-400/30 flex items-center justify-center text-base md:text-3xl">🧵</div>
+          <h1 class="text-[15px] md:text-3xl text-white tracking-tighter leading-tight whitespace-nowrap">
+            ĐĂNG BÀI THREAD HẰNG NGÀY
+          </h1>
         </div>
-        <p class="text-slate-400 text-[11px] md:text-xs font-medium normal-case leading-relaxed mt-4 max-w-md mx-auto relative z-10">
+        <div class="bg-gradient-to-r from-emerald-500/15 to-teal-500/15 border border-emerald-500/30 rounded-2xl px-4 py-2.5 md:px-5 md:py-4 flex items-center gap-2 md:gap-3 font-sans not-italic normal-case relative z-10 max-w-md mx-auto text-left">
+          <span class="text-lg md:text-2xl shrink-0">💰</span>
+          <p class="text-emerald-300 text-[10px] md:text-[13px] font-bold leading-relaxed">
+            1 bài đăng Threads đạt <span class="text-white">{{ DAILY_THREAD_POST_VIEW_REQUIREMENT.toLocaleString() }} view</span> được thưởng <span class="text-amber-400">{{ DAILY_THREAD_FLAT_REWARD.toLocaleString() }} xu</span>.
+          </p>
+        </div>
+        <p class="text-slate-400 text-[9px] md:text-xs font-medium normal-case leading-relaxed mt-2 md:mt-4 max-w-md mx-auto relative z-10">
           Đăng bài mỗi ngày, nhập link nhận xu.
         </p>
-        <p v-if="pendingTodayCount > 0" class="text-teal-400 text-[10px] md:text-[11px] font-bold normal-case mt-2 relative z-10">
+        <p v-if="pendingTodayCount > 0" class="text-teal-400 text-[9px] md:text-[11px] font-bold normal-case mt-1 md:mt-2 relative z-10">
           Đang chờ duyệt hôm nay: {{ pendingTodayCount }}/{{ DAILY_THREAD_MAX_PENDING_PER_DAY }}
         </p>
-        <div class="flex flex-col sm:flex-row gap-3 mt-6 relative z-10">
-          <button @click="openSubmitModal" class="flex-1 py-4 bg-teal-500 hover:bg-teal-400 text-teal-950 rounded-2xl shadow-lg active:scale-95 transition-all text-[13px] md:text-sm">
+        <div class="flex flex-row gap-2 md:gap-3 mt-3 md:mt-6 relative z-10">
+          <button @click="openSubmitModal" class="flex-1 py-2.5 md:py-4 px-1.5 bg-teal-500 hover:bg-teal-400 text-teal-950 rounded-xl md:rounded-2xl shadow-lg active:scale-95 transition-all text-[10px] md:text-sm leading-tight">
             GỬI BẰNG CHỨNG 🧵
           </button>
-          <button @click="showGuideModal = true" class="flex-1 py-4 bg-[#0d121f] border border-slate-700 hover:border-teal-500/60 text-white rounded-2xl active:scale-95 transition-all text-[13px] md:text-sm">
+          <button @click="showGuideModal = true" class="flex-1 py-2.5 md:py-4 px-1.5 bg-[#0d121f] border border-slate-700 hover:border-teal-500/60 text-white rounded-xl md:rounded-2xl active:scale-95 transition-all text-[10px] md:text-sm leading-tight">
             XEM HƯỚNG DẪN 📖
           </button>
-          <button @click="showHistoryModal = true" class="flex-1 py-4 bg-[#0d121f] border border-slate-700 hover:border-teal-500/60 text-white rounded-2xl active:scale-95 transition-all text-[13px] md:text-sm">
+          <button @click="showHistoryModal = true" class="flex-1 py-2.5 md:py-4 px-1.5 bg-[#0d121f] border border-slate-700 hover:border-teal-500/60 text-white rounded-xl md:rounded-2xl active:scale-95 transition-all text-[10px] md:text-sm leading-tight">
             LỊCH SỬ ĐƠN 📜
           </button>
         </div>
-      </div>
 
-      <!-- BẢNG MỨC THƯỞNG -->
-      <div class="bg-[#111726] border border-slate-800/50 rounded-[30px] p-6 shadow-xl">
-        <h3 class="text-violet-400 text-sm md:text-base tracking-tight mb-4">📊 BẢNG MỨC THƯỞNG</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-center border-separate border-spacing-y-2 font-sans not-italic normal-case min-w-[420px]">
-            <thead>
-              <tr class="text-slate-500 text-[9px] md:text-[10px] tracking-widest">
-                <th class="pb-2 font-bold">VIEW BÀI THREADS</th>
-                <th class="pb-2 font-bold text-amber-400">LƯỢT XEM MÃ QR<br/>GHIM TẠI BÌNH LUẬN</th>
-                <th class="pb-2 font-bold">THƯỞNG</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(tier, idx) in rewardTiers" :key="tier.qrViews" class="bg-[#0d121f]">
-                <td class="py-3 rounded-l-2xl text-white text-[12px] font-bold">{{ tier.postViews }} view</td>
-                <td class="py-3 text-violet-400 text-[12px] font-bold">{{ tier.qrViews.toLocaleString() }} view</td>
-                <td class="py-3 rounded-r-2xl text-[13px] font-black" :class="idx === rewardTiers.length - 1 ? 'text-amber-400' : 'text-emerald-400'">{{ tier.reward.toLocaleString() }} XU</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="space-y-2 font-sans not-italic normal-case text-left mt-4 md:mt-6 relative z-10">
+          <p class="text-violet-400 text-[11px] tracking-widest font-bold">💡 MẸO</p>
+          <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">1.</span><span>Không giới hạn đăng bài, 1 ngày có thể đăng 3-5 bài.</span></p>
+          <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">2.</span><span>Không giới hạn nick Threads, có thể tạo nhiều nick clone để đăng bài.</span></p>
         </div>
       </div>
 
-      <!-- HƯỚNG DẪN -->
-      <div class="bg-[#111726] border border-slate-800/50 rounded-[30px] p-6 md:p-8 shadow-xl space-y-6">
-        <h3 class="text-teal-400 text-sm md:text-base tracking-tight">📖 HƯỚNG DẪN THỰC HIỆN</h3>
-        <div class="relative pl-10">
-          <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
-          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-teal-500 text-[#021617] flex items-center justify-center text-sm shadow-lg">1</div>
-          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed mb-3">Bấm nút "XEM HƯỚNG DẪN" để lấy nội dung bài đăng, ảnh và mã QR.</p>
-          <button @click="showGuideModal = true" class="flex items-center justify-center gap-2 py-3 px-5 bg-teal-500 hover:bg-teal-400 text-teal-950 rounded-2xl shadow-lg active:scale-95 transition-all text-[11px] md:text-xs not-italic normal-case font-sans font-bold">
-            📖 XEM HƯỚNG DẪN
-          </button>
-        </div>
-        <div class="relative pl-10">
-          <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
-          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-teal-500 text-[#021617] flex items-center justify-center text-sm shadow-lg">2</div>
-          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">Dùng tài khoản Threads để đăng bài theo nội dung được giao.</p>
-        </div>
-        <div class="relative pl-10">
-          <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
-          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-teal-500 text-[#021617] flex items-center justify-center text-sm shadow-lg">3</div>
-          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">Ghim mã QR trong bài viết và chụp/kiểm tra số view.</p>
-        </div>
-        <div class="relative pl-10">
-          <div class="absolute left-0 top-0 w-8 h-8 rounded-full bg-teal-500 text-[#021617] flex items-center justify-center text-sm shadow-lg">4</div>
-          <p class="text-slate-300 text-xs font-medium normal-case leading-relaxed">Bấm "Gửi bằng chứng" và điền đầy đủ thông tin để nhận xu.</p>
-        </div>
+      <!-- LƯU Ý BẮT BUỘC -->
+      <div class="bg-gradient-to-br from-red-950/60 to-orange-950/40 border border-red-600/40 rounded-[30px] p-6 md:p-8 shadow-xl space-y-3">
+        <h3 class="text-red-400 text-sm md:text-base tracking-tight">🚨 LƯU Ý BẮT BUỘC</h3>
+        <p class="text-white text-[14px] md:text-base font-black leading-relaxed normal-case">
+          Đăng bài Threads bắt buộc <span class="text-amber-400">GHIM MÃ QR NHÓM ZALO</span> <span class="text-amber-400">TẠI BÌNH LUẬN</span>.
+        </p>
+        <p class="text-red-300 text-[12px] md:text-[13px] font-bold leading-relaxed normal-case">
+          Thiếu mã QR nhóm Zalo tại bình luận sẽ bị <span class="text-red-500 font-black">TỪ CHỐI</span>.
+        </p>
       </div>
 
       <!-- LƯU Ý -->
