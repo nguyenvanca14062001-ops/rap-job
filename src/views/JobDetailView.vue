@@ -10,6 +10,9 @@ import LpbankPlusHistoryModal from '@/components/LpbankPlusHistoryModal.vue'
 import VietcombankGuideModal from '@/components/VietcombankGuideModal.vue'
 import VietcombankProofModal from '@/components/VietcombankProofModal.vue'
 import VietcombankHistoryModal from '@/components/VietcombankHistoryModal.vue'
+import ShopeePayGuideModal from '@/components/ShopeePayGuideModal.vue'
+import ShopeePayProofModal from '@/components/ShopeePayProofModal.vue'
+import ShopeePayHistoryModal from '@/components/ShopeePayHistoryModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,7 +37,6 @@ const handleLpSubmitted = () => { showLpProof.value = false; showLpSuccess.value
 
 // Job VIETCOMBANK — clone của khối APP LPBANK PLUS ở trên, dùng giao diện popup riêng tương tự
 const isVietcombank = jobId === 'vietcombank'
-const isPopupJob = isLpbankPlus || isVietcombank
 const showVcGuide = ref(false)
 const showVcProof = ref(false)
 const showVcHistory = ref(false)
@@ -44,9 +46,21 @@ const openVcProof = () => { showVcGuide.value = false; showVcProof.value = true 
 const openVcHistory = () => { showVcHistory.value = true }
 const handleVcSubmitted = () => { showVcProof.value = false; showVcSuccess.value = true }
 
-const openPopupGuide = () => { isLpbankPlus ? openLpGuide() : openVcGuide() }
-const openPopupProof = () => { isLpbankPlus ? openLpProof() : openVcProof() }
-const openPopupHistory = () => { isLpbankPlus ? openLpHistory() : openVcHistory() }
+// Job SHOPEE PAY — clone của khối VIETCOMBANK ở trên, dùng giao diện popup riêng tương tự
+const isShopeePay = jobId === 'shopee-pay'
+const isPopupJob = isLpbankPlus || isVietcombank || isShopeePay
+const showSpGuide = ref(false)
+const showSpProof = ref(false)
+const showSpHistory = ref(false)
+const showSpSuccess = ref(false)
+const openSpGuide = () => { showSpGuide.value = true }
+const openSpProof = () => { showSpGuide.value = false; showSpProof.value = true }
+const openSpHistory = () => { showSpHistory.value = true }
+const handleSpSubmitted = () => { showSpProof.value = false; showSpSuccess.value = true }
+
+const openPopupGuide = () => { isLpbankPlus ? openLpGuide() : isVietcombank ? openVcGuide() : openSpGuide() }
+const openPopupProof = () => { isLpbankPlus ? openLpProof() : isVietcombank ? openVcProof() : openSpProof() }
+const openPopupHistory = () => { isLpbankPlus ? openLpHistory() : isVietcombank ? openVcHistory() : openSpHistory() }
 
 const currentJob = computed((): any => {
   const override = vipJobs.value.find((v: any) => v.id === jobId)
@@ -185,8 +199,8 @@ const handleCopy = (text: string) => {
         </section>
 
         <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-8 shadow-2xl">
-          <h3 class="text-white text-base md:text-lg tracking-tight mb-5 text-center">3 ẢNH BẰNG CHỨNG CẦN GỬI</h3>
-          <div class="grid grid-cols-3 gap-3">
+          <h3 class="text-white text-base md:text-lg tracking-tight mb-5 text-center">{{ currentJob.proofSampleImages.length }} ẢNH BẰNG CHỨNG CẦN GỬI</h3>
+          <div class="grid gap-3" :class="currentJob.proofSampleImages.length === 2 ? 'grid-cols-2' : 'grid-cols-3'">
             <div v-for="(img, idx) in currentJob.proofSampleImages" :key="idx" class="text-center">
               <div class="rounded-2xl overflow-hidden border border-slate-700/50 shadow-lg bg-slate-900 aspect-[3/4] cursor-zoom-in group relative" @click="openImage(baseUrl + img)">
                 <img class="w-full h-full object-cover group-hover:scale-105 transition-transform" :src="baseUrl + img" />
@@ -211,7 +225,20 @@ const handleCopy = (text: string) => {
                   <p class="text-red-400 text-[11px] font-black normal-case tracking-wide leading-relaxed">{{ step.note }}</p>
                 </div>
 
-                <a v-if="step.id === 2 && currentJob.zaloReferralLink" :href="currentJob.zaloReferralLink" target="_blank"
+                <div class="mb-4 max-w-sm" v-if="isShopeePay && step.referralCode">
+                  <div class="bg-[#0d121f] border border-emerald-500/50 p-3 rounded-2xl flex items-center gap-3 shadow-xl">
+                    <div class="flex-1 min-w-0">
+                      <p class="text-[9px] text-emerald-400 font-black tracking-[2px] uppercase mb-0.5">MÃ GIỚI THIỆU</p>
+                      <p class="text-white text-lg font-black italic tracking-wider select-all truncate">{{ step.referralCode }}</p>
+                    </div>
+                    <button
+                      class="bg-emerald-500 hover:bg-emerald-400 text-[#090e17] px-4 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg shrink-0"
+                      @click="handleCopy(step.referralCode)">
+                      📋 SAO CHÉP
+                    </button>
+                  </div>
+                </div>
+                <a v-else-if="step.id === 2 && currentJob.zaloReferralLink" :href="currentJob.zaloReferralLink" target="_blank"
                    class="mb-4 inline-flex items-center gap-2 bg-[#0068FF] hover:bg-blue-500 text-white px-6 py-3 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-5 h-5" />
                   THAM GIA NHÓM ZALO
@@ -467,6 +494,35 @@ const handleCopy = (text: string) => {
                 XEM LỊCH SỬ NỘP ĐƠN
               </button>
               <button @click="showVcSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
+    <template v-if="isShopeePay">
+      <ShopeePayGuideModal :show="showSpGuide" @close="showSpGuide = false" @openProof="openSpProof" />
+      <ShopeePayProofModal :show="showSpProof" @close="showSpProof = false" @submitted="handleSpSubmitted" />
+      <ShopeePayHistoryModal :show="showSpHistory" @close="showSpHistory = false" />
+
+      <Transition name="fade">
+        <div v-if="showSpSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showSpSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng SHOPEE PAY thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showSpSuccess = false; openSpHistory()" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showSpSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
                 ĐÓNG
               </button>
             </div>

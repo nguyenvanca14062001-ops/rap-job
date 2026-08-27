@@ -636,6 +636,90 @@ export const jobsData: Record<string, any> = {
     ]
   },
 
+  // Job VIP mới SHOPEE PAY — clone cấu trúc/logic của 'vietcombank', ảnh + nội dung hướng dẫn (bước 1/2/3),
+  // mã giới thiệu và 2 ảnh mẫu bằng chứng (anh-shopee2/3) đã cập nhật riêng cho Shopee Pay.
+  'shopee-pay': {
+    title: "SHOPEE PAY",
+    subtitle: "Đăng ký Shopee Pay nhận thưởng",
+    reward: "65.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    ageRequirement: 15,
+    zaloGuideUrl: "",
+    // Field phân loại — dùng khi seed vào Firestore vip_jobs và để nhận diện report là job VIP/bank
+    category: "vip",
+    jobCategory: "vip",
+    jobType: "vip",
+    isVip: true,
+    bankType: "shopeepay",
+    appType: "bank",
+    campaignType: "bank",
+    // Text ngắn hiển thị dưới khối tiêu đề ở trang chi tiết
+    shortDesc: "Hoàn thành đăng ký SHOPEE PAY theo hướng dẫn để nhận thưởng.",
+    warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    // Link nhóm Zalo để lấy mã giới thiệu
+    zaloReferralLink: "https://zalo.me/g/iobklj13hk0wxwvt85ru",
+    // 2 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
+    proofSampleImages: [
+      "images/anh-shopee2.jpg",
+      "images/anh-shopee3.jpg"
+    ],
+    // 3 bước hướng dẫn rút gọn — dùng chung cho khối "CÁC BƯỚC THỰC HIỆN" ở trang chi tiết và popup "XEM HƯỚNG DẪN"
+    quickSteps: [
+      {
+        id: 1,
+        title: "TẢI APP SHOPEE PAY",
+        content: "Tải APP Shopee Pay về điện thoại để đăng ký.",
+        note: "CHÚ Ý: TẢI ĐÚNG APP CHÍNH THỨC, KHÔNG CHỌN NHẦM APP KHÁC.",
+        img: "images/anh-shopee1.jpg"
+      },
+      {
+        id: 2,
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU",
+        content: "Trong lúc đăng ký, bắt buộc nhập mã giới thiệu bên dưới rồi chụp lại ảnh.",
+        note: "LƯU Ý: BẮT BUỘC NHẬP MÃ GIỚI THIỆU XW6JU8LUR.",
+        referralCode: "XW6JU8LUR",
+        img: "images/anh-shopee2.jpg"
+      },
+      {
+        id: 3,
+        title: "XÁC THỰC TÀI KHOẢN VÀ HOÀN TẤT THEO HƯỚNG DẪN",
+        content: "Chụp CCCD, xác thực NFC và xác minh tài khoản đầy đủ theo hướng dẫn trong app. Sau khi hoàn thành, chụp lại 2 ảnh bằng chứng bên dưới rồi gửi nộp đơn.",
+        img: "images/anh-shopee3.jpg"
+      }
+    ],
+    steps: [
+      {
+        id: 1,
+        title: "TẢI ĐÚNG APP SHOPEE PAY",
+        content: "Tên APP: SHOPEE PAY hoặc chọn TẢI ỨNG DỤNG.",
+        downloadLink: "https://content.lpbank.com.vn/share/down_app/index.html",
+        buttonText: "🚀 TẢI ỨNG DỤNG",
+        img: "images/anh-shopee1.jpg"
+      },
+      {
+        id: 2,
+        title: "NHẬP MÃ GIỚI THIỆU : XW6JU8LUR",
+        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU XW6JU8LUR VÀ CHỤP LẠI ẢNH.",
+        img: "images/anh-shopee2.jpg",
+        note: "NHẬP MÃ GIỚI THIỆU: XW6JU8LUR (BẮT BUỘC)",
+        referralCode: "XW6JU8LUR"
+      },
+      {
+        id: 3,
+        title: "XÁC THỰC TÀI KHOẢN",
+        content: "CHỤP CCCD, XÁC THỰC NFC, XÁC MINH TÀI KHOẢN THEO HƯỚNG DẪN TRONG APP RỒI CHỤP LẠI ẢNH GỬI BẰNG CHỨNG.",
+        img: "images/anh-shopee3.jpg"
+      },
+      {
+        id: 4,
+        title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
+        content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
+
+      }
+    ]
+  },
+
   'momo': {
     title: "VÍ MOMO",
     subtitle: "Đăng ký ví MoMo nhận thưởng",

@@ -394,12 +394,12 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
+const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'shopee-pay', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
 
 // Các job VIP ngân hàng/chứng khoán không tự điền họ tên/SĐT từ hồ sơ web — report của các job này
 // tách riêng "thông tin chủ tài khoản ngân hàng" (bankAccountHolderName/bankRegisteredPhone) khỏi
 // "hồ sơ web thật" (userFullName/userPhoneRef) để admin đối soát rõ ràng.
-const BANK_ACCOUNT_JOB_IDS = ['vietcombank', 'lpbank-plus', 'abbank']
+const BANK_ACCOUNT_JOB_IDS = ['vietcombank', 'shopee-pay', 'lpbank-plus', 'abbank']
 
 // Doc ID cũ trùng tên hiển thị "GIỚI THIỆU BẠN BÈ ABBANK" với job referral_abbank chuẩn — popup/trang
 // ABBANK ngoài user chỉ đọc doc này khi CHƯA có doc referral_abbank. Sửa ABBANK thì hãy sửa job có
