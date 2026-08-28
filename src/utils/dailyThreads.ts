@@ -10,7 +10,7 @@ export const DAILY_THREAD_LOW_VIEW_THRESHOLD = 50
 
 // Mức thưởng công khai cho user — cố định, không còn tăng theo lượt xem QR (khớp với getDailyThreadSuggestedReward bên dưới)
 export const DAILY_THREAD_POST_VIEW_REQUIREMENT = 500
-export const DAILY_THREAD_FLAT_REWARD = 20000
+export const DAILY_THREAD_FLAT_REWARD = 45000
 
 export const DAILY_THREAD_REJECT_REASONS = [
   'Link sai',

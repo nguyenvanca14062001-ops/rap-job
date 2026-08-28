@@ -17,7 +17,7 @@ const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 const VIP_JOBS = VIP_JOB_IDS;
 // 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_JOBS/jobsData
 // (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
-const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_lpbank_plus'];
+const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus'];
 
 // Lọc hidden + job đã gộp + sắp xếp theo order từ Firestore (nếu có); fallback về vị trí gốc trong VIP_JOBS
 const sortedVipJobIds = computed(() =>

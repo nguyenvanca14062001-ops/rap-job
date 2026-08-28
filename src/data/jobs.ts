@@ -70,8 +70,8 @@ export const jobsData: Record<string, any> = {
   'daily_threads': {
     title: "ĐĂNG BÀI THREAD HẰNG NGÀY",
     subtitle: "Đăng bài mỗi ngày, nhập link nhận xu",
-    reward: "20.000",
-    rewardText: "20.000 xu / bài",
+    reward: "45.000",
+    rewardText: "45.000 xu / bài",
     color: "text-teal-400",
     badge: "HẰNG NGÀY",
     type: "daily_thread_post",
@@ -84,7 +84,7 @@ export const jobsData: Record<string, any> = {
 
   'follow-cgv': {
     title: "FOLLOW FANPAGE RẠP PHIM",
-    reward: "30.000 xu",
+    reward: "20.000 xu",
     color: "text-red-400",
     badge: "HOT 🎬",
     steps: [
@@ -108,7 +108,7 @@ export const jobsData: Record<string, any> = {
 
   'checkin-cinema': {
     title: "CHECK-IN TẠI RẠP + ĐĂNG MẠNG XÃ HỘI",
-    reward: "30.000 xu",
+    reward: "20.000 xu",
     color: "text-rose-400",
     badge: "HOT 🎬",
     steps: [
@@ -120,7 +120,7 @@ export const jobsData: Record<string, any> = {
 
   'survey-cinema': {
     title: "KHẢO SÁT THÓI QUEN XEM PHIM",
-    reward: "30.000 xu",
+    reward: "20.000 xu",
     color: "text-violet-400",
     badge: "SURVEY 📋",
     steps: [

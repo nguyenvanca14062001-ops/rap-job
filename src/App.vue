@@ -21,6 +21,7 @@ import ProfileCard from '@/components/home/ProfileCard.vue'
 import Logo from '@/components/Logo.vue'
 import MomoReferralHubModal from '@/components/MomoReferralHubModal.vue'
 import LpbankPlusReferralHubModal from '@/components/LpbankPlusReferralHubModal.vue'
+import ShopeePayReferralHubModal from '@/components/ShopeePayReferralHubModal.vue'
 import FriendReferralSelectModal from '@/components/FriendReferralSelectModal.vue'
 import { jobsData } from '@/data/jobs'
 
@@ -35,7 +36,7 @@ const jobIconMap: Record<string, string> = {
 const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'vietcombank', 'shopee-pay', 'momo', 'referral_momo']
 // 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_IDS/jobsData
 // (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
-const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_lpbank_plus']
+const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -90,9 +91,9 @@ const mergedJobs = computed((): Record<string, any> => {
       status:  override.status,
     }
   }
-  // Card parent 'referral-friends' tự ẩn nếu cả 3 job con (referral_momo/referral_abbank/referral_lpbank_plus) đều hidden
+  // Card parent 'referral-friends' tự ẩn nếu cả 4 job con (referral_momo/referral_abbank/referral_shopee_pay/referral_lpbank_plus) đều hidden
   if ('referral-friends' in result) {
-    const childIds = ['referral_momo', 'referral_abbank', 'referral_lpbank_plus']
+    const childIds = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus']
     const allChildrenHidden = childIds.every(cid => vipJobs.value.find(v => v.id === cid)?.status === 'hidden')
     if (allChildrenHidden) delete result['referral-friends']
   }
@@ -103,7 +104,7 @@ const mergedJobs = computed((): Record<string, any> => {
 // Thứ tự VIP jobs theo Firestore order; lọc hidden + job đã gộp vào card parent; fallback về vị trí gốc trong VIP_IDS
 const sortedVipJobIds = computed(() =>
   VIP_IDS
-    .filter(id => id in mergedJobs.value && !CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB.includes(id))
+    .filter(id => id in mergedJobs.value && !CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB.includes(id) && id !== 'referral-friends')
     .sort((a, b) => {
       const oA = Number(mergedJobs.value[a]?.order ?? VIP_IDS.indexOf(a))
       const oB = Number(mergedJobs.value[b]?.order ?? VIP_IDS.indexOf(b))
@@ -126,24 +127,25 @@ const jobCardClass: Record<string, string> = {
   'post-threads':   'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/70 shadow-[0_0_20px_rgba(217,70,239,0.25)]',
   'join-zalo':      'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.25)]',
   'daily_threads':  'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/70 shadow-[0_0_20px_rgba(20,184,166,0.25)]',
+  'shopee-pay':     'bg-gradient-to-br from-[#ff5722] via-[#c2410c] to-[#2a0a00] border-[2px] border-orange-300 shopee-glow-pulse',
 }
 const jobBadgeClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
   'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
   'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
-  'daily_threads': 'bg-teal-600',
+  'daily_threads': 'bg-teal-600', 'shopee-pay': 'bg-gradient-to-r from-orange-400 to-red-600 animate-pulse',
 }
 const jobIconBgClass: Record<string, string> = {
   'follow-cgv': 'bg-red-600/20', 'review-cinema': 'bg-amber-500/20',
   'checkin-cinema': 'bg-rose-500/20', 'survey-cinema': 'bg-violet-500/20',
   'post-threads': 'bg-fuchsia-500/20', 'join-zalo': 'bg-indigo-500/20',
-  'daily_threads': 'bg-teal-500/20',
+  'daily_threads': 'bg-teal-500/20', 'shopee-pay': 'bg-orange-400/25',
 }
 const jobRewardClass: Record<string, string> = {
   'follow-cgv': 'text-red-400', 'review-cinema': 'text-amber-400',
   'checkin-cinema': 'text-rose-400', 'survey-cinema': 'text-violet-400',
   'post-threads': 'text-fuchsia-400', 'join-zalo': 'text-indigo-400',
-  'daily_threads': 'text-teal-400',
+  'daily_threads': 'text-teal-400', 'shopee-pay': 'text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-yellow-300',
 }
 function getAgeBadgeClass(age: number): string {
   if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
@@ -155,7 +157,7 @@ const jobBtnClass: Record<string, string> = {
   'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
   'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
   'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
-  'daily_threads': 'bg-teal-600',
+  'daily_threads': 'bg-teal-600', 'shopee-pay': 'bg-gradient-to-r from-orange-500 to-red-600',
 }
 
 // --- KHỞI TẠO BIẾN TRẠNG THÁI HỆ THỐNG ---
@@ -182,6 +184,7 @@ const windowWidth = ref(0)
 const showBankModal = ref(false)
 const showMomoReferralHub = ref(false)
 const showLpbankPlusReferralHub = ref(false)
+const showShopeePayReferralHub = ref(false)
 const showFriendReferralSelect = ref(false)
 const activePopup = ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
 const mobileRejectNote = ref<string | null>(null)
@@ -259,10 +262,10 @@ const names = ['TRUNG NGUYỄN', 'HOÀNG ANH', 'MINH TUẤN', 'THANH HẰNG', 'V
 const banks = ['MB BANK', 'VPBANK', 'TPBANK', 'VIETCOMBANK', 'TECHCOMBANK', 'MOMO', 'MSB BANK']
 
 const jobList = [
-  { name: 'Follow Fanpage CGV', reward: '30.000' },
+  { name: 'Follow Fanpage CGV', reward: '20.000' },
   { name: 'Đánh Giá 5 Sao Rạp Phim', reward: '25.000' },
-  { name: 'Check-in Tại Rạp', reward: '30.000' },
-  { name: 'Khảo Sát Phim', reward: '30.000' },
+  { name: 'Check-in Tại Rạp', reward: '20.000' },
+  { name: 'Khảo Sát Phim', reward: '20.000' },
   { name: 'Đánh Giá Google Map', reward: '25.000' },
   { name: 'Tham Gia Nhóm Zalo', reward: '10.000' },
   { name: 'App Chứng Khoán Kafi', reward: '85.000' },
@@ -272,10 +275,10 @@ const jobList = [
 
 // Pool các loại hoạt động (không có tên — tên lấy ngẫu nhiên từ names[])
 const activityPool = [
-  { icon: '🎬', job: 'FOLLOW FANPAGE CGV',       reward: '30.000',    type: 'job'      },
+  { icon: '🎬', job: 'FOLLOW FANPAGE CGV',       reward: '20.000',    type: 'job'      },
   { icon: '⭐', job: 'ĐÁNH GIÁ 5 SAO RẠP PHIM', reward: '25.000',    type: 'job'      },
-  { icon: '📸', job: 'CHECK-IN TẠI RẠP',         reward: '30.000',    type: 'job'      },
-  { icon: '📋', job: 'KHẢO SÁT PHIM',            reward: '30.000',    type: 'job'      },
+  { icon: '📸', job: 'CHECK-IN TẠI RẠP',         reward: '20.000',    type: 'job'      },
+  { icon: '📋', job: 'KHẢO SÁT PHIM',            reward: '20.000',    type: 'job'      },
   { icon: '📍', job: 'ĐÁNH GIÁ GOOGLE MAP',      reward: '25.000',    type: 'job'      },
   { icon: '💬', job: 'THAM GIA NHÓM ZALO',       reward: '10.000',    type: 'job'      },
   { icon: '📈', job: 'APP CHỨNG KHOÁN KAFI',     reward: '85.000',    type: 'job'      },
@@ -980,12 +983,14 @@ watch(activePopup, (val) => {
 
     <MomoReferralHubModal :show="showMomoReferralHub" :myReports="myReports" :vipJobs="vipJobs" @close="showMomoReferralHub = false" />
     <LpbankPlusReferralHubModal :show="showLpbankPlusReferralHub" :myReports="myReports" @close="showLpbankPlusReferralHub = false" />
+    <ShopeePayReferralHubModal :show="showShopeePayReferralHub" :myReports="myReports" @close="showShopeePayReferralHub = false" />
     <FriendReferralSelectModal
       :show="showFriendReferralSelect"
       :vipJobs="vipJobs"
       @close="showFriendReferralSelect = false"
       @selectMomo="showFriendReferralSelect = false; showMomoReferralHub = true"
       @selectAbbank="showFriendReferralSelect = false; router.push('/jobs/referral-abbank')"
+      @selectShopeePay="showFriendReferralSelect = false; showShopeePayReferralHub = true"
       @selectLpbankPlus="showFriendReferralSelect = false; showLpbankPlusReferralHub = true"
     />
 
@@ -1050,6 +1055,21 @@ watch(activePopup, (val) => {
           <!-- SCREEN 1: Chọn loại công việc -->
           <div v-if="jobCategory === ''" class="flex-1 flex flex-col gap-4 p-4 justify-center">
 
+            <!-- Card GIỚI THIỆU BẠN BÈ -->
+            <button @click="handleReceiveJob('referral-friends')"
+              class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#052e1f] to-[#031a12] border-2 border-emerald-500/50 active:border-emerald-400/80 active:scale-[0.97] transition-all overflow-hidden group">
+              <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent pointer-events-none"></div>
+              <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-2xl shrink-0">👥</div>
+              <div class="text-left flex-1 relative z-10">
+                <p class="text-emerald-300 text-base font-black italic uppercase leading-tight">GIỚI THIỆU BẠN BÈ</p>
+                <p class="text-emerald-400 text-[11px] font-black uppercase tracking-wider mt-0.5">KHÔNG GIỚI HẠN • 65K–90K XU</p>
+                <p class="text-slate-500 text-[10px] mt-1">Mời bạn bè đăng ký app, nhận thưởng mỗi lượt</p>
+              </div>
+              <svg class="w-5 h-5 text-emerald-400 shrink-0 group-active:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+
             <!-- Card CƠ BẢN -->
             <button @click="jobCategory = 'basic'"
               class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#2a0c0c] to-[#1a0808] border-2 border-red-600/50 active:border-red-500/80 active:scale-[0.97] transition-all overflow-hidden group">
@@ -1085,10 +1105,10 @@ watch(activePopup, (val) => {
           <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
             <div class="grid grid-cols-2 gap-2.5">
               <template v-for="(j, id) in mergedJobs" :key="id">
-                <button v-if="!VIP_IDS.includes(id as string)"
+                <button v-if="!VIP_IDS.includes(id as string) || id === 'shopee-pay'"
                   @click="handleReceiveJob(id as string)"
                   class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left"
-                  :class="[jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700', (id === 'post-threads' && j.paused) ? 'opacity-60 grayscale' : '']">
+                  :class="[jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700', (id === 'post-threads' && j.paused) ? 'opacity-60 grayscale' : '', id === 'shopee-pay' ? 'order-first' : '']">
 
                   <!-- Highlight layer -->
                   <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
@@ -1569,6 +1589,15 @@ watch(activePopup, (val) => {
 @keyframes starTwinkle {
   0%, 100% { opacity: 0.5; }
   50%       { opacity: 1; }
+}
+
+/* ⚡ Shopee Pay — glow nổi bật, khác biệt với các job cơ bản còn lại */
+@keyframes shopeePulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(255,87,34,0.45), 0 0 0 rgba(255,87,34,0); }
+  50%       { box-shadow: 0 0 40px rgba(255,87,34,0.85), 0 0 70px rgba(255,87,34,0.25); }
+}
+.shopee-glow-pulse {
+  animation: shopeePulse 1.8s ease-in-out infinite;
 }
 
 /* ⚡ Dual laser beams — chạy liên tục không nghỉ */

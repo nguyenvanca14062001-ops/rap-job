@@ -6,18 +6,20 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'selectMomo'): void
   (e: 'selectAbbank'): void
+  (e: 'selectShopeePay'): void
   (e: 'selectLpbankPlus'): void
 }>()
 
-// 3 doc CỐ ĐỊNH trong Firestore vip_jobs — Admin luôn sửa đúng 3 ID này, popup luôn đọc đúng 3 ID này.
+// 4 doc CỐ ĐỊNH trong Firestore vip_jobs — Admin luôn sửa đúng 4 ID này, popup luôn đọc đúng 4 ID này.
 // Không hard-code title/subtitle/reward/status ở đây, chỉ những gì Firestore không lưu
 // (icon hiển thị, hành động điều hướng khi bấm "CHỌN CÔNG VIỆC").
-const REFERRAL_JOB_IDS = ['referral_momo', 'referral_abbank', 'referral_lpbank_plus'] as const
+const REFERRAL_JOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus'] as const
 type ReferralJobId = typeof REFERRAL_JOB_IDS[number]
 
 const UI_ONLY: Record<ReferralJobId, { icon: string; select: () => void }> = {
   referral_momo: { icon: '💰', select: () => emit('selectMomo') },
   referral_abbank: { icon: '🏦', select: () => emit('selectAbbank') },
+  referral_shopee_pay: { icon: '🛍️', select: () => emit('selectShopeePay') },
   referral_lpbank_plus: { icon: '🏦', select: () => emit('selectLpbankPlus') },
 }
 
@@ -34,6 +36,11 @@ const DEFAULTS: Record<ReferralJobId, { name: string; subtitle: string; rewardTe
     name: 'Giới thiệu bạn bè đăng ký APP ABBANK',
     subtitle: 'Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần',
     rewardText: '85.000 XU',
+  },
+  referral_shopee_pay: {
+    name: 'Giới thiệu bạn bè đăng ký APP SHOPEE PAY',
+    subtitle: 'Mời bạn bè đăng ký APP SHOPEE PAY nhận 90.000 xu/lượt',
+    rewardText: '90.000 XU',
   },
   referral_lpbank_plus: {
     name: 'Giới thiệu bạn bè đăng ký APP LPBANK PLUS',

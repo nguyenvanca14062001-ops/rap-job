@@ -11,6 +11,7 @@ import { normalizePhone } from '@/utils/phone'
 import { ABBANK_REFERRAL_JOB_ID, ABBANK_REFERRAL_REWARD } from '@/utils/referralAbbank'
 import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
 import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/utils/referralLpbankPlus'
+import { SHOPEE_PAY_REFERRAL_JOB_ID, SHOPEE_PAY_REFERRAL_REWARD } from '@/utils/referralShopeePay'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
@@ -394,7 +395,7 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'shopee-pay', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID]
+const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'shopee-pay', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID, SHOPEE_PAY_REFERRAL_JOB_ID]
 
 // Các job VIP ngân hàng/chứng khoán không tự điền họ tên/SĐT từ hồ sơ web — report của các job này
 // tách riêng "thông tin chủ tài khoản ngân hàng" (bankAccountHolderName/bankRegisteredPhone) khỏi
@@ -581,6 +582,21 @@ const addNewVipJob = async () => {
   } catch (e) { Swal.fire('LỖI!', '' + e, 'error') }
 }
 
+// Job giới thiệu bạn bè (referral_*) không có entry trong jobsData (chỉ hiện qua hub modal riêng,
+// không phải card VIP thường) — cần nguồn dữ liệu seed riêng để nút "SEED JOB VIP CÒN THIẾU" tạo
+// được doc Firestore cho job này, thay vì bỏ qua do !s. Giữ đúng text/reward đang hiển thị mặc định
+// ở FriendReferralSelectModal.vue để không làm lệch nội dung user đang thấy.
+const REFERRAL_ONLY_SEED_DEFAULTS: Record<string, any> = {
+  [SHOPEE_PAY_REFERRAL_JOB_ID]: {
+    title: 'GIỚI THIỆU BẠN BÈ ĐĂNG KÝ APP SHOPEE PAY',
+    subtitle: 'Mời bạn bè đăng ký APP SHOPEE PAY nhận 90.000 xu/lượt',
+    reward: '90.000',
+    rewardText: '90.000 xu',
+    badge: 'VIP',
+    color: 'text-orange-500',
+  },
+}
+
 const seedVipJobs = async () => {
   const existingIds = new Set(vipJobs.value.map((v: any) => v.id))
   const toCreate = VIP_JOB_IDS.filter(id => !existingIds.has(id))
@@ -591,7 +607,7 @@ const seedVipJobs = async () => {
   isSeedingVipJobs.value = true
   let created = 0
   for (const [idx, id] of toCreate.entries()) {
-    const s = (jobsData as Record<string, any>)[id]
+    const s = (jobsData as Record<string, any>)[id] || REFERRAL_ONLY_SEED_DEFAULTS[id]
     if (!s) continue
     const newOrder = vipJobs.value.length + idx + 1
     // Field phân loại VIP/bank — mọi job trong VIP_JOB_IDS đều là job VIP nên mặc định true/'vip';
@@ -986,6 +1002,7 @@ const getTrustedReward = (jobId: string): number => {
   const fixedReferral =
     jobId === ABBANK_REFERRAL_JOB_ID ? ABBANK_REFERRAL_REWARD :
     jobId === LPBANK_PLUS_REFERRAL_JOB_ID ? LPBANK_PLUS_REFERRAL_REWARD :
+    jobId === SHOPEE_PAY_REFERRAL_JOB_ID ? SHOPEE_PAY_REFERRAL_REWARD :
     jobId === MOMO_REFERRAL_JOB_ID ? MOMO_REFERRAL_REWARD : undefined
   const staticReward = (jobsData as Record<string, any>)[jobId]?.reward
   const source = override ?? fixedReferral ?? staticReward
@@ -1078,6 +1095,13 @@ const approveReport = async (report: any) => {
         reportUpdates.isVip = true
         reportUpdates.bankType = 'lpbank'
         reportUpdates.referralProgram = 'lpbank'
+      } else if (report.jobId === SHOPEE_PAY_REFERRAL_JOB_ID) {
+        reportUpdates.jobCategory = 'vip'
+        reportUpdates.category = 'vip'
+        reportUpdates.jobType = 'vip'
+        reportUpdates.isVip = true
+        reportUpdates.bankType = 'shopeepay'
+        reportUpdates.referralProgram = 'shopeepay'
       }
 
       // Chỉ update/increment field cần thiết — không bao giờ setDoc ghi đè toàn bộ users/{uid}.
@@ -1540,7 +1564,7 @@ const handleAdminLogout = async () => {
               </td>
               <td class="p-6">
                 <div class="text-[var(--admin-text)] text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
-                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID || rp.jobId === MOMO_REFERRAL_JOB_ID || rp.jobId === LPBANK_PLUS_REFERRAL_JOB_ID">
+                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID || rp.jobId === MOMO_REFERRAL_JOB_ID || rp.jobId === LPBANK_PLUS_REFERRAL_JOB_ID || rp.jobId === SHOPEE_PAY_REFERRAL_JOB_ID">
                   <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
                     <div class="text-[10px] text-[var(--admin-warning)]">Bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendName || '—' }}</span></div>
                     <div class="text-[10px] text-[var(--admin-warning)]">SĐT bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendPhone || '—' }}</span></div>
