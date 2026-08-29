@@ -34,7 +34,7 @@ const closeImage = () => { selectedImage.value = null }
 // --- Dynamic job options từ Firestore + jobs.ts ---
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
 
-const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'post-threads', 'join-zalo']
+const BASIC_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'join-zalo']
 const VIP_JOB_IDS_SUBMIT = ['liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'momo']
 
 // VIP ngân hàng dùng chung form này nhưng KHÔNG được tự điền họ tên/SĐT từ hồ sơ web —
