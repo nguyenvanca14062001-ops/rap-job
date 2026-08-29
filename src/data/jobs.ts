@@ -70,8 +70,8 @@ export const jobsData: Record<string, any> = {
   'daily_threads': {
     title: "ĐĂNG BÀI THREAD HẰNG NGÀY",
     subtitle: "Đăng bài mỗi ngày, nhập link nhận xu",
-    reward: "45.000",
-    rewardText: "45.000 xu / bài",
+    reward: "30.000",
+    rewardText: "30.000 xu / bài",
     color: "text-teal-400",
     badge: "HẰNG NGÀY",
     type: "daily_thread_post",

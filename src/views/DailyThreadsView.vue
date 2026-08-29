@@ -413,7 +413,7 @@ const statusBadgeClass = (status: string) => {
               <div v-else-if="qrViews !== ''"
                    class="bg-orange-500/10 border border-orange-500/30 rounded-2xl px-4 py-3 font-sans not-italic normal-case flex items-center gap-2">
                 <span class="text-lg">⚠️</span>
-                <span class="text-orange-400 text-[11px] font-bold leading-snug">Chưa đủ mốc nhận xu. Tối thiểu 50 view để nhận 45.000 xu.</span>
+                <span class="text-orange-400 text-[11px] font-bold leading-snug">Chưa đủ mốc nhận xu. Tối thiểu 50 view để nhận 30.000 xu.</span>
               </div>
             </div>
             <div class="space-y-2">
