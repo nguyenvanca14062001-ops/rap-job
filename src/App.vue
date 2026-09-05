@@ -10,6 +10,7 @@ import { POST_THREADS_JOB_ID } from '@/utils/postThreadsConfig'
 import { startAppConfigListener } from '@/composables/useAppConfig'
 import { startSupportListener, supportConfig, supportBadge, shouldAutoPopup, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
 import SupportPanel from '@/components/SupportPanel.vue'
+import Swal from 'sweetalert2'
 
 // --- IMPORT COMPONENT ---
 import AppBrowserBlocker from '@/components/AppBrowserBlocker.vue'
@@ -118,46 +119,14 @@ const ageConfirmJobId = ref('')
 const ageConfirmJobTitle = ref('')
 const ageConfirmAge = ref(18)
 
-// --- Color maps cho 2-column card grid (CÔNG VIỆC sheet) ---
-const jobCardClass: Record<string, string> = {
-  'follow-cgv':     'bg-gradient-to-br from-[#4A1212] to-[#220606] border-red-600/70 shadow-[0_0_20px_rgba(220,38,38,0.25)]',
-  'review-cinema':  'bg-gradient-to-br from-[#4A3500] to-[#221800] border-amber-500/70 shadow-[0_0_20px_rgba(245,158,11,0.25)]',
-  'checkin-cinema': 'bg-gradient-to-br from-[#4A1428] to-[#220610] border-rose-500/70 shadow-[0_0_20px_rgba(244,63,94,0.25)]',
-  'survey-cinema':  'bg-gradient-to-br from-[#281555] to-[#100820] border-violet-600/70 shadow-[0_0_20px_rgba(124,58,237,0.25)]',
-  'post-threads':   'bg-gradient-to-br from-[#4A1E3D] to-[#240A1A] border-fuchsia-500/70 shadow-[0_0_20px_rgba(217,70,239,0.25)]',
-  'join-zalo':      'bg-gradient-to-br from-[#1E2850] to-[#0C1226] border-indigo-500/70 shadow-[0_0_20px_rgba(99,102,241,0.25)]',
-  'daily_threads':  'bg-gradient-to-br from-[#042a2e] to-[#021617] border-teal-500/70 shadow-[0_0_20px_rgba(20,184,166,0.25)]',
-  'shopee-pay':     'bg-gradient-to-br from-[#ff5722] via-[#c2410c] to-[#2a0a00] border-[2px] border-orange-300 shopee-glow-pulse',
-}
-const jobBadgeClass: Record<string, string> = {
-  'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
-  'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
-  'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
-  'daily_threads': 'bg-teal-600', 'shopee-pay': 'bg-gradient-to-r from-orange-400 to-red-600 animate-pulse',
-}
-const jobIconBgClass: Record<string, string> = {
-  'follow-cgv': 'bg-red-600/20', 'review-cinema': 'bg-amber-500/20',
-  'checkin-cinema': 'bg-rose-500/20', 'survey-cinema': 'bg-violet-500/20',
-  'post-threads': 'bg-fuchsia-500/20', 'join-zalo': 'bg-indigo-500/20',
-  'daily_threads': 'bg-teal-500/20', 'shopee-pay': 'bg-orange-400/25',
-}
-const jobRewardClass: Record<string, string> = {
-  'follow-cgv': 'text-red-400', 'review-cinema': 'text-amber-400',
-  'checkin-cinema': 'text-rose-400', 'survey-cinema': 'text-violet-400',
-  'post-threads': 'text-fuchsia-400', 'join-zalo': 'text-indigo-400',
-  'daily_threads': 'text-teal-400', 'shopee-pay': 'text-transparent bg-clip-text bg-gradient-to-r from-orange-300 to-yellow-300',
-}
-function getAgeBadgeClass(age: number): string {
-  if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-  if (age <= 18) return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
-  if (age <= 20) return 'bg-orange-500/20 text-orange-300 border-orange-500/30'
-  return 'bg-red-500/20 text-red-300 border-red-500/30'
-}
-const jobBtnClass: Record<string, string> = {
-  'follow-cgv': 'bg-red-700', 'review-cinema': 'bg-amber-600',
-  'checkin-cinema': 'bg-rose-600', 'survey-cinema': 'bg-violet-700',
-  'post-threads': 'bg-fuchsia-600', 'join-zalo': 'bg-indigo-600',
-  'daily_threads': 'bg-teal-600', 'shopee-pay': 'bg-gradient-to-r from-orange-500 to-red-600',
+// --- Badge text color cho danh sách CÔNG VIỆC (list đơn giản, 1 màu nền, chỉ đổi màu chữ) ---
+function getBadgeTextClass(badge: string): string {
+  const b = (badge || '').toUpperCase()
+  if (b.includes('HOT')) return 'text-red-400'
+  if (b.includes('HẰNG NGÀY')) return 'text-teal-400'
+  if (b.includes('SURVEY')) return 'text-violet-400'
+  if (b.includes('VIP')) return 'text-amber-400'
+  return 'text-slate-400'
 }
 
 // --- KHỞI TẠO BIẾN TRẠNG THÁI HỆ THỐNG ---
@@ -192,6 +161,27 @@ const jobCategory = ref<'basic' | 'vip' | ''>('')
 
 const isAdminRoute = computed(() => route.path.includes('admin'))
 const isAuthRoute = computed(() => route.path.includes('/login') || route.path.includes('/register'))
+
+// Ẩn ticker/nổ hũ ảo "vừa rút thành công" khi user đang thao tác công việc/hướng dẫn/nộp bằng chứng —
+// tránh che giao diện lúc cần tập trung. Không đổi logic ticker/withdrawal thật, chỉ đổi điều kiện hiển thị UI.
+// - isJobRoute: /job/:id (job detail cơ bản + VIP), /jobs/* (referral-abbank, daily-threads, momo), /submit-report, /survey-cinema
+// - hasWorkModalOpen: các bottom sheet/modal "chọn công việc" mở ngay trên trang chủ (chưa đổi route)
+const shouldHideWithdrawTicker = computed(() => {
+  const path = route.path || ''
+  const isJobRoute = path.startsWith('/job') || path === '/submit-report' || path === '/survey-cinema'
+
+  const hasWorkModalOpen =
+    activePopup.value === 'cong-viec' ||
+    activePopup.value === 'nop-bai' ||
+    showAgeConfirmModal.value ||
+    showFriendReferralSelect.value ||
+    showMomoReferralHub.value ||
+    showLpbankPlusReferralHub.value ||
+    showShopeePayReferralHub.value ||
+    showBankModal.value
+
+  return isJobRoute || hasWorkModalOpen
+})
 
 const username = ref(localStorage.getItem('mmo_username') || 'Member')
 const userBalance = ref(Number(localStorage.getItem('mmo_balance')) || 0)
@@ -273,50 +263,6 @@ const jobList = [
   { name: 'Ngân Hàng VPBank', reward: '100.000' },
 ]
 
-// Pool các loại hoạt động (không có tên — tên lấy ngẫu nhiên từ names[])
-const activityPool = [
-  { icon: '🎬', job: 'FOLLOW FANPAGE CGV',       reward: '20.000',    type: 'job'      },
-  { icon: '⭐', job: 'ĐÁNH GIÁ 5 SAO RẠP PHIM', reward: '25.000',    type: 'job'      },
-  { icon: '📸', job: 'CHECK-IN TẠI RẠP',         reward: '20.000',    type: 'job'      },
-  { icon: '📋', job: 'KHẢO SÁT PHIM',            reward: '20.000',    type: 'job'      },
-  { icon: '📍', job: 'ĐÁNH GIÁ GOOGLE MAP',      reward: '25.000',    type: 'job'      },
-  { icon: '💬', job: 'THAM GIA NHÓM ZALO',       reward: '10.000',    type: 'job'      },
-  { icon: '📈', job: 'APP CHỨNG KHOÁN KAFI',     reward: '85.000',    type: 'job'      },
-  { icon: '💎', job: 'NGÂN HÀNG MSB',            reward: '100.000',   type: 'job'      },
-  { icon: '💎', job: 'NGÂN HÀNG VPBANK',         reward: '100.000',   type: 'job'      },
-  { icon: '💸', job: 'RÚT VỀ MB BANK',           reward: '350.000',   type: 'withdraw' },
-  { icon: '💸', job: 'RÚT VỀ VPBANK',            reward: '650.000',   type: 'withdraw' },
-  { icon: '💸', job: 'RÚT VỀ TECHCOMBANK',       reward: '500.000',   type: 'withdraw' },
-  { icon: '💸', job: 'RÚT VỀ MOMO',              reward: '1.000.000', type: 'withdraw' },
-  { icon: '💸', job: 'RÚT VỀ VIETCOMBANK',       reward: '800.000',   type: 'withdraw' },
-  { icon: '💸', job: 'RÚT VỀ TPBANK',            reward: '300.000',   type: 'withdraw' },
-]
-let _feedUid = 0
-const liveActivityFeed = ref<any[]>([])
-
-const startLiveFeed = () => {
-  // Khởi tạo 8 entries ngẫu nhiên
-  const usedNames = [...names].sort(() => Math.random() - 0.5)
-  const initTimes = ['1 phút', '2 phút', '4 phút', '6 phút', '9 phút', '13 phút', '18 phút', '24 phút']
-  liveActivityFeed.value = initTimes.map((t, i) => {
-    const entry = activityPool[Math.floor(Math.random() * activityPool.length)]
-    return { ...entry, name: usedNames[i % usedNames.length], time: t + ' trước', uid: ++_feedUid }
-  })
-  // Thêm entry mới lên đầu mỗi 2.5–4.5 giây
-  const rotate = () => {
-    const delay = Math.floor(Math.random() * (4500 - 2500 + 1) + 2500)
-    setTimeout(() => {
-      const entry = activityPool[Math.floor(Math.random() * activityPool.length)]
-      const name = names[Math.floor(Math.random() * names.length)]
-      liveActivityFeed.value = [
-        { ...entry, name, time: 'vừa xong', uid: ++_feedUid },
-        ...liveActivityFeed.value.slice(0, 7)
-      ]
-      rotate()
-    }, delay)
-  }
-  rotate()
-}
 
 const fmtXu = (n: number) => n.toLocaleString('vi-VN')
 
@@ -499,12 +445,26 @@ const initFirebaseSync = (user: any) => {
   )
 }
 
+// Tự động bật "lite-effects" (tắt animation nền/glow liên tục, giữ nguyên bố cục & màu sắc)
+// trên màn hình nhỏ (<=768px), khi hệ điều hành bật prefers-reduced-motion, hoặc thiết bị yếu
+// (ít lõi CPU). Chỉ thêm/xoá class trên <body> — không đụng tới logic nghiệp vụ nào khác.
+const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia
+  ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  : false
+const isLowPowerDevice = typeof navigator !== 'undefined' && typeof navigator.hardwareConcurrency === 'number'
+  ? navigator.hardwareConcurrency <= 4
+  : false
+const updateLiteEffects = () => {
+  const shouldUseLite = window.innerWidth <= 768 || prefersReducedMotion || isLowPowerDevice
+  document.body.classList.toggle('lite-effects', shouldUseLite)
+}
+
 onMounted(() => {
   windowWidth.value = window.innerWidth
-  window.addEventListener('resize', () => { windowWidth.value = window.innerWidth })
+  updateLiteEffects()
+  window.addEventListener('resize', () => { windowWidth.value = window.innerWidth; updateLiteEffects() })
   startToasting()
-  startLiveFeed()
-  
+
   onAuthStateChanged(auth, (user) => {
     isAuthChecking.value = false 
     if (user) {
@@ -550,7 +510,14 @@ const handleReceiveJob = (jobId: string) => {
     return
   }
   if (mergedJobs.value[jobId]?.paused || mergedJobs.value[jobId]?.soldout) {
-    alert('⏸️ CÔNG VIỆC TẠM DỪNG\nChương trình đang được cập nhật. Vui lòng quay lại sau!')
+    Swal.fire({
+      title: mergedJobs.value[jobId]?.soldout ? 'Công việc đã hết slot, vui lòng quay lại sau.' : 'Công việc này đang tạm dừng, vui lòng quay lại sau.',
+      icon: 'info',
+      toast: true,
+      position: 'top',
+      timer: 2200,
+      showConfirmButton: false,
+    })
     return
   }
   if (jobId === 'survey-cinema') {
@@ -848,41 +815,42 @@ watch(activePopup, (val) => {
 
 
 
-           <!-- Mobile: Live activity feed -->
+           <!-- Mobile: Demo mức hoa hồng theo loại công việc -->
            <div class="lg:hidden space-y-4">
              <div class="flex items-center gap-3">
                <div class="w-1.5 h-8 bg-sky-500 rounded-full shadow-[0_0_15px_rgba(56,189,248,0.5)]"></div>
-               <div class="flex items-center gap-2 flex-wrap">
-                 <h2 class="text-2xl text-white font-black italic uppercase tracking-tighter">
-                   HOẠT ĐỘNG <span class="text-sky-400">GẦN ĐÂY</span>
-                 </h2>
-                 <span class="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[8px] font-black px-2 py-0.5 rounded-full">
-                   <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                   LIVE
-                 </span>
-               </div>
+               <h2 class="text-2xl text-white font-black italic uppercase tracking-tighter">
+                 MỨC <span class="text-sky-400">HOA HỒNG</span>
+               </h2>
              </div>
 
-             <div class="relative overflow-hidden">
-               <TransitionGroup name="live-feed" tag="div" class="space-y-2">
-                 <div v-for="entry in liveActivityFeed" :key="entry.uid"
-                      class="bg-[#1e1309]/70 border border-slate-700/40 rounded-[20px] px-4 py-3 flex items-center gap-3">
-                   <div :class="[
-                     'w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border border-white/10',
-                     entry.type === 'withdraw' ? 'bg-emerald-500/15' : 'bg-red-600/15'
-                   ]">{{ entry.icon }}</div>
-                   <div class="flex-1 min-w-0">
-                     <p class="text-white text-[11px] font-black italic uppercase tracking-tight truncate">{{ entry.name }}</p>
-                     <p class="text-slate-400 text-[9px] font-bold normal-case truncate">{{ entry.job }}</p>
-                   </div>
-                   <div class="text-right shrink-0">
-                     <p :class="['text-sm font-black italic tracking-tighter', entry.type === 'withdraw' ? 'text-emerald-400' : 'text-yellow-400']">
-                       +{{ entry.reward }}
-                     </p>
-                     <p :class="['text-[8px] font-bold', entry.time === 'vừa xong' ? 'text-sky-400' : 'text-slate-600']">{{ entry.time }}</p>
-                   </div>
+             <div class="space-y-2.5">
+               <div class="bg-[#1e1309]/70 border border-slate-700/40 rounded-[20px] px-4 py-3.5 flex items-center gap-3">
+                 <div class="w-11 h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/20 flex items-center justify-center text-xl shrink-0">👥</div>
+                 <div class="flex-1 min-w-0">
+                   <p class="text-white text-[12.5px] font-black italic uppercase tracking-tight truncate">Giới thiệu bạn bè</p>
+                   <p class="text-emerald-400 text-[13px] font-black italic tracking-tighter">65.000 – 90.000 xu / lượt</p>
                  </div>
-               </TransitionGroup>
+                 <button @click="handleReceiveJob('referral-friends')" class="shrink-0 bg-emerald-500 active:bg-emerald-400 text-[#090e17] px-4 py-2.5 rounded-xl text-[10.5px] font-black uppercase tracking-wide">Tham gia</button>
+               </div>
+
+               <div class="bg-[#1e1309]/70 border border-slate-700/40 rounded-[20px] px-4 py-3.5 flex items-center gap-3">
+                 <div class="w-11 h-11 rounded-xl bg-red-500/15 border border-red-500/20 flex items-center justify-center text-xl shrink-0">⚡</div>
+                 <div class="flex-1 min-w-0">
+                   <p class="text-white text-[12.5px] font-black italic uppercase tracking-tight truncate">Công việc cơ bản</p>
+                   <p class="text-yellow-400 text-[13px] font-black italic tracking-tighter">10.000 – 30.000 xu / job</p>
+                 </div>
+                 <button @click="activePopup = 'cong-viec'; jobCategory = 'basic'" class="shrink-0 bg-red-600 active:bg-red-500 text-white px-4 py-2.5 rounded-xl text-[10.5px] font-black uppercase tracking-wide">Đăng ký</button>
+               </div>
+
+               <div class="bg-[#1e1309]/70 border border-amber-500/25 rounded-[20px] px-4 py-3.5 flex items-center gap-3">
+                 <div class="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center text-xl shrink-0">👑</div>
+                 <div class="flex-1 min-w-0">
+                   <p class="text-white text-[12.5px] font-black italic uppercase tracking-tight truncate">Công việc VIP</p>
+                   <p class="text-amber-400 text-[13px] font-black italic tracking-tighter">85.000 – 100.000 xu / job</p>
+                 </div>
+                 <button @click="activePopup = 'cong-viec'; jobCategory = 'vip'" class="shrink-0 bg-amber-500 active:bg-amber-400 text-[#090e17] px-4 py-2.5 rounded-xl text-[10.5px] font-black uppercase tracking-wide">Đăng ký</button>
+               </div>
              </div>
            </div>
            <InfoSection :isLoggedIn="isLoggedIn" @contactSupport="contactSupport" />
@@ -1005,7 +973,7 @@ watch(activePopup, (val) => {
     <!-- BOTTOM SHEET PANEL -->
     <Transition name="sheet-up">
       <div v-if="activePopup"
-           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[78vh] flex flex-col shadow-[0_-8px_60px_rgba(0,0,0,0.7)] bg-gradient-to-b from-[#221510] to-[#160d0b] border border-white/10 select-none">
+           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[78vh] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.5)] bg-[#17110f] border border-white/10 select-none">
 
         <!-- Handle bar -->
         <div class="flex justify-center pt-3 pb-1">
@@ -1030,21 +998,19 @@ watch(activePopup, (val) => {
 
         </div>
 
-        <!-- CÔNG VIỆC popup — 2-step category flow -->
+        <!-- CÔNG VIỆC popup — 2-step category flow (đã đơn giản hoá: list 1 cột, ít màu/glow) -->
         <div v-if="activePopup === 'cong-viec'" class="flex flex-col flex-1 min-h-0">
           <!-- Sticky header — dynamic based on step -->
-          <div class="sticky top-0 bg-[#1e1309] px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
-            <div class="flex items-center gap-2">
+          <div class="sticky top-0 bg-[#171010] px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
+            <div class="flex items-center gap-2.5">
               <!-- Back button (screen 2 only) -->
-              <button v-if="jobCategory !== ''" @click="jobCategory = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform mr-0.5">
+              <button v-if="jobCategory !== ''" @click="jobCategory = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
               </button>
-              <div class="w-1 h-5 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-                   :class="jobCategory === 'vip' ? 'bg-amber-400' : 'bg-red-500'"></div>
-              <h3 class="text-white text-sm font-black italic uppercase tracking-tight">
-                <template v-if="jobCategory === ''">CHỌN LOẠI CÔNG VIỆC</template>
-                <template v-else-if="jobCategory === 'basic'">⚡ CƠ BẢN</template>
-                <template v-else>👑 VIP</template>
+              <h3 class="text-white text-sm font-bold tracking-tight">
+                <template v-if="jobCategory === ''">Chọn loại công việc</template>
+                <template v-else-if="jobCategory === 'basic'">Công việc cơ bản</template>
+                <template v-else>Công việc VIP</template>
               </h3>
             </div>
             <button @click="activePopup = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
@@ -1052,179 +1018,116 @@ watch(activePopup, (val) => {
             </button>
           </div>
 
-          <!-- SCREEN 1: Chọn loại công việc -->
-          <div v-if="jobCategory === ''" class="flex-1 flex flex-col gap-4 p-4 justify-center">
+          <!-- SCREEN 1: Chọn loại công việc — list đơn giản, không card/glow -->
+          <div v-if="jobCategory === ''" class="flex-1 overflow-y-auto p-2">
 
-            <!-- Card GIỚI THIỆU BẠN BÈ -->
             <button @click="handleReceiveJob('referral-friends')"
-              class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#052e1f] to-[#031a12] border-2 border-emerald-500/50 active:border-emerald-400/80 active:scale-[0.97] transition-all overflow-hidden group">
-              <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent pointer-events-none"></div>
-              <div class="w-14 h-14 rounded-2xl bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center text-2xl shrink-0">👥</div>
-              <div class="text-left flex-1 relative z-10">
-                <p class="text-emerald-300 text-base font-black italic uppercase leading-tight">GIỚI THIỆU BẠN BÈ</p>
-                <p class="text-emerald-400 text-[11px] font-black uppercase tracking-wider mt-0.5">KHÔNG GIỚI HẠN • 65K–90K XU</p>
-                <p class="text-slate-500 text-[10px] mt-1">Mời bạn bè đăng ký app, nhận thưởng mỗi lượt</p>
+              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left border-b border-white/5">
+              <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl shrink-0">👥</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-[13px] font-semibold leading-tight">Giới thiệu bạn bè</p>
+                <p class="text-emerald-400 text-[11px] font-semibold mt-0.5">65K – 90K xu / lượt</p>
               </div>
-              <svg class="w-5 h-5 text-emerald-400 shrink-0 group-active:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-              </svg>
+              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
 
-            <!-- Card CƠ BẢN -->
             <button @click="jobCategory = 'basic'"
-              class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#2a0c0c] to-[#1a0808] border-2 border-red-600/50 active:border-red-500/80 active:scale-[0.97] transition-all overflow-hidden group">
-              <div class="absolute inset-0 bg-gradient-to-r from-red-600/10 to-transparent pointer-events-none"></div>
-              <div class="w-14 h-14 rounded-2xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-2xl shrink-0">⚡</div>
-              <div class="text-left flex-1 relative z-10">
-                <p class="text-white text-base font-black italic uppercase leading-tight">CÔNG VIỆC CƠ BẢN</p>
-                <p class="text-red-400 text-[11px] font-black uppercase tracking-wider mt-0.5">NHANH &amp; DỄ • 10K–30K XU</p>
-                <p class="text-slate-500 text-[10px] mt-1">Follow, check-in, đánh giá, khảo sát...</p>
+              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left border-b border-white/5">
+              <div class="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-xl shrink-0">⚡</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-[13px] font-semibold leading-tight">Công việc cơ bản</p>
+                <p class="text-red-400 text-[11px] font-semibold mt-0.5">10K – 30K xu / job</p>
               </div>
-              <svg class="w-5 h-5 text-red-400 shrink-0 group-active:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-              </svg>
+              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
 
-            <!-- Card VIP -->
             <button @click="jobCategory = 'vip'"
-              class="relative flex items-center gap-4 p-5 rounded-[22px] bg-gradient-to-r from-[#2A1C00] to-[#1a1000] border-2 border-amber-500/50 active:border-amber-400/80 active:scale-[0.97] transition-all overflow-hidden group">
-              <div class="absolute inset-0 bg-gradient-to-r from-amber-500/10 to-transparent pointer-events-none"></div>
-              <div class="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-400/30 flex items-center justify-center text-2xl shrink-0">👑</div>
-              <div class="text-left flex-1 relative z-10">
-                <p class="text-amber-300 text-base font-black italic uppercase leading-tight">CÔNG VIỆC VIP</p>
-                <p class="text-amber-400 text-[11px] font-black uppercase tracking-wider mt-0.5">THU NHẬP CAO • 85K–100K XU</p>
-                <p class="text-slate-500 text-[10px] mt-1">App chứng khoán, ngân hàng...</p>
+              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left">
+              <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shrink-0">👑</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-[13px] font-semibold leading-tight">Công việc VIP</p>
+                <p class="text-amber-400 text-[11px] font-semibold mt-0.5">85K – 100K xu / job</p>
               </div>
-              <svg class="w-5 h-5 text-amber-400 shrink-0 group-active:translate-x-1 transition-transform" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-              </svg>
+              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
           </div>
 
-          <!-- SCREEN 2a: Basic jobs — 2-column card grid -->
-          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
-            <div class="grid grid-cols-2 gap-2.5">
-              <template v-for="(j, id) in mergedJobs" :key="id">
-                <button v-if="!VIP_IDS.includes(id as string) || id === 'shopee-pay'"
-                  @click="handleReceiveJob(id as string)"
-                  class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left"
-                  :class="[jobCardClass[id as string] || 'bg-[#150f0d] border-slate-700', (id === 'post-threads' && j.paused) ? 'opacity-60 grayscale' : '', id === 'shopee-pay' ? 'order-first' : '']">
+          <!-- SCREEN 2a: Basic jobs — list 1 cột, gọn -->
+          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-2 py-2 flex flex-col gap-1.5">
+            <template v-for="(j, id) in mergedJobs" :key="id">
+              <button v-if="!VIP_IDS.includes(id as string) || id === 'shopee-pay'"
+                @click="handleReceiveJob(id as string)"
+                class="w-full flex items-center gap-3 px-3 py-3 rounded-2xl border border-white/5 bg-white/[0.03] active:bg-white/[0.07] transition-colors text-left"
+                :class="[j.paused ? 'opacity-50' : '', id === 'shopee-pay' ? 'order-first' : '']">
 
-                  <!-- Highlight layer -->
-                  <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
+                <!-- Icon -->
+                <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">
+                  {{ jobIconMap[id as string] || '🎯' }}
+                </div>
 
-                  <!-- Overlay TẠM DỪNG — chỉ riêng job ĐĂNG BÀI THREADS (post-threads) -->
-                  <div v-if="id === 'post-threads' && j.paused" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                    <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">⏸ TẠM DỪNG</span>
-                  </div>
-
-                  <!-- Badge top-right -->
-                  <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-white/15 text-white z-10"
-                       :class="jobBadgeClass[id as string] || 'bg-slate-700'">
-                    {{ j.badge || 'CƠ BẢN' }}
-                  </div>
-
-                  <!-- Icon -->
-                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-3 border border-white/10 relative z-10"
-                       :class="jobIconBgClass[id as string] || 'bg-white/5'">
-                    {{ jobIconMap[id as string] || '🎯' }}
-                  </div>
-
-                  <!-- Title -->
-                  <p class="text-white text-[11px] font-black italic uppercase tracking-tight leading-tight mb-2 flex-1 relative z-10">
-                    {{ j.title }}
+                <!-- Title + reward -->
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-[12.5px] font-semibold leading-snug line-clamp-2">{{ j.title }}</p>
+                  <p class="text-[12px] font-bold mt-0.5 truncate" :class="j.paused ? 'text-slate-500' : 'text-yellow-400'">
+                    <template v-if="j.rewardText">{{ j.rewardText }}</template>
+                    <template v-else>{{ String(j.reward).replace(/\D/g,'') }} xu</template>
                   </p>
+                </div>
 
-                  <!-- Reward -->
-                  <div class="flex items-baseline gap-1 mb-3 relative z-10">
-                    <template v-if="j.rewardText">
-                      <span class="text-[13px] font-black italic tracking-tighter" :class="jobRewardClass[id as string] || 'text-yellow-400'">
-                        {{ j.rewardText }}
-                      </span>
-                    </template>
-                    <template v-else>
-                      <span class="text-lg font-black italic tracking-tighter"
-                            :class="jobRewardClass[id as string] || 'text-yellow-400'">
-                        +{{ String(j.reward).replace(/\D/g,'') }}
-                      </span>
-                      <span class="text-[9px] font-black text-slate-400">XU</span>
-                    </template>
-                  </div>
-
-                  <!-- CTA button -->
-                  <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10"
-                       :class="(id === 'post-threads' && j.paused) ? 'bg-slate-700 text-slate-400' : (jobBtnClass[id as string] || 'bg-slate-700')">
-                    {{ (id === 'post-threads' && j.paused) ? 'TẠM DỪNG ⏸' : 'BẮT ĐẦU ⚡' }}
-                  </div>
-                </button>
-              </template>
-            </div>
-            <div class="h-2"></div>
+                <!-- Badge + CTA -->
+                <div class="flex flex-col items-end gap-1.5 shrink-0">
+                  <span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10" :class="j.paused ? 'text-slate-400' : getBadgeTextClass(j.badge || 'CƠ BẢN')">
+                    {{ j.paused ? 'TẠM DỪNG' : (j.badge || 'CƠ BẢN') }}
+                  </span>
+                  <span class="flex items-center gap-0.5 text-[10.5px] font-bold" :class="j.paused ? 'text-slate-500' : 'text-white'">
+                    {{ j.paused ? 'Tạm dừng' : 'Làm ngay' }}
+                    <svg v-if="!j.paused" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                  </span>
+                </div>
+              </button>
+            </template>
+            <div class="h-1"></div>
           </div>
 
-          <!-- SCREEN 2b: VIP jobs — 2-column card grid (amber theme) -->
-          <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto overscroll-y-contain flex-1 px-3 py-3">
-            <div class="grid grid-cols-2 gap-2.5">
-              <template v-for="id in sortedVipJobIds" :key="id">
-                <button
-                  @click="handleReceiveJob(id as string)"
-                  class="relative flex flex-col p-4 rounded-[20px] border-[1.5px] transition-all duration-200 active:scale-[0.96] overflow-hidden text-left bg-gradient-to-br from-[#2A1C00] to-[#1a1000] border-amber-500/60 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-                  :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'opacity-50 grayscale' : ''">
+          <!-- SCREEN 2b: VIP jobs — list 1 cột, tông amber nhẹ -->
+          <div v-else-if="jobCategory === 'vip'" class="overflow-y-auto overscroll-y-contain flex-1 px-2 py-2 space-y-1.5">
+            <template v-for="id in sortedVipJobIds" :key="id">
+              <button
+                @click="handleReceiveJob(id as string)"
+                class="w-full flex items-center gap-3 px-3 py-3 rounded-2xl border border-amber-500/10 bg-amber-500/[0.04] active:bg-amber-500/[0.08] transition-colors text-left"
+                :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'opacity-50' : ''">
 
-                  <!-- Highlight layer -->
-                  <div class="absolute inset-0 bg-gradient-to-t from-transparent to-white/5 pointer-events-none rounded-[18px]"></div>
+                <!-- Icon -->
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-base shrink-0">
+                  {{ jobIconMap[id as string] || '💎' }}
+                </div>
 
-                  <!-- Paused / Soldout overlay -->
-                  <div v-if="mergedJobs[id as string]?.soldout" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                    <span class="bg-black/70 text-red-400 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">HẾT SLOT</span>
-                  </div>
-                  <div v-else-if="mergedJobs[id as string]?.paused" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-                    <span class="bg-black/70 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg">⏸ TẠM DỪNG</span>
-                  </div>
-
-                  <!-- Badge top-right -->
-                  <div class="absolute top-0 right-0 text-[8px] px-2 py-1 rounded-bl-xl rounded-tr-[18px] font-black italic uppercase border-b border-l border-amber-400/20 text-amber-200 z-10 bg-amber-700">
-                    {{ mergedJobs[id as string]?.badge || 'VIP' }}
-                  </div>
-
-                  <!-- Icon -->
-                  <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg mb-3 border border-amber-400/20 bg-amber-500/15 relative z-10">
-                    {{ jobIconMap[id as string] || '💎' }}
-                  </div>
-
-                  <!-- Title -->
-                  <p class="text-amber-200 text-[11px] font-black italic uppercase tracking-tight leading-tight mb-1 relative z-10">
-                    {{ mergedJobs[id as string]?.title }}
+                <!-- Title + reward (+ độ tuổi nếu có) -->
+                <div class="flex-1 min-w-0">
+                  <p class="text-amber-100 text-[12.5px] font-semibold leading-snug line-clamp-2">{{ mergedJobs[id as string]?.title }}</p>
+                  <p class="text-[12px] font-bold mt-0.5 truncate"
+                     :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'text-slate-500' : 'text-amber-400'">
+                    <template v-if="mergedJobs[id as string]?.rewardText">{{ mergedJobs[id as string]?.rewardText }}</template>
+                    <template v-else>{{ String(mergedJobs[id as string]?.reward || '0').replace(/\D/g,'') }} xu</template>
+                    <span v-if="mergedJobs[id as string]?.ageRequirement" class="text-slate-500 font-medium"> · từ {{ mergedJobs[id as string]?.ageRequirement }} tuổi</span>
                   </p>
+                </div>
 
-                  <!-- Age badge -->
-                  <div
-                    v-if="mergedJobs[id as string]?.ageRequirement"
-                    class="w-full px-2 py-1 rounded-lg text-[11px] font-black uppercase text-center mb-2 relative z-10 border"
-                    :class="getAgeBadgeClass(mergedJobs[id as string]?.ageRequirement)"
-                  >🪪 YÊU CẦU: TỪ {{ mergedJobs[id as string]?.ageRequirement }} TUỔI</div>
-
-                  <!-- Reward -->
-                  <div v-if="mergedJobs[id as string]?.rewardText" class="flex items-baseline gap-1 mb-3 relative z-10">
-                    <span class="text-sm font-black italic tracking-tighter text-amber-400">
-                      {{ mergedJobs[id as string]?.rewardText }}
-                    </span>
-                  </div>
-                  <div v-else class="flex items-baseline gap-1 mb-3 relative z-10">
-                    <span class="text-lg font-black italic tracking-tighter text-amber-400">
-                      +{{ String(mergedJobs[id as string]?.reward || '0').replace(/\D/g,'') }}
-                    </span>
-                    <span class="text-[9px] font-black text-slate-400">XU</span>
-                  </div>
-
-                  <!-- CTA button -->
-                  <div class="w-full py-2 rounded-xl text-white text-[10px] font-black italic uppercase text-center relative z-10 bg-amber-600">
-                    ĐĂNG KÝ 👑
-                  </div>
-                </button>
-              </template>
-            </div>
-            <div class="h-2"></div>
+                <!-- Badge + CTA -->
+                <div class="flex flex-col items-end gap-1.5 shrink-0">
+                  <span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10"
+                        :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'text-slate-400' : 'text-amber-400'">
+                    {{ mergedJobs[id as string]?.soldout ? 'HẾT SLOT' : mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'VIP') }}
+                  </span>
+                  <span class="flex items-center gap-0.5 text-[10.5px] font-bold"
+                        :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'text-slate-500' : 'text-amber-300'">
+                    {{ mergedJobs[id as string]?.soldout ? 'Hết slot' : mergedJobs[id as string]?.paused ? 'Tạm dừng' : 'Đăng ký' }}
+                    <svg v-if="!(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout)" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                  </span>
+                </div>
+              </button>
+            </template>
+            <div class="h-1"></div>
           </div>
         </div>
 
@@ -1345,87 +1248,59 @@ watch(activePopup, (val) => {
     </Transition>
 
     <nav v-if="!isAuthRoute || isLoggedIn"
-         class="cosmic-nav fixed bottom-0 left-0 w-full lg:hidden z-[4000] flex justify-between items-end px-2 pb-5 pt-2 bg-[#06000f]/97 backdrop-blur-xl border-t border-violet-500/15 overflow-hidden select-none">
+         class="cosmic-nav fixed bottom-0 left-0 w-full lg:hidden z-[4000] flex items-stretch justify-between px-1 pt-2 pb-3 bg-[#0a0714]/85 backdrop-blur-md border-t border-violet-400/15 select-none">
 
-      <!-- Laser border — 2 beams continuous sweep -->
-      <div class="laser-border" aria-hidden="true"></div>
-
-      <!-- ① CÔNG VIỆC — vị trí 1 (HOT 🔥) -->
-      <button @click="vibrate(); activePopup === 'cong-viec' ? activePopup = '' : activePopup = 'cong-viec'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
-        <div class="absolute -top-2 w-5 h-[3px] bg-red-500 rounded-full shadow-[0_0_8px_#dc2626]" v-if="activePopup === 'cong-viec'"></div>
-        <div class="relative">
-          <!-- HOT badge -->
-          <div class="absolute -top-2 -right-2 z-10 flex items-center gap-0.5 bg-red-600 text-white text-[6px] font-black px-1.5 py-0.5 rounded-full shadow-[0_0_8px_rgba(220,38,38,0.7)] uppercase leading-none">🔥 HOT</div>
-          <!-- Orbit ring -->
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#dc2626; border-right-color:rgba(220,38,38,0.25);"></div>
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(220,38,38,0.35);"></div>
-          <!-- Icon circle -->
-          <div class="w-[52px] h-[52px] rounded-full bg-[#140808] border border-red-900/50 flex items-center justify-center nav-glow-red group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'cong-viec' ? 'border-red-500/70 bg-red-900/20' : ''">
-            <svg class="w-5 h-5 transition-colors duration-300" :class="activePopup === 'cong-viec' ? 'text-red-400' : 'text-slate-400 group-hover:text-red-400'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-          </div>
-        </div>
-        <span class="text-[8px] font-black tracking-widest uppercase transition-colors duration-300" :class="activePopup === 'cong-viec' ? 'text-red-400' : 'text-slate-500 group-hover:text-red-400'">CÔNG VIỆC</span>
+      <!-- ① CÔNG VIỆC — vị trí 1 (HOT 🔥) — active: cyan -->
+      <button @click="vibrate(); activePopup === 'cong-viec' ? activePopup = '' : activePopup = 'cong-viec'" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1">
+        <span class="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-6 rounded-full transition duration-200" :class="activePopup === 'cong-viec' ? 'bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.7)] opacity-100' : 'opacity-0'"></span>
+        <span class="relative flex items-center justify-center w-9 h-9 rounded-xl transition duration-200" :class="activePopup === 'cong-viec' ? 'bg-cyan-500/15 shadow-[0_0_10px_rgba(34,211,238,0.35)]' : ''">
+          <span class="absolute -top-1.5 -right-1.5 z-10 flex items-center gap-0.5 bg-red-600 text-white text-[6px] font-black px-1 py-0.5 rounded-full uppercase leading-none">🔥</span>
+          <svg style="width:24px;height:24px" class="transition duration-200" :class="activePopup === 'cong-viec' ? 'text-cyan-400' : 'text-[#9CA3AF]'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+        </span>
+        <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="activePopup === 'cong-viec' ? 'text-cyan-400' : 'text-[#8B93A7]'">CÔNG VIỆC</span>
       </button>
 
-      <!-- ② LỊCH SỬ — vị trí 2 -->
-      <button @click="vibrate(); activePopup === 'lich-su' ? activePopup = '' : activePopup = 'lich-su'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
-        <div class="absolute -top-2 w-5 h-[3px] bg-sky-400 rounded-full shadow-[0_0_8px_rgba(56,189,248,0.9)]" v-if="activePopup === 'lich-su'"></div>
-        <div class="relative">
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#38bdf8; border-right-color:rgba(56,189,248,0.2);"></div>
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(56,189,248,0.35);"></div>
-          <div class="w-[52px] h-[52px] rounded-full bg-[#080e14] border border-sky-900/50 flex items-center justify-center nav-glow-sky group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'lich-su' ? 'border-sky-500/70 bg-sky-900/20' : ''">
-            <svg class="w-5 h-5 transition-colors duration-300" :class="activePopup === 'lich-su' ? 'text-sky-400' : 'text-slate-400 group-hover:text-sky-400'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-        </div>
-        <span class="text-[8px] font-black tracking-widest uppercase transition-colors duration-300" :class="activePopup === 'lich-su' ? 'text-sky-400' : 'text-slate-500 group-hover:text-sky-400'">LỊCH SỬ</span>
+      <!-- ② LỊCH SỬ — vị trí 2 — active: blue -->
+      <button @click="vibrate(); activePopup === 'lich-su' ? activePopup = '' : activePopup = 'lich-su'" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1">
+        <span class="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-6 rounded-full transition duration-200" :class="activePopup === 'lich-su' ? 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.7)] opacity-100' : 'opacity-0'"></span>
+        <span class="flex items-center justify-center w-9 h-9 rounded-xl transition duration-200" :class="activePopup === 'lich-su' ? 'bg-blue-500/15 shadow-[0_0_10px_rgba(96,165,250,0.35)]' : ''">
+          <svg style="width:24px;height:24px" class="transition duration-200" :class="activePopup === 'lich-su' ? 'text-blue-400' : 'text-[#9CA3AF]'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </span>
+        <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="activePopup === 'lich-su' ? 'text-blue-400' : 'text-[#8B93A7]'">LỊCH SỬ</span>
       </button>
 
-      <!-- ③ RÚT TIỀN — Center button (flat, no float) -->
-      <button @click="handleNav('/withdraw')" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
-        <div class="relative">
-          <!-- Orbit ring FAB -->
-          <div class="absolute inset-[-7px] rounded-full pointer-events-none orbit-ring-fast" style="border:2px solid transparent; border-top-color:#dc2626; border-right-color:rgba(251,191,36,0.4); border-bottom-color:rgba(220,38,38,0.15);"></div>
-          <!-- Pulse ring -->
-          <div class="absolute inset-[-7px] rounded-full border border-red-500/25 fab-pulse pointer-events-none"></div>
-          <!-- Main button -->
-          <div class="w-[54px] h-[54px] rounded-full bg-gradient-to-br from-red-600 via-rose-500 to-orange-500 flex items-center justify-center shadow-[0_0_24px_rgba(220,38,38,0.7),0_4px_14px_rgba(0,0,0,0.5)] group-active:scale-95 transition-all duration-300 border-2 border-red-400/30 relative overflow-hidden group-hover:-translate-y-[5px]">
-            <div class="absolute top-1 left-2 right-2 h-3 bg-white/20 rounded-full blur-[3px] pointer-events-none"></div>
-            <svg class="w-6 h-6 text-white relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" /></svg>
-          </div>
-        </div>
-        <span class="text-[9px] font-black text-red-400 tracking-widest uppercase drop-shadow-[0_0_6px_rgba(220,38,38,0.5)]">Rút Tiền</span>
+      <!-- ③ RÚT TIỀN — nút giữa nổi bật, nhô lên ~10px, gradient đỏ→hồng -->
+      <button @click="handleNav('/withdraw')" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-end pb-1.5">
+        <span class="absolute -top-[10px] left-1/2 -translate-x-1/2 w-12 h-12 rounded-full flex items-center justify-center border-2 border-white/10 bg-gradient-to-br from-red-600 to-pink-500 transition duration-200"
+              :class="route.path === '/withdraw' ? 'shadow-[0_0_24px_rgba(239,68,68,0.75),0_4px_14px_rgba(0,0,0,0.5)]' : 'shadow-[0_0_10px_rgba(239,68,68,0.35),0_4px_10px_rgba(0,0,0,0.4)]'">
+          <svg style="width:24px;height:24px" class="text-white relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" /></svg>
+        </span>
+        <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="route.path === '/withdraw' ? 'text-red-400' : 'text-[#8B93A7]'">RÚT TIỀN</span>
       </button>
 
-      <!-- ④ NỘP BÀI — vị trí 4 -->
-      <button @click="vibrate(); activePopup === 'nop-bai' ? activePopup = '' : activePopup = 'nop-bai'" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
-        <div class="absolute -top-2 w-5 h-[3px] bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.9)]" v-if="activePopup === 'nop-bai'"></div>
-        <div class="relative">
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#10b981; border-right-color:rgba(16,185,129,0.2);"></div>
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(16,185,129,0.35);"></div>
-          <div class="w-[52px] h-[52px] rounded-full bg-[#081410] border border-emerald-900/50 flex items-center justify-center nav-glow-emerald group-hover:-translate-y-[5px] transition-transform duration-300" :class="activePopup === 'nop-bai' ? 'border-emerald-500/70 bg-emerald-900/20' : ''">
-            <svg class="w-5 h-5 transition-colors duration-300" :class="activePopup === 'nop-bai' ? 'text-emerald-400' : 'text-slate-400 group-hover:text-emerald-400'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          </div>
-        </div>
-        <span class="text-[8px] font-black tracking-widest uppercase transition-colors duration-300" :class="activePopup === 'nop-bai' ? 'text-emerald-400' : 'text-slate-500 group-hover:text-emerald-400'">GỬI BC</span>
+      <!-- ④ GỬI BC — vị trí 4 — active: green -->
+      <button @click="vibrate(); activePopup === 'nop-bai' ? activePopup = '' : activePopup = 'nop-bai'" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1">
+        <span class="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-6 rounded-full transition duration-200" :class="activePopup === 'nop-bai' ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)] opacity-100' : 'opacity-0'"></span>
+        <span class="flex items-center justify-center w-9 h-9 rounded-xl transition duration-200" :class="activePopup === 'nop-bai' ? 'bg-emerald-500/15 shadow-[0_0_10px_rgba(52,211,153,0.35)]' : ''">
+          <svg style="width:24px;height:24px" class="transition duration-200" :class="activePopup === 'nop-bai' ? 'text-emerald-400' : 'text-[#9CA3AF]'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        </span>
+        <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="activePopup === 'nop-bai' ? 'text-emerald-400' : 'text-[#8B93A7]'">GỬI BC</span>
       </button>
 
-      <!-- ⑤ HỖ TRỢ — vị trí 5 -->
-      <button @click="showSupportPanel = true" class="flex flex-col items-center gap-1 w-[20%] group relative z-10">
-        <div class="relative">
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring" style="border:1.5px solid transparent; border-top-color:#f43f5e; border-right-color:rgba(244,63,94,0.2);"></div>
-          <div class="absolute inset-[-5px] rounded-full pointer-events-none orbit-ring-reverse" style="border:1px solid transparent; border-bottom-color:rgba(244,63,94,0.35);"></div>
-          <div class="w-[52px] h-[52px] rounded-full bg-[#140810] border border-rose-900/50 flex items-center justify-center nav-glow-rose group-hover:-translate-y-[5px] transition-transform duration-300">
-            <svg class="w-5 h-5 text-slate-400 group-hover:text-rose-400 transition-colors duration-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
-          </div>
-          <span v-if="supportBadge" class="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0a0507] animate-pulse pointer-events-none"></span>
-        </div>
-        <span class="text-[8px] font-black tracking-widest uppercase transition-colors" :class="supportBadge ? 'text-rose-400' : 'text-slate-500 group-hover:text-rose-400'">HỖ TRỢ</span>
+      <!-- ⑤ HỖ TRỢ — vị trí 5 — active: fuchsia (tím/hồng) -->
+      <button @click="showSupportPanel = true" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1">
+        <span class="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-6 rounded-full transition duration-200" :class="showSupportPanel ? 'bg-fuchsia-400 shadow-[0_0_6px_rgba(232,121,249,0.7)] opacity-100' : 'opacity-0'"></span>
+        <span class="relative flex items-center justify-center w-9 h-9 rounded-xl transition duration-200" :class="showSupportPanel ? 'bg-fuchsia-500/15 shadow-[0_0_10px_rgba(232,121,249,0.35)]' : ''">
+          <svg style="width:24px;height:24px" class="transition duration-200" :class="showSupportPanel ? 'text-fuchsia-400' : 'text-[#9CA3AF]'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+          <span v-if="supportBadge" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0507] animate-pulse pointer-events-none"></span>
+        </span>
+        <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="showSupportPanel ? 'text-fuchsia-400' : 'text-[#8B93A7]'">HỖ TRỢ</span>
       </button>
 
     </nav>
 
     <Transition name="slide-up">
-      <div v-if="randomNotice && (!isAuthRoute || isLoggedIn)"
+      <div v-if="randomNotice && (!isAuthRoute || isLoggedIn) && !shouldHideWithdrawTicker"
            :style="windowWidth >= 1024 ? { left: isMenuOpen ? '320px' : '20px' } : {}"
            class="fixed top-[72px] left-3 right-3 lg:top-auto lg:bottom-10 lg:left-auto lg:right-auto z-[5000] flex items-center gap-3 bg-[#150f0d]/95 backdrop-blur-xl border border-red-700/50 px-4 py-3 rounded-2xl shadow-[0_8px_40px_rgba(220,38,38,0.35),0_4px_20px_rgba(0,0,0,0.6)] lg:min-w-[320px] transition-all duration-300">
         <div :class="[
@@ -1557,166 +1432,17 @@ watch(activePopup, (val) => {
 </template>
 
 <style>
-/* ===== COSMIC NAV ===== */
+/* ===== COSMIC NAV — bottom nav mobile (5 nút cố định) ===== */
 .cosmic-nav {
-  box-shadow:
-    0 -30px 80px rgba(0,0,0,0.99),
-    0 -1px 0 rgba(139,92,246,0.3),
-    0 -8px 40px rgba(88,28,220,0.12);
-  background: linear-gradient(180deg, rgba(14,0,28,0.97) 0%, rgba(6,0,15,0.98) 100%);
-  /* iPhone X+ home indicator safe area */
-  padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
-}
-.cosmic-nav::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(1.5px 1.5px at 8% 40%, rgba(167,139,250,0.7) 0%, transparent 100%),
-    radial-gradient(1px 1px at 18% 70%, rgba(255,255,255,0.4) 0%, transparent 100%),
-    radial-gradient(2px 2px at 32% 25%, rgba(56,189,248,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 45% 80%, rgba(255,255,255,0.25) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 58% 35%, rgba(251,191,36,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 72% 65%, rgba(255,255,255,0.3) 0%, transparent 100%),
-    radial-gradient(2px 2px at 83% 20%, rgba(244,63,94,0.5) 0%, transparent 100%),
-    radial-gradient(1px 1px at 92% 75%, rgba(167,139,250,0.4) 0%, transparent 100%),
-    radial-gradient(1.5px 1.5px at 25% 50%, rgba(16,185,129,0.4) 0%, transparent 100%),
-    radial-gradient(1px 1px at 65% 15%, rgba(255,255,255,0.2) 0%, transparent 100%);
-  animation: starTwinkle 3s ease-in-out infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-@keyframes starTwinkle {
-  0%, 100% { opacity: 0.5; }
-  50%       { opacity: 1; }
-}
-
-/* ⚡ Shopee Pay — glow nổi bật, khác biệt với các job cơ bản còn lại */
-@keyframes shopeePulse {
-  0%, 100% { box-shadow: 0 0 22px rgba(255,87,34,0.45), 0 0 0 rgba(255,87,34,0); }
-  50%       { box-shadow: 0 0 40px rgba(255,87,34,0.85), 0 0 70px rgba(255,87,34,0.25); }
-}
-.shopee-glow-pulse {
-  animation: shopeePulse 1.8s ease-in-out infinite;
-}
-
-/* ⚡ Dual laser beams — chạy liên tục không nghỉ */
-.laser-border {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  overflow: hidden;
-}
-.laser-border::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 160px; height: 2px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(139,92,246,0.4) 20%,
-    rgba(255,255,255,1) 50%,
-    rgba(251,191,36,1) 65%,
-    rgba(56,189,248,0.6) 85%,
-    transparent 100%
-  );
-  box-shadow: 0 0 8px rgba(255,255,255,0.9), 0 0 20px rgba(139,92,246,0.7), 0 0 35px rgba(251,191,36,0.4);
-  filter: blur(0.3px);
-  animation: laserSweep1 2.4s linear infinite;
-}
-.laser-border::after {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 90px; height: 2px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(244,63,94,0.4) 30%,
-    rgba(255,255,255,0.9) 55%,
-    rgba(56,189,248,0.8) 80%,
-    transparent 100%
-  );
-  box-shadow: 0 0 6px rgba(56,189,248,0.8), 0 0 18px rgba(244,63,94,0.6);
-  filter: blur(0.4px);
-  animation: laserSweep2 3.7s linear infinite;
-  animation-delay: -1.6s;
-}
-@keyframes laserSweep1 {
-  0%   { transform: translateX(-160px); }
-  100% { transform: translateX(calc(100vw + 60px)); }
-}
-@keyframes laserSweep2 {
-  0%   { transform: translateX(-90px); }
-  100% { transform: translateX(calc(100vw + 40px)); }
-}
-
-/* Orbit ring — regular buttons */
-.orbit-ring {
-  animation: orbitSpin 3s linear infinite;
-  transform-origin: center;
-}
-/* Orbit ring — center FAB (faster) */
-.orbit-ring-fast {
-  animation: orbitSpin 2s linear infinite;
-  transform-origin: center;
-}
-/* Orbit ring — counter-clockwise (dual ring effect) */
-.orbit-ring-reverse {
-  animation: orbitSpinReverse 5s linear infinite;
-  transform-origin: center;
-}
-@keyframes orbitSpin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes orbitSpinReverse {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(-360deg); }
-}
-
-/* Per-button colored glow pulses */
-.nav-glow-red {
-  animation: pulseRed 2.5s ease-in-out infinite;
-}
-@keyframes pulseRed {
-  0%,100% { box-shadow: 0 0 8px rgba(220,38,38,0.2), inset 0 0 8px rgba(220,38,38,0.05); }
-  50%     { box-shadow: 0 0 24px rgba(220,38,38,0.65), 0 0 48px rgba(220,38,38,0.2), inset 0 0 14px rgba(220,38,38,0.12); }
-}
-.nav-glow-sky {
-  animation: pulseSky 2.8s ease-in-out infinite;
-}
-@keyframes pulseSky {
-  0%,100% { box-shadow: 0 0 8px rgba(56,189,248,0.2), inset 0 0 8px rgba(56,189,248,0.05); }
-  50%     { box-shadow: 0 0 24px rgba(56,189,248,0.65), 0 0 48px rgba(56,189,248,0.2), inset 0 0 14px rgba(56,189,248,0.12); }
-}
-.nav-glow-emerald {
-  animation: pulseEmerald 3s ease-in-out infinite;
-}
-@keyframes pulseEmerald {
-  0%,100% { box-shadow: 0 0 8px rgba(16,185,129,0.2), inset 0 0 8px rgba(16,185,129,0.05); }
-  50%     { box-shadow: 0 0 24px rgba(16,185,129,0.65), 0 0 48px rgba(16,185,129,0.2), inset 0 0 14px rgba(16,185,129,0.12); }
-}
-.nav-glow-rose {
-  animation: pulseRose 2.6s ease-in-out infinite;
-}
-@keyframes pulseRose {
-  0%,100% { box-shadow: 0 0 8px rgba(244,63,94,0.2), inset 0 0 8px rgba(244,63,94,0.05); }
-  50%     { box-shadow: 0 0 24px rgba(244,63,94,0.65), 0 0 48px rgba(244,63,94,0.2), inset 0 0 14px rgba(244,63,94,0.12); }
-}
-
-/* FAB pulse ring */
-.fab-pulse {
-  animation: fabPulse 2.5s ease-in-out infinite;
-}
-@keyframes fabPulse {
-  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.35; }
-  50%       { transform: translateX(-50%) scale(1.12); opacity: 0.08; }
+  min-height: 72px;
+  box-shadow: 0 -6px 24px rgba(0,0,0,0.35), 0 -1px 0 rgba(139,92,246,0.15);
+  /* iPhone X+ home indicator safe area — cộng thêm dưới padding-bottom sẵn có, không đè mất nội dung */
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
 
-.slide-up-enter-active, .slide-up-leave-active { transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .slide-up-enter-from { opacity: 0; transform: translateY(80px) scale(0.6); }
 .slide-up-leave-to { opacity: 0; transform: translateX(-80px) scale(0.9); }
 
@@ -1845,6 +1571,7 @@ watch(activePopup, (val) => {
   border-radius: 50%;
   filter: blur(80px);
   animation: aurora-drift 22s ease-in-out infinite alternate;
+  will-change: transform;
 }
 .aurora-blob-2 {
   position: absolute;
@@ -1854,6 +1581,7 @@ watch(activePopup, (val) => {
   border-radius: 50%;
   filter: blur(80px);
   animation: aurora-drift 28s ease-in-out infinite alternate-reverse;
+  will-change: transform;
 }
 .aurora-blob-3 {
   position: absolute;
@@ -1864,6 +1592,7 @@ watch(activePopup, (val) => {
   filter: blur(80px);
   animation: aurora-drift 18s ease-in-out infinite alternate;
   animation-delay: -8s;
+  will-change: transform;
 }
 .dot-grid {
   position: absolute; inset: 0;
@@ -1874,13 +1603,6 @@ watch(activePopup, (val) => {
   from { transform: translate(0, 0) scale(1); }
   to   { transform: translate(60px, 45px) scale(1.1); }
 }
-
-/* ── LIVE FEED TRANSITION ───────────────────────────── */
-.live-feed-enter-active { transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.live-feed-leave-active  { transition: all 0.3s ease; position: absolute; width: 100%; }
-.live-feed-enter-from   { opacity: 0; transform: translateY(-24px) scale(0.96); }
-.live-feed-leave-to     { opacity: 0; transform: translateX(30px); }
-.live-feed-move         { transition: transform 0.4s ease; }
 
 /* ── BOTTOM SHEET TRANSITIONS ──────────────────────── */
 .fade-backdrop-enter-active, .fade-backdrop-leave-active { transition: opacity 0.2s ease; }

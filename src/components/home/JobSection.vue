@@ -620,22 +620,22 @@ function getAgeBadgeClass(age: number): string {
   50%       { text-shadow: 0 0 14px rgba(234,179,8,1),  0 0 35px rgba(234,179,8,0.8), 0 0 60px rgba(234,179,8,0.4); }
 }
 
-/* VIP card: border glow nhấp nháy */
+/* VIP card: border glow nhấp nháy (biên độ giảm để đỡ repaint khi có nhiều thẻ cùng lúc) */
 @keyframes vip-border-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(245,158,11,0.3), 0 0 0px rgba(245,158,11,0); }
-  50%       { box-shadow: 0 0 45px rgba(245,158,11,0.6), 0 0 80px rgba(245,158,11,0.15); }
+  0%, 100% { box-shadow: 0 0 14px rgba(245,158,11,0.25); }
+  50%       { box-shadow: 0 0 28px rgba(245,158,11,0.5), 0 0 46px rgba(245,158,11,0.12); }
 }
 .vip-card {
-  animation: vip-border-pulse 2.8s ease-in-out infinite;
+  animation: vip-border-pulse 3.4s ease-in-out infinite;
 }
 
 /* VIP button: glow pulse */
 @keyframes vip-btn-pulse {
-  0%, 100% { box-shadow: 0 0 15px rgba(245,158,11,0.35); }
-  50%       { box-shadow: 0 0 30px rgba(245,158,11,0.75), 0 0 50px rgba(245,158,11,0.2); }
+  0%, 100% { box-shadow: 0 0 12px rgba(245,158,11,0.3); }
+  50%       { box-shadow: 0 0 22px rgba(245,158,11,0.6), 0 0 34px rgba(245,158,11,0.15); }
 }
 .vip-btn {
-  animation: vip-btn-pulse 1.8s ease-in-out infinite;
+  animation: vip-btn-pulse 2.6s ease-in-out infinite;
 }
 
 /* Hide scrollbar for stats carousel */

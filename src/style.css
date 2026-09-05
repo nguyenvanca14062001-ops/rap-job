@@ -45,3 +45,80 @@ button, a, [role="button"] {
   -webkit-tap-highlight-color: transparent;
   cursor: pointer;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   HIỆU ỨNG: BIẾN CSS DÙNG CHUNG TOÀN HỆ THỐNG
+   Đổi giá trị ở đây để giảm/tăng cường độ glow-shadow toàn app.
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --shadow-soft: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-glow: 0 0 24px rgba(220,38,38,0.35);
+  --mobile-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  --mobile-glow: 0 0 10px rgba(220,38,38,0.18);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   PREFERS-REDUCED-MOTION — tôn trọng cài đặt hệ điều hành người dùng
+   ════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   MOBILE (<=768px) — hạ cấp mặc định các hiệu ứng nặng
+   (glow nhiều lớp, blur, animation infinite chạy liên tục)
+   Không xoá style — chỉ giảm cường độ/tắt animation vòng lặp.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .aurora-blob-1, .aurora-blob-2, .aurora-blob-3 { filter: blur(48px); }
+  .aurora-blob-3 { display: none; }
+  .film-grain::before { display: none; }
+  .hero-shimmer { display: none; }
+  .cta-shimmer, .logged-shimmer { animation: none; }
+  .rap-text { animation-duration: 4s; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LITE EFFECTS MODE — bật tự động trên màn hình nhỏ / thiết bị yếu
+   (xem App.vue: gắn class "lite-effects" vào <body> khi <=768px,
+   prefers-reduced-motion, hoặc navigator.hardwareConcurrency thấp)
+   Tắt hẳn animation infinite + particle nền, giữ nguyên bố cục/màu sắc.
+   ════════════════════════════════════════════════════════════════ */
+body.lite-effects .aurora-blob-1,
+body.lite-effects .aurora-blob-2,
+body.lite-effects .aurora-blob-3 { animation: none; }
+body.lite-effects .film-grain::before,
+body.lite-effects .hero-shimmer { display: none; }
+body.lite-effects .vip-card,
+body.lite-effects .vip-btn,
+body.lite-effects .age-shield-app,
+body.lite-effects .age-btn-confirm-app,
+body.lite-effects .age-shield-icon,
+body.lite-effects .age-confirm-btn,
+body.lite-effects .dot-ring {
+  animation: none;
+  box-shadow: var(--mobile-glow);
+}
+body.lite-effects .cta-shimmer,
+body.lite-effects .logged-shimmer,
+body.lite-effects .highlight-text,
+body.lite-effects .rap-text { animation: none; }
+body.lite-effects .confetti-layer-2,
+body.lite-effects .confetti-layer-3 { display: none; }
+body.lite-effects .reward-popup-card { animation: none; }
+body.lite-effects .reward-amount-glow { animation: none; }
+body.lite-effects .welcome-mascot-mobile .coin-fx:nth-of-type(n+5) { display: none; }
+
+/* backdrop-filter blur là một trong những hiệu ứng tốn GPU nhất khi phần tử
+   nằm trong vùng sticky/fixed và repaint liên tục lúc cuộn — tắt hẳn trên
+   lite-effects, nền các khối này đã đủ đậm (90%+ opacity) nên gần như
+   không đổi cảm giác "kính mờ" khi nhìn bằng mắt thường. */
+body.lite-effects [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
