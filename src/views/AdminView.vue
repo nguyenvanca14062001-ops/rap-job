@@ -1543,6 +1543,10 @@ const handleAdminLogout = async () => {
                   <span class="text-[9px] text-[var(--admin-warning)] tracking-widest block mb-0.5">CHỦ TK NGÂN HÀNG NGƯỜI DÙNG NHẬP ({{ formatDate(rp.createdAt) }}):</span>
                   <div class="text-[var(--admin-text)] text-xs font-black truncate max-w-[200px]">{{ rp.bankAccountHolderName || rp.fullName || 'N/A' }}</div>
                   <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">SĐT đăng ký NH: {{ rp.bankRegisteredPhone || rp.phoneRef || '—' }}</div>
+                  <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">
+                    Năm sinh: <span class="text-[var(--admin-warning)] font-bold" v-if="rp.birthYear">{{ rp.birthYear }}</span>
+                    <span class="text-slate-400" v-else>—</span>
+                  </div>
                   <div class="mt-1" v-if="!usersMap[effUid(rp)]">
                     <span class="inline-block bg-red-50 text-[var(--admin-danger)] border border-red-200 text-[9px] px-2 py-0.5 rounded-full font-sans not-italic normal-case font-bold">⚠️ Chưa có hồ sơ ví</span>
                     <button class="ml-1 bg-blue-50 text-[var(--admin-primary)] hover:bg-[var(--admin-primary)] hover:text-white border border-blue-200 px-2 py-0.5 rounded-lg text-[9px] font-sans not-italic normal-case font-bold" @click="openWalletLinkModal(rp)">Gắn hồ sơ ví</button>

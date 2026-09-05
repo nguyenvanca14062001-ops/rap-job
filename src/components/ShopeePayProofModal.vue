@@ -28,6 +28,7 @@ const profileFullName = ref('')
 const profilePhone = ref('')
 const fullName = ref('')
 const phoneRef = ref('')
+const birthYear = ref('')
 const images = ref<string[]>([])
 const imageBlobs = ref<Blob[]>([])
 const imageError = ref('')
@@ -53,6 +54,7 @@ watch(() => props.show, (v) => { if (v) loadProfile() })
 const resetForm = () => {
   fullName.value = ''
   phoneRef.value = ''
+  birthYear.value = ''
   images.value = []
   imageBlobs.value = []
   imageError.value = ''
@@ -114,9 +116,16 @@ const submitProof = async () => {
   if (!uid || isSubmitting.value) return
   const name = fullName.value.trim()
   const phone = phoneRef.value.trim()
+  const year = String(birthYear.value).trim()
 
   if (!name) { alert('⚠️ VUI LÒNG NHẬP HỌ VÀ TÊN XÁC THỰC!'); return }
   if (!phone || normalizePhone(phone).length < 9) { alert('⚠️ VUI LÒNG NHẬP ĐÚNG SỐ ĐIỆN THOẠI ĐỐI SOÁT!'); return }
+  if (!/^\d{4}$/.test(year)) { alert('⚠️ VUI LÒNG NHẬP ĐÚNG NĂM SINH 4 SỐ (VD: 2000)!'); return }
+  // Job SHOPEE PAY yêu cầu đủ 18 tuổi — chặn ngay ở form gửi bằng chứng.
+  if (new Date().getFullYear() - Number(year) < 18) {
+    alert('⚠️ CÔNG VIỆC SHOPEE PAY YÊU CẦU ĐỦ 18 TUỔI TRỞ LÊN!')
+    return
+  }
   if (imageBlobs.value.length !== REQUIRED_IMAGES) {
     imageError.value = `Vui lòng gửi đúng ${REQUIRED_IMAGES} ảnh bằng chứng theo mẫu bên dưới. Thiếu ảnh hoặc gửi sai ảnh có thể bị từ chối.`
     return
@@ -170,6 +179,7 @@ const submitProof = async () => {
       fullName: name,
       phoneRef: phone,
       phoneNormalized: normalizePhone(phone),
+      birthYear: year,
       bankAccountHolderName: name,
       bankRegisteredPhone: phone,
       bankRegisteredPhoneNormalized: normalizePhone(phone),
@@ -244,6 +254,12 @@ const submitProof = async () => {
           <div class="space-y-2">
             <label class="text-amber-400 text-[11px] tracking-widest ml-1">SĐT ĐĂNG KÝ SHOPEE PAY *</label>
             <input v-model="phoneRef" type="text" placeholder="Nhập SĐT đã dùng đăng ký Shopee Pay"
+                   class="w-full bg-[#0d121f] border border-slate-800 focus:border-amber-500 rounded-2xl py-3.5 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[14px] transition-colors" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-amber-400 text-[11px] tracking-widest ml-1">NĂM SINH * (YÊU CẦU ĐỦ 18 TUỔI)</label>
+            <input v-model="birthYear" type="number" inputmode="numeric" placeholder="Năm sinh (VD: 2000)"
+                   @input="birthYear = birthYear ? String(birthYear).slice(0, 4) : ''"
                    class="w-full bg-[#0d121f] border border-slate-800 focus:border-amber-500 rounded-2xl py-3.5 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[14px] transition-colors" />
           </div>
 

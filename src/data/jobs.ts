@@ -644,7 +644,7 @@ export const jobsData: Record<string, any> = {
     reward: "65.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
-    ageRequirement: 15,
+    ageRequirement: 18,
     zaloGuideUrl: "",
     // Field phân loại — dùng khi seed vào Firestore vip_jobs và để nhận diện report là job VIP/bank
     category: "vip",
@@ -656,7 +656,7 @@ export const jobsData: Record<string, any> = {
     campaignType: "bank",
     // Text ngắn hiển thị dưới khối tiêu đề ở trang chi tiết
     shortDesc: "Hoàn thành đăng ký SHOPEE PAY theo hướng dẫn để nhận thưởng.",
-    warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    warning: "Người đăng ký phải từ 18 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
     // Link nhóm Zalo để lấy mã giới thiệu
     zaloReferralLink: "https://zalo.me/g/iobklj13hk0wxwvt85ru",
     // 2 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
