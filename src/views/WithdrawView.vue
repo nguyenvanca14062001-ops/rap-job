@@ -46,7 +46,8 @@ const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
 
 const requiredJobs = computed(() => 3)
 const tasksUnlocked = computed(() => vipCompletedCount.value >= requiredJobs.value)
-const taskErrorMessage = computed(() => `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} nhiệm vụ VIP để rút tiền. Hiện tại bạn đã hoàn thành: ${vipCompletedCount.value}/${requiredJobs.value} nhiệm vụ VIP.`)
+// Chỉ đổi text hiển thị (tên gọi "công việc hoa hồng cao - dễ làm" thay cho "VIP") — không đổi field/logic vipCompletedCount/requiredJobs.
+const taskErrorMessage = computed(() => `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} công việc hoa hồng cao - dễ làm để rút tiền. Hiện tại bạn đã hoàn thành: <span style="color:#fbbf24;font-weight:900">${vipCompletedCount.value}/${requiredJobs.value} công việc hoa hồng cao - dễ làm</span>.`)
 
 const formatNumber = (num: number) => {
   return Math.floor(num).toLocaleString('vi-VN')
@@ -127,7 +128,7 @@ const triggerWithdraw = () => {
   if (!tasksUnlocked.value) {
     Swal.fire({
       title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
-      text: taskErrorMessage.value,
+      html: taskErrorMessage.value,
       icon: 'warning',
       confirmButtonColor: '#eab308',
       customClass: { popup: 'rounded-[30px]' }
@@ -211,7 +212,7 @@ const handleConfirmWithdraw = async () => {
     showConfirmModal.value = false
     Swal.fire({
       title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
-      text: `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} nhiệm vụ VIP để rút tiền. Hiện tại bạn đã hoàn thành: ${liveVipCompletedCount}/${requiredJobs.value} nhiệm vụ VIP.`,
+      html: `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} công việc hoa hồng cao - dễ làm để rút tiền. Hiện tại bạn đã hoàn thành: <span style="color:#fbbf24;font-weight:900">${liveVipCompletedCount}/${requiredJobs.value} công việc hoa hồng cao - dễ làm</span>.`,
       icon: 'warning',
       confirmButtonColor: '#eab308',
       customClass: { popup: 'rounded-[30px]' }

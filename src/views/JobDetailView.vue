@@ -289,7 +289,7 @@ const handleCopy = (text: string) => {
           </div>
 
           <!-- Quick actions -->
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <button @click="scrollToGuide" class="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/5 border border-white/10 active:bg-white/10 transition-colors">
               <span class="text-base">📖</span>
               <span class="text-[9.5px] font-bold text-slate-300">Hướng dẫn</span>
@@ -297,10 +297,6 @@ const handleCopy = (text: string) => {
             <button @click="goSubmitReport" class="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 active:bg-emerald-500/25 transition-colors">
               <span class="text-base">📥</span>
               <span class="text-[9.5px] font-bold text-emerald-400">Nộp bằng chứng</span>
-            </button>
-            <button @click="showJobHistory = true" class="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/5 border border-white/10 active:bg-white/10 transition-colors">
-              <span class="text-base">📜</span>
-              <span class="text-[9.5px] font-bold text-slate-300">Lịch sử</span>
             </button>
           </div>
 

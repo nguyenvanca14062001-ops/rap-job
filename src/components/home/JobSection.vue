@@ -418,7 +418,7 @@ function getAgeBadgeClass(age: number): string {
                   </div>
                   <div v-else class="flex items-center gap-1.5">
                     <p class="font-black text-xl md:text-3xl tracking-tighter italic leading-none" :class="j.color">
-                      {{ formatReward(j.reward).toLocaleString() }}
+                      {{ Number(formatReward(j.reward)).toLocaleString('vi-VN') }}
                     </p>
                     <div class="flex flex-col items-start translate-y-[-2px]">
                       <svg class="w-4 h-4 md:w-5 md:h-5 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" viewBox="0 0 24 24">

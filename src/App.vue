@@ -113,6 +113,16 @@ const sortedVipJobIds = computed(() =>
     })
 )
 
+// --- Tab "Công việc dễ làm": tách 2 nhóm hiển thị ---
+// Không giới hạn: được làm/nộp nhiều lần. 'lpbank-plus' vẫn thuộc VIP_IDS (giữ nguyên ở tab hoa hồng cao),
+// ở đây chỉ hiển thị thêm cho tab dễ làm, không đổi phân loại gốc của nó.
+const UNLIMITED_BASIC_IDS = ['daily_threads', 'shopee-pay', 'lpbank-plus']
+const basicUnlimitedIds = computed(() => UNLIMITED_BASIC_IDS.filter(id => id in mergedJobs.value))
+// Giới hạn: tất cả job dễ làm còn lại (không thuộc VIP_IDS và không nằm trong nhóm không giới hạn)
+const basicLimitedIds = computed(() =>
+  Object.keys(mergedJobs.value).filter(id => !VIP_IDS.includes(id) && !UNLIMITED_BASIC_IDS.includes(id))
+)
+
 // --- Age confirmation modal (mobile bottom sheet) ---
 const showAgeConfirmModal = ref(false)
 const ageConfirmJobId = ref('')
@@ -162,13 +172,13 @@ const jobCategory = ref<'basic' | 'vip' | ''>('')
 const isAdminRoute = computed(() => route.path.includes('admin'))
 const isAuthRoute = computed(() => route.path.includes('/login') || route.path.includes('/register'))
 
-// Ẩn ticker/nổ hũ ảo "vừa rút thành công" khi user đang thao tác công việc/hướng dẫn/nộp bằng chứng —
+// Ẩn ticker/nổ hũ ảo "vừa rút thành công" khi user đang thao tác công việc/hướng dẫn/nộp bằng chứng/rút tiền —
 // tránh che giao diện lúc cần tập trung. Không đổi logic ticker/withdrawal thật, chỉ đổi điều kiện hiển thị UI.
-// - isJobRoute: /job/:id (job detail cơ bản + VIP), /jobs/* (referral-abbank, daily-threads, momo), /submit-report, /survey-cinema
+// - isJobRoute: /job/:id (job detail cơ bản + VIP), /jobs/* (referral-abbank, daily-threads, momo), /submit-report, /survey-cinema, /withdraw
 // - hasWorkModalOpen: các bottom sheet/modal "chọn công việc" mở ngay trên trang chủ (chưa đổi route)
 const shouldHideWithdrawTicker = computed(() => {
   const path = route.path || ''
-  const isJobRoute = path.startsWith('/job') || path === '/submit-report' || path === '/survey-cinema'
+  const isJobRoute = path.startsWith('/job') || path === '/submit-report' || path === '/survey-cinema' || path === '/withdraw'
 
   const hasWorkModalOpen =
     activePopup.value === 'cong-viec' ||
@@ -973,7 +983,7 @@ watch(activePopup, (val) => {
     <!-- BOTTOM SHEET PANEL -->
     <Transition name="sheet-up">
       <div v-if="activePopup"
-           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[78vh] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.5)] bg-[#17110f] border border-white/10 select-none">
+           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[88vh] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.5)] bg-[#17110f] border border-white/10 select-none">
 
         <!-- Handle bar -->
         <div class="flex justify-center pt-3 pb-1">
@@ -1009,8 +1019,8 @@ watch(activePopup, (val) => {
               </button>
               <h3 class="text-white text-sm font-bold tracking-tight">
                 <template v-if="jobCategory === ''">Chọn loại công việc</template>
-                <template v-else-if="jobCategory === 'basic'">Công việc cơ bản</template>
-                <template v-else>Công việc VIP</template>
+                <template v-else-if="jobCategory === 'basic'">Công việc dễ làm</template>
+                <template v-else>Công việc hoa hồng cao - dễ làm</template>
               </h3>
             </div>
             <button @click="activePopup = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
@@ -1021,8 +1031,28 @@ watch(activePopup, (val) => {
           <!-- SCREEN 1: Chọn loại công việc — list đơn giản, không card/glow -->
           <div v-if="jobCategory === ''" class="flex-1 overflow-y-auto p-2">
 
-            <button @click="handleReceiveJob('referral-friends')"
+            <button @click="jobCategory = 'basic'"
               class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left border-b border-white/5">
+              <div class="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-xl shrink-0">⚡</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-[13px] font-semibold leading-tight">Công việc dễ làm</p>
+                <p class="text-red-400 text-[11px] font-semibold mt-0.5">10K – 30K xu / job</p>
+              </div>
+              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+
+            <button @click="jobCategory = 'vip'"
+              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left border-b border-white/5">
+              <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shrink-0">👑</div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white text-[13px] font-semibold leading-tight">Công việc hoa hồng cao - dễ làm</p>
+                <p class="text-amber-400 text-[11px] font-semibold mt-0.5">85K – 100K xu / job</p>
+              </div>
+              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+            </button>
+
+            <button @click="handleReceiveJob('referral-friends')"
+              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left">
               <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl shrink-0">👥</div>
               <div class="flex-1 min-w-0">
                 <p class="text-white text-[13px] font-semibold leading-tight">Giới thiệu bạn bè</p>
@@ -1030,62 +1060,86 @@ watch(activePopup, (val) => {
               </div>
               <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
-
-            <button @click="jobCategory = 'basic'"
-              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left border-b border-white/5">
-              <div class="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-xl shrink-0">⚡</div>
-              <div class="flex-1 min-w-0">
-                <p class="text-white text-[13px] font-semibold leading-tight">Công việc cơ bản</p>
-                <p class="text-red-400 text-[11px] font-semibold mt-0.5">10K – 30K xu / job</p>
-              </div>
-              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
-
-            <button @click="jobCategory = 'vip'"
-              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left">
-              <div class="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-xl shrink-0">👑</div>
-              <div class="flex-1 min-w-0">
-                <p class="text-white text-[13px] font-semibold leading-tight">Công việc VIP</p>
-                <p class="text-amber-400 text-[11px] font-semibold mt-0.5">85K – 100K xu / job</p>
-              </div>
-              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
           </div>
 
-          <!-- SCREEN 2a: Basic jobs — list 1 cột, gọn -->
-          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-2 py-2 flex flex-col gap-1.5">
-            <template v-for="(j, id) in mergedJobs" :key="id">
-              <button v-if="!VIP_IDS.includes(id as string) || id === 'shopee-pay'"
-                @click="handleReceiveJob(id as string)"
-                class="w-full flex items-center gap-3 px-3 py-3 rounded-2xl border border-white/5 bg-white/[0.03] active:bg-white/[0.07] transition-colors text-left"
-                :class="[j.paused ? 'opacity-50' : '', id === 'shopee-pay' ? 'order-first' : '']">
+          <!-- SCREEN 2a: Basic jobs — tách 2 nhóm: Không giới hạn / Giới hạn (làm 1 lần) — thu gọn để hiện đủ không cần vuốt -->
+          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-2 py-1.5 flex flex-col gap-1">
+
+            <p class="px-1 pt-0.5 pb-0 text-emerald-400 text-[9.5px] font-black uppercase tracking-widest">⚡ Không giới hạn — làm nhiều lần</p>
+            <template v-for="id in basicUnlimitedIds" :key="id">
+              <button @click="handleReceiveJob(id as string)"
+                class="w-full flex items-center gap-2.5 px-2.5 rounded-xl border transition-colors text-left relative overflow-hidden"
+                :class="[
+                  mergedJobs[id as string]?.paused ? 'opacity-50' : '',
+                  id === 'daily_threads'
+                    ? 'py-2.5 border-teal-400/60 bg-gradient-to-r from-teal-500/20 to-emerald-500/10 active:from-teal-500/25 active:to-emerald-500/15 featured-job-row'
+                    : 'py-2 border-white/5 bg-white/[0.03] active:bg-white/[0.07]'
+                ]">
+
+                <!-- Ribbon nổi bật -->
+                <span v-if="id === 'daily_threads'" class="absolute top-0 right-0 bg-gradient-to-r from-teal-400 to-emerald-400 text-teal-950 text-[7px] font-black uppercase px-2 py-0.5 rounded-bl-lg tracking-wide">🔥 Nổi bật</span>
 
                 <!-- Icon -->
-                <div class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-base shrink-0">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
+                     :class="id === 'daily_threads' ? 'bg-teal-500/25 border border-teal-400/50' : 'bg-white/5 border border-white/10'">
                   {{ jobIconMap[id as string] || '🎯' }}
                 </div>
 
                 <!-- Title + reward -->
                 <div class="flex-1 min-w-0">
-                  <p class="text-white text-[12.5px] font-semibold leading-snug line-clamp-2">{{ j.title }}</p>
-                  <p class="text-[12px] font-bold mt-0.5 truncate" :class="j.paused ? 'text-slate-500' : 'text-yellow-400'">
-                    <template v-if="j.rewardText">{{ j.rewardText }}</template>
-                    <template v-else>{{ String(j.reward).replace(/\D/g,'') }} xu</template>
+                  <p class="text-[12px] font-semibold leading-snug line-clamp-2" :class="id === 'daily_threads' ? 'text-teal-50' : 'text-white'">{{ mergedJobs[id as string]?.title }}</p>
+                  <p class="text-[11px] font-bold mt-0.5 truncate" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : (id === 'daily_threads' ? 'text-teal-300' : 'text-yellow-400')">
+                    <template v-if="mergedJobs[id as string]?.rewardText">{{ mergedJobs[id as string]?.rewardText }}</template>
+                    <template v-else>{{ fmtXu(Number(String(mergedJobs[id as string]?.reward).replace(/\D/g,''))) }} xu</template>
                   </p>
                 </div>
 
                 <!-- Badge + CTA -->
-                <div class="flex flex-col items-end gap-1.5 shrink-0">
-                  <span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10" :class="j.paused ? 'text-slate-400' : getBadgeTextClass(j.badge || 'CƠ BẢN')">
-                    {{ j.paused ? 'TẠM DỪNG' : (j.badge || 'CƠ BẢN') }}
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <span class="text-[7.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10" :class="mergedJobs[id as string]?.paused ? 'text-slate-400' : getBadgeTextClass(mergedJobs[id as string]?.badge || 'CƠ BẢN')">
+                    {{ mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'CƠ BẢN') }}
                   </span>
-                  <span class="flex items-center gap-0.5 text-[10.5px] font-bold" :class="j.paused ? 'text-slate-500' : 'text-white'">
-                    {{ j.paused ? 'Tạm dừng' : 'Làm ngay' }}
-                    <svg v-if="!j.paused" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                  <span class="flex items-center gap-0.5 text-[10px] font-bold" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : 'text-white'">
+                    {{ mergedJobs[id as string]?.paused ? 'Tạm dừng' : 'Làm ngay' }}
+                    <svg v-if="!mergedJobs[id as string]?.paused" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                   </span>
                 </div>
               </button>
             </template>
+
+            <p class="px-1 pt-1.5 pb-0 text-slate-400 text-[9.5px] font-black uppercase tracking-widest">🔒 Giới hạn — chỉ làm 1 lần</p>
+            <template v-for="id in basicLimitedIds" :key="id">
+              <button @click="handleReceiveJob(id as string)"
+                class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl border border-white/5 bg-white/[0.03] active:bg-white/[0.07] transition-colors text-left"
+                :class="mergedJobs[id as string]?.paused ? 'opacity-50' : ''">
+
+                <!-- Icon -->
+                <div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm shrink-0">
+                  {{ jobIconMap[id as string] || '🎯' }}
+                </div>
+
+                <!-- Title + reward -->
+                <div class="flex-1 min-w-0">
+                  <p class="text-white text-[12px] font-semibold leading-snug line-clamp-2">{{ mergedJobs[id as string]?.title }}</p>
+                  <p class="text-[11px] font-bold mt-0.5 truncate" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : 'text-yellow-400'">
+                    <template v-if="mergedJobs[id as string]?.rewardText">{{ mergedJobs[id as string]?.rewardText }}</template>
+                    <template v-else>{{ fmtXu(Number(String(mergedJobs[id as string]?.reward).replace(/\D/g,''))) }} xu</template>
+                  </p>
+                </div>
+
+                <!-- Badge + CTA -->
+                <div class="flex flex-col items-end gap-1 shrink-0">
+                  <span class="text-[7.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10" :class="mergedJobs[id as string]?.paused ? 'text-slate-400' : getBadgeTextClass(mergedJobs[id as string]?.badge || 'CƠ BẢN')">
+                    {{ mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'CƠ BẢN') }}
+                  </span>
+                  <span class="flex items-center gap-0.5 text-[10px] font-bold" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : 'text-white'">
+                    {{ mergedJobs[id as string]?.paused ? 'Tạm dừng' : 'Làm ngay' }}
+                    <svg v-if="!mergedJobs[id as string]?.paused" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                  </span>
+                </div>
+              </button>
+            </template>
+
             <div class="h-1"></div>
           </div>
 
@@ -1302,7 +1356,7 @@ watch(activePopup, (val) => {
     <Transition name="slide-up">
       <div v-if="randomNotice && (!isAuthRoute || isLoggedIn) && !shouldHideWithdrawTicker"
            :style="windowWidth >= 1024 ? { left: isMenuOpen ? '320px' : '20px' } : {}"
-           class="fixed top-[72px] left-3 right-3 lg:top-auto lg:bottom-10 lg:left-auto lg:right-auto z-[5000] flex items-center gap-3 bg-[#150f0d]/95 backdrop-blur-xl border border-red-700/50 px-4 py-3 rounded-2xl shadow-[0_8px_40px_rgba(220,38,38,0.35),0_4px_20px_rgba(0,0,0,0.6)] lg:min-w-[320px] transition-all duration-300">
+           class="fixed bottom-[90px] left-3 right-3 lg:bottom-10 lg:left-auto lg:right-auto z-[3500] flex items-center gap-3 bg-[#150f0d]/95 backdrop-blur-xl border border-red-700/40 px-4 py-2.5 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.35)] lg:min-w-[320px] transition-all duration-300">
         <div :class="[
           'w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-md shrink-0',
           randomNotice.type === 'withdraw'
@@ -1442,9 +1496,10 @@ watch(activePopup, (val) => {
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
 
-.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.slide-up-enter-from { opacity: 0; transform: translateY(80px) scale(0.6); }
-.slide-up-leave-to { opacity: 0; transform: translateX(-80px) scale(0.9); }
+/* Ticker "vừa rút thành công" — animation nhẹ, chỉ opacity/transform, không bounce/scale mạnh */
+.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.35s ease-out, opacity 0.35s ease-out; }
+.slide-up-enter-from { opacity: 0; transform: translateY(14px); }
+.slide-up-leave-to { opacity: 0; transform: translateY(14px); }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
@@ -1561,6 +1616,13 @@ watch(activePopup, (val) => {
   50% { filter: drop-shadow(0 0 22px rgba(234,179,8,0.85)); }
 }
 .reward-amount-glow { animation: reward-glow-pulse 1.5s ease-in-out infinite; }
+
+/* Featured job row (daily threads) trong bottom sheet "Công việc dễ làm" — nổi bật hơn các job còn lại */
+@keyframes featured-job-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(20,184,166,0.35), 0 0 0 1px rgba(45,212,191,0.4) inset; }
+  50%      { box-shadow: 0 0 26px rgba(20,184,166,0.65), 0 0 0 1px rgba(45,212,191,0.7) inset; }
+}
+.featured-job-row { animation: featured-job-pulse 2.2s ease-in-out infinite; }
 
 /* Aurora background */
 .aurora-blob-1 {

@@ -326,8 +326,10 @@ const statusBadgeClass = (status: string) => {
 
         <div class="space-y-2 font-sans not-italic normal-case text-left mt-4 md:mt-6 relative z-10">
           <p class="text-violet-400 text-[11px] tracking-widest font-bold">💡 MẸO</p>
-          <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">1.</span><span>Không giới hạn đăng bài, 1 ngày có thể đăng 3-5 bài.</span></p>
+          <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">1.</span><span>Không giới hạn đăng bài, 1 ngày có thể đăng 10 - 100 bài.</span></p>
           <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">2.</span><span>Không giới hạn nick Threads, có thể tạo nhiều nick clone để đăng bài.</span></p>
+          <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">3.</span><span>Ưu tiên các bạn tạo nhiều nick Threads, càng nhiều càng tốt.</span></p>
+          <p class="text-slate-400 text-[11px] leading-relaxed flex items-start gap-2"><span class="text-violet-500 shrink-0">4.</span><span>Ưu tiên các bạn 1 ngày đăng từ 10 bài trở lên.</span></p>
         </div>
       </div>
 
@@ -413,7 +415,7 @@ const statusBadgeClass = (status: string) => {
               <div v-else-if="qrViews !== ''"
                    class="bg-orange-500/10 border border-orange-500/30 rounded-2xl px-4 py-3 font-sans not-italic normal-case flex items-center gap-2">
                 <span class="text-lg">⚠️</span>
-                <span class="text-orange-400 text-[11px] font-bold leading-snug">Chưa đủ mốc nhận xu. Tối thiểu 50 view để nhận 30.000 xu.</span>
+                <span class="text-orange-400 text-[11px] font-bold leading-snug">Chưa đủ mốc nhận xu. Tối thiểu 50 view để nhận {{ DAILY_THREAD_FLAT_REWARD.toLocaleString() }} xu.</span>
               </div>
             </div>
             <div class="space-y-2">
