@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import Logo from '@/components/Logo.vue'
 
 type Platform = 'android' | 'ios' | 'other'
 
@@ -128,19 +129,26 @@ const continueHere = () => {
   >
     <div class="bg-[#111726] border border-blue-500/30 w-full max-w-sm max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-[32px] p-6 shadow-[0_0_50px_rgba(37,99,235,0.15)] relative font-black italic uppercase">
 
-      <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20 shadow-inner">
-        <span class="text-3xl not-italic">🔖</span>
+      <div class="flex items-center justify-center mb-4">
+        <Logo size="lg" />
       </div>
 
-      <h2 class="text-white text-xl tracking-tight mb-3 leading-tight">
-        Giữ trang web để <span class="text-blue-500">quay lại dễ dàng</span>
+      <h2 class="text-white text-2xl tracking-tight mb-2 leading-tight">
+        Rạp Job Freelance
       </h2>
 
-      <p v-if="platform !== 'ios'" class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
-        Bạn đang mở trang bằng trình duyệt của Messenger/Zalo. Nếu vô tình vuốt đóng, bạn có thể phải tìm lại liên kết trong tin nhắn. Mở bằng Chrome hoặc Safari giúp trang được giữ lại trong tab để quay lại bất cứ lúc nào.
+      <p class="text-slate-400 text-[11px] normal-case font-bold leading-relaxed mb-5 not-italic px-2">
+        Kiếm tiền online, không mất phí, không nạp tiền, không cọc tiền
+      </p>
+
+      <p v-if="platform === 'android'" class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
+        Chọn "Mở bằng Google Chrome" để vào trang web hoặc sao chép link trang web.
+      </p>
+      <p v-else-if="platform === 'ios'" class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
+        Nếu bạn dùng iPhone, hãy sao chép link trang web rồi dán vào Safari hoặc Chrome để mở trang.
       </p>
       <p v-else class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
-        Nếu bạn dùng iPhone, hãy sao chép link trang web rồi dán vào Safari hoặc Chrome để mở trang.
+        Bạn đang mở trang bằng trình duyệt của Messenger/Zalo. Nếu vô tình vuốt đóng, bạn có thể phải tìm lại liên kết trong tin nhắn. Mở bằng Chrome hoặc Safari giúp trang được giữ lại trong tab để quay lại bất cứ lúc nào.
       </p>
 
       <!-- ANDROID: CTA mở trực tiếp bằng Chrome -->
@@ -167,8 +175,8 @@ const continueHere = () => {
         :class="isCopied ? 'bg-emerald-500 shadow-emerald-500/40 text-[#090e17]' : 'bg-[#1a2236] hover:bg-[#212b45] text-white border border-slate-700'"
         class="w-full py-3.5 mt-3 rounded-2xl text-[13px] tracking-[1px] transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
       >
-        <span v-if="!isCopied">📋 {{ platform === 'ios' ? 'Sao chép link trang web' : 'Sao chép liên kết' }}</span>
-        <span v-else>✓ Đã sao chép liên kết</span>
+        <span v-if="!isCopied">📋 Sao chép link trang web</span>
+        <span v-else>✓ Đã sao chép link trang web</span>
       </button>
 
       <!-- LỰA CHỌN PHỤ: tiếp tục dùng web ngay trong trình duyệt hiện tại -->
