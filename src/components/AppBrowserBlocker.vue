@@ -8,7 +8,6 @@ const dismissed = ref(false)
 const platform = ref<Platform>('other')
 const isCopied = ref(false)
 const androidIntentFailed = ref(false)
-const showIOSGuide = ref(false)
 
 let intentTimer: number | undefined
 let visibilityHandler: (() => void) | null = null
@@ -137,8 +136,11 @@ const continueHere = () => {
         Giữ trang web để <span class="text-blue-500">quay lại dễ dàng</span>
       </h2>
 
-      <p class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
+      <p v-if="platform !== 'ios'" class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
         Bạn đang mở trang bằng trình duyệt của Messenger/Zalo. Nếu vô tình vuốt đóng, bạn có thể phải tìm lại liên kết trong tin nhắn. Mở bằng Chrome hoặc Safari giúp trang được giữ lại trong tab để quay lại bất cứ lúc nào.
+      </p>
+      <p v-else class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
+        Nếu bạn dùng iPhone, hãy sao chép link trang web rồi dán vào Safari hoặc Chrome để mở trang.
       </p>
 
       <!-- ANDROID: CTA mở trực tiếp bằng Chrome -->
@@ -158,25 +160,6 @@ const continueHere = () => {
         </Transition>
       </template>
 
-      <!-- IOS: hướng dẫn ngắn vì không thể ép mở Safari/Chrome -->
-      <template v-else-if="platform === 'ios'">
-        <button
-          type="button"
-          @click="showIOSGuide = !showIOSGuide"
-          class="w-full py-4 rounded-2xl text-sm tracking-[1px] text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/40 active:scale-95 transition-all flex items-center justify-center gap-2"
-        >
-          🌐 Hướng dẫn mở Safari / Chrome
-        </button>
-
-        <Transition name="fade">
-          <div v-if="showIOSGuide" class="mt-3 bg-[#0d121f] border border-blue-500/20 rounded-xl p-4 text-left">
-            <p class="text-slate-300 text-[11px] normal-case font-bold leading-relaxed not-italic">
-              Nhấn dấu <span class="text-blue-400">⋯</span> ở góc trên màn hình → chọn <span class="text-emerald-400">"Mở trong trình duyệt"</span> / <span class="text-emerald-400">"Open in browser"</span>.
-            </p>
-          </div>
-        </Transition>
-      </template>
-
       <!-- NÚT SAO CHÉP LIÊN KẾT (dự phòng cho mọi nền tảng) -->
       <button
         type="button"
@@ -184,7 +167,7 @@ const continueHere = () => {
         :class="isCopied ? 'bg-emerald-500 shadow-emerald-500/40 text-[#090e17]' : 'bg-[#1a2236] hover:bg-[#212b45] text-white border border-slate-700'"
         class="w-full py-3.5 mt-3 rounded-2xl text-[13px] tracking-[1px] transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
       >
-        <span v-if="!isCopied">📋 Sao chép liên kết</span>
+        <span v-if="!isCopied">📋 {{ platform === 'ios' ? 'Sao chép link trang web' : 'Sao chép liên kết' }}</span>
         <span v-else>✓ Đã sao chép liên kết</span>
       </button>
 
