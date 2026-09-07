@@ -1,110 +1,201 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+
+type Platform = 'android' | 'ios' | 'other'
 
 const isInApp = ref(false)
-const currentUrl = ref('')
+const dismissed = ref(false)
+const platform = ref<Platform>('other')
 const isCopied = ref(false)
-const linkInputRef = ref<HTMLInputElement | null>(null)
+const androidIntentFailed = ref(false)
+const showIOSGuide = ref(false)
+
+let intentTimer: number | undefined
+let visibilityHandler: (() => void) | null = null
 
 onMounted(() => {
-  const url = new URL(window.location.href)
-  url.searchParams.delete('fbclid')
-  currentUrl.value = url.toString()
-  const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
-  
-  // NÂNG CẤP LƯỚI LỌC TIA X: Thêm 'Barcelona' (Tên mã của Threads), 'wv', 'WebView', 'FBIOS'
+  const ua = navigator.userAgent || navigator.vendor || (window as any).opera
+
+  // Danh sách nhận diện trình duyệt nhúng trong app (Messenger, Facebook, Zalo, Threads, Instagram, ...)
   const rules = [
-    'FBAN', 'FBAV', 'FBIOS', // Dòng họ nhà Facebook, Messenger
+    'FBAN', 'FBAV', 'FBIOS', // Facebook, Messenger
     'Zalo', // Zalo
     'Instagram', // Instagram
-    'Threads', 'Barcelona', // Bắt chết Threads cả tên thật lẫn tên ẩn
+    'Threads', 'Barcelona', // Threads (kể cả tên mã ẩn)
     'TikTok', 'trill', 'ByteLocale', // TikTok
-    'Messenger', 'Line', 'Viber', // App chat
-    'wv', 'WebView' // Tóm gọn mọi loại trình duyệt nhúng trên Android
+    'Messenger', 'Line', 'Viber', // App chat khác
+    'wv', 'WebView' // Trình duyệt nhúng (WebView) chung trên Android
   ]
-  
-  // Dùng RegExp quét không phân biệt hoa thường
   const isBadBrowser = rules.some(rule => new RegExp(rule, 'i').test(ua))
 
-  // BẪY PHỤ CHO IPHONE: Nếu xài iOS mà trình duyệt đéo có chữ Safari -> Chắc chắn là Webview ẩn
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isSafari = /Safari/i.test(ua);
-  const isIOSWebview = isIOS && !isSafari;
+  const isAndroid = /Android/i.test(ua)
+  const isIOS = /iPhone|iPad|iPod/i.test(ua)
+  const isSafari = /Safari/i.test(ua)
+  // Trên iOS, mọi trình duyệt hợp lệ (Safari, Chrome, Firefox...) đều bắt buộc dùng WebKit nên UA luôn có "Safari".
+  // Nếu là iOS mà UA không có "Safari" thì gần như chắc chắn là WebView ẩn trong app.
+  const isIOSWebview = isIOS && !isSafari
 
-  // Nếu dính lưới Regex HOẶC dính bẫy iOS Webview -> Khóa mõm, bật bảng chặn!
   if (isBadBrowser || isIOSWebview) {
     isInApp.value = true
+    platform.value = isAndroid ? 'android' : isIOS ? 'ios' : 'other'
   }
 })
 
-// THUẬT TOÁN COPY TRỰC TIẾP TỪ Ô INPUT (Giữ nguyên cái này của mày vì nó chống mù iOS quá tốt)
-const copyLink = () => {
-  if (!linkInputRef.value) return;
-  
+onUnmounted(() => {
+  if (intentTimer) window.clearTimeout(intentTimer)
+  if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
+})
+
+// Mở trực tiếp website hiện tại bằng Chrome trên Android qua Android Intent, dựng từ URL hiện tại (không hard-code domain)
+const tryOpenChrome = () => {
+  androidIntentFailed.value = false
+
   try {
-    // Ép trình duyệt focus và bôi đen toàn bộ chữ trong ô input
-    linkInputRef.value.select();
-    linkInputRef.value.setSelectionRange(0, 99999); // Dành riêng cho thiết bị Mobile
-    
-    // Gọi lệnh copy cổ điển (tỷ lệ thành công 99% trên Webview)
-    const successful = document.execCommand('copy');
-    
-    if (successful) {
-      isCopied.value = true;
-      setTimeout(() => { isCopied.value = false }, 2500);
-    } else {
-      // Nếu máy nó bảo mật quá chặn luôn thì báo nó tự copy thủ công
-      alert('⚠️ Trình duyệt chặn copy tự động! Vui lòng NHẤN GIỮ vào ô link bên dưới và chọn "Sao chép" thủ công nhé.');
+    const scheme = window.location.protocol.replace(':', '')
+    const urlWithoutScheme = window.location.href.replace(/^https?:\/\//i, '')
+    const intentUrl = `intent://${urlWithoutScheme}#Intent;scheme=${scheme};package=com.android.chrome;end`
+
+    if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = () => {
+      if (document.hidden && intentTimer) {
+        window.clearTimeout(intentTimer)
+      }
     }
+    document.addEventListener('visibilitychange', visibilityHandler)
+
+    intentTimer = window.setTimeout(() => {
+      if (!document.hidden) {
+        androidIntentFailed.value = true
+      }
+    }, 1800)
+
+    window.location.href = intentUrl
   } catch (err) {
-    alert('⚠️ Trình duyệt chặn copy tự động! Vui lòng NHẤN GIỮ vào ô link bên dưới và chọn "Sao chép" thủ công nhé.');
+    androidIntentFailed.value = true
   }
+}
+
+const showCopiedState = () => {
+  isCopied.value = true
+  setTimeout(() => { isCopied.value = false }, 2000)
+}
+
+const copyLink = async () => {
+  const text = window.location.href
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      showCopiedState()
+      return
+    }
+    throw new Error('clipboard-api-unavailable')
+  } catch (err) {
+    // Fallback: copy bằng textarea tạm cho các trình duyệt/WebView không hỗ trợ Clipboard API
+    try {
+      const textarea = document.createElement('textarea')
+      textarea.value = text
+      textarea.style.position = 'fixed'
+      textarea.style.top = '-9999px'
+      textarea.style.left = '-9999px'
+      document.body.appendChild(textarea)
+      textarea.focus()
+      textarea.select()
+      textarea.setSelectionRange(0, text.length)
+      const successful = document.execCommand('copy')
+      document.body.removeChild(textarea)
+
+      if (successful) {
+        showCopiedState()
+      } else {
+        alert('⚠️ Không thể tự động sao chép. Vui lòng nhấn giữ vào thanh địa chỉ để tự sao chép liên kết nhé.')
+      }
+    } catch (fallbackErr) {
+      alert('⚠️ Không thể tự động sao chép. Vui lòng nhấn giữ vào thanh địa chỉ để tự sao chép liên kết nhé.')
+    }
+  }
+}
+
+const continueHere = () => {
+  dismissed.value = true
 }
 </script>
 
 <template>
-  <div v-if="isInApp" class="fixed inset-0 z-[999999] bg-[#090e17]/95 backdrop-blur-xl flex items-center justify-center p-6 text-center font-black italic uppercase font-sans">
-    <div class="bg-[#111726] border border-blue-500/30 w-full max-w-sm rounded-[40px] p-8 shadow-[0_0_50px_rgba(37,99,235,0.15)] relative overflow-hidden">
-      
-      <!-- Icon mượt mà -->
-      <div class="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20 shadow-inner">
-        <span class="text-4xl animate-bounce">✨</span>
+  <div
+    v-if="isInApp && !dismissed"
+    class="fixed inset-0 z-[999999] bg-[#090e17]/95 backdrop-blur-xl flex items-center justify-center p-4 text-center font-sans"
+    style="padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom));"
+  >
+    <div class="bg-[#111726] border border-blue-500/30 w-full max-w-sm max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-[32px] p-6 shadow-[0_0_50px_rgba(37,99,235,0.15)] relative font-black italic uppercase">
+
+      <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20 shadow-inner">
+        <span class="text-3xl not-italic">🔖</span>
       </div>
 
-      <h2 class="text-2xl text-white tracking-tighter mb-4 leading-tight">
-        TỐI ƯU <br/> <span class="text-blue-500">TRẢI NGHIỆM</span>
+      <h2 class="text-white text-xl tracking-tight mb-3 leading-tight">
+        Giữ trang web để <span class="text-blue-500">quay lại dễ dàng</span>
       </h2>
 
-      <!-- Câu chữ đã đổi chuẩn ý mày -->
-      <p class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-8 italic">
-        Để trải nghiệm trang web mượt mà hơn, bạn nên sao chép link bên dưới và dán vào <span class="text-emerald-400 font-black">Chrome</span> hoặc <span class="text-blue-400 font-black">Safari</span> để hệ thống hoạt động tốt nhất nhé!
+      <p class="text-slate-300 text-[12px] normal-case font-bold leading-relaxed mb-5 not-italic">
+        Bạn đang mở trang bằng trình duyệt của Messenger/Zalo. Nếu vô tình vuốt đóng, bạn có thể phải tìm lại liên kết trong tin nhắn. Mở bằng Chrome hoặc Safari giúp trang được giữ lại trong tab để quay lại bất cứ lúc nào.
       </p>
 
-      <!-- Ô CHỨA LINK - KHÁCH CÓ THỂ NHẤN GIỮ ĐỂ TỰ COPY -->
-      <div class="mb-4 relative group">
-         <p class="text-[9px] text-slate-500 tracking-[2px] mb-2 text-left ml-2">LIÊN KẾT TRANG WEB:</p>
-         <input 
-           ref="linkInputRef"
-           type="text" 
-           readonly 
-           :value="currentUrl" 
-           class="w-full bg-[#0d121f] text-white text-[12px] normal-case py-4 px-4 rounded-xl border border-slate-700 outline-none text-left font-sans font-bold shadow-inner focus:border-blue-500 transition-colors cursor-text" 
-         />
-      </div>
+      <!-- ANDROID: CTA mở trực tiếp bằng Chrome -->
+      <template v-if="platform === 'android'">
+        <button
+          type="button"
+          @click="tryOpenChrome"
+          class="w-full py-4 rounded-2xl text-sm tracking-[1px] text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/40 active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          🌐 Mở bằng Google Chrome
+        </button>
 
-      <!-- NÚT COPY -->
-      <button 
-        @click="copyLink" 
-        :class="isCopied ? 'bg-emerald-500 shadow-emerald-500/40 text-[#090e17]' : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 text-white'" 
-        class="w-full py-4 mt-2 rounded-2xl text-sm font-black tracking-[2px] transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+        <Transition name="fade">
+          <p v-if="androidIntentFailed" class="text-amber-400 text-[11px] normal-case font-bold mt-3 not-italic">
+            Không thể tự mở Chrome. Hãy sao chép liên kết bên dưới.
+          </p>
+        </Transition>
+      </template>
+
+      <!-- IOS: hướng dẫn ngắn vì không thể ép mở Safari/Chrome -->
+      <template v-else-if="platform === 'ios'">
+        <button
+          type="button"
+          @click="showIOSGuide = !showIOSGuide"
+          class="w-full py-4 rounded-2xl text-sm tracking-[1px] text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/40 active:scale-95 transition-all flex items-center justify-center gap-2"
+        >
+          🌐 Hướng dẫn mở Safari / Chrome
+        </button>
+
+        <Transition name="fade">
+          <div v-if="showIOSGuide" class="mt-3 bg-[#0d121f] border border-blue-500/20 rounded-xl p-4 text-left">
+            <p class="text-slate-300 text-[11px] normal-case font-bold leading-relaxed not-italic">
+              Nhấn dấu <span class="text-blue-400">⋯</span> ở góc trên màn hình → chọn <span class="text-emerald-400">"Mở trong trình duyệt"</span> / <span class="text-emerald-400">"Open in browser"</span>.
+            </p>
+          </div>
+        </Transition>
+      </template>
+
+      <!-- NÚT SAO CHÉP LIÊN KẾT (dự phòng cho mọi nền tảng) -->
+      <button
+        type="button"
+        @click="copyLink"
+        :class="isCopied ? 'bg-emerald-500 shadow-emerald-500/40 text-[#090e17]' : 'bg-[#1a2236] hover:bg-[#212b45] text-white border border-slate-700'"
+        class="w-full py-3.5 mt-3 rounded-2xl text-[13px] tracking-[1px] transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
       >
-        <span v-if="!isCopied">📋 SAO CHÉP LIÊN KẾT</span>
-        <span v-else>✅ ĐÃ SAO CHÉP THÀNH CÔNG</span>
+        <span v-if="!isCopied">📋 Sao chép liên kết</span>
+        <span v-else>✓ Đã sao chép liên kết</span>
       </button>
 
-      <p class="text-slate-500 text-[9px] normal-case font-bold mt-5 italic">
-        *Mẹo: Nếu nút không hoạt động, hãy nhấn giữ vào đường link phía trên để tự sao chép.
-      </p>
+      <!-- LỰA CHỌN PHỤ: tiếp tục dùng web ngay trong trình duyệt hiện tại -->
+      <button
+        type="button"
+        @click="continueHere"
+        class="mt-4 text-slate-400 hover:text-slate-200 text-[11px] normal-case font-bold underline underline-offset-2 transition-colors not-italic"
+      >
+        Tiếp tục tại đây
+      </button>
 
     </div>
   </div>
