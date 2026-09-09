@@ -304,9 +304,9 @@ const names = ['TRUNG NGUYỄN', 'HOÀNG ANH', 'MINH TUẤN', 'THANH HẰNG', 'V
 const banks = ['MB BANK', 'VPBANK', 'TPBANK', 'VIETCOMBANK', 'TECHCOMBANK', 'MOMO', 'MSB BANK']
 
 const jobList = [
-  { name: 'Follow Fanpage CGV', reward: '20.000' },
-  { name: 'Đánh Giá 5 Sao Rạp Phim', reward: '25.000' },
-  { name: 'Check-in Tại Rạp', reward: '20.000' },
+  { name: 'Follow Fanpage CGV', reward: '25.000' },
+  { name: 'Đánh Giá 5 Sao Rạp Phim', reward: '30.000' },
+  { name: 'Check-in Tại Rạp', reward: '30.000' },
   { name: 'Khảo Sát Phim', reward: '20.000' },
   { name: 'Đánh Giá Google Map', reward: '25.000' },
   { name: 'Tham Gia Nhóm Zalo', reward: '10.000' },

@@ -84,7 +84,7 @@ export const jobsData: Record<string, any> = {
 
   'follow-cgv': {
     title: "FOLLOW FANPAGE RẠP PHIM",
-    reward: "15.000 xu",
+    reward: "25.000 xu",
     color: "text-red-400",
     badge: "HOT 🎬",
     steps: [
@@ -96,7 +96,7 @@ export const jobsData: Record<string, any> = {
 
   'review-cinema': {
     title: "ĐÁNH GIÁ 5 SAO RẠP PHIM",
-    reward: "20.000 xu",
+    reward: "30.000 xu",
     color: "text-amber-400",
     badge: "CƠ BẢN",
     steps: [
@@ -108,7 +108,7 @@ export const jobsData: Record<string, any> = {
 
   'checkin-cinema': {
     title: "CHECK-IN TẠI RẠP + ĐĂNG MẠNG XÃ HỘI",
-    reward: "15.000 xu",
+    reward: "30.000 xu",
     color: "text-rose-400",
     badge: "HOT 🎬",
     steps: [

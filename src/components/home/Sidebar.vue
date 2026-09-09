@@ -123,7 +123,7 @@ const navigateTo = (path: string, authRequired = false) => {
      <button @click="navigateTo('/job/follow-cgv')" class="w-full relative flex items-center justify-between px-3 py-3 rounded-[18px] bg-gradient-to-r from-red-700/25 to-red-600/5 border-2 border-red-600/60 hover:border-red-500 shadow-[0_0_25px_rgba(220,38,38,0.22)] transition-all group mb-2">
        <div class="flex items-center gap-3">
          <div class="w-8 h-8 rounded-xl bg-red-700 flex items-center justify-center shadow-lg group-hover:rotate-12 shrink-0"><span class="text-white font-black text-[13px]">🎬</span></div>
-         <div class="text-left"><span class="text-red-400 text-[11px] block leading-none mb-1">Follow Fanpage CGV</span><span class="text-white/40 text-[12px] normal-case font-bold">Thưởng 20k xu</span></div>
+         <div class="text-left"><span class="text-red-400 text-[11px] block leading-none mb-1">Follow Fanpage CGV</span><span class="text-white/40 text-[12px] normal-case font-bold">Thưởng 25k xu</span></div>
        </div>
        <div class="relative flex items-center justify-center px-1.5 py-0.5">
          <div class="absolute inset-0 bg-red-700 blur-[4px] rounded-full animate-pulse"></div>
