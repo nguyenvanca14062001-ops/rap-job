@@ -1594,7 +1594,16 @@ const handleAdminLogout = async () => {
                     <span class="text-[var(--admin-muted)] text-[10px]" v-if="rp.referralSuccessNumber">(Lần #{{ rp.referralSuccessNumber }})</span>
                   </div>
                 </template>
-                <div class="text-[var(--admin-success)] text-sm font-black" v-else>+{{ String(rp.reward).replace(/\D/g, '') }} XU</div>
+                <template v-else>
+                  <!-- Đơn đang chờ duyệt: hiện số xu ĐÚNG cấu hình job HIỆN TẠI (getTrustedReward), không dùng
+                       rp.reward (snapshot lúc user gửi đơn) — tránh hiện số cũ khi Admin vừa tăng/giảm thưởng job
+                       sau khi đơn đã được gửi. Đơn đã xử lý thì vẫn hiện đúng số ĐÃ CỘNG THẬT (actualReward/reward),
+                       không suy diễn lại theo cấu hình mới để giữ đúng lịch sử đã trả. -->
+                  <div class="text-[var(--admin-success)] text-sm font-black" v-if="rp.status === 'pending'">
+                    Dự kiến: {{ getTrustedReward(rp.jobId).toLocaleString() }} XU
+                  </div>
+                  <div class="text-[var(--admin-success)] text-sm font-black" v-else>+{{ (rp.actualReward || Number(String(rp.reward).replace(/\D/g, '')) || 0).toLocaleString() }} XU</div>
+                </template>
               </td>
               <td class="p-6">
                 <div class="flex flex-col items-center gap-2">
