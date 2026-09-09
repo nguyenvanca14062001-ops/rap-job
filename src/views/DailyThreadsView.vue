@@ -313,9 +313,6 @@ const statusBadgeClass = (status: string) => {
           Đang chờ duyệt hôm nay: {{ pendingTodayCount }}/{{ DAILY_THREAD_MAX_PENDING_PER_DAY }}
         </p>
         <div class="flex flex-row gap-2 md:gap-3 mt-3 md:mt-6 relative z-10">
-          <button @click="openSubmitModal" class="flex-1 py-2.5 md:py-4 px-1.5 bg-teal-500 hover:bg-teal-400 text-teal-950 rounded-xl md:rounded-2xl shadow-lg active:scale-95 transition-all text-[10px] md:text-sm leading-tight">
-            GỬI BẰNG CHỨNG 🧵
-          </button>
           <button @click="showGuideModal = true" class="flex-1 py-2.5 md:py-4 px-1.5 bg-[#0d121f] border border-slate-700 hover:border-teal-500/60 text-white rounded-xl md:rounded-2xl active:scale-95 transition-all text-[10px] md:text-sm leading-tight">
             XEM HƯỚNG DẪN 📖
           </button>
@@ -361,7 +358,28 @@ const statusBadgeClass = (status: string) => {
         </p>
       </div>
 
+      <!-- Chừa khoảng trống để không bị nút sticky che nội dung cuối trang -->
+      <div class="h-24 lg:hidden"></div>
+
+      <!-- Nút nộp bằng chứng — bản thường cho desktop (không sticky), giống các job cơ bản khác (follow fanpage, nhóm zalo, checkin, đánh giá 5 sao) -->
+      <button
+        class="hidden lg:flex w-full items-center justify-center bg-emerald-500 active:bg-emerald-400 text-[#090e17] py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-colors"
+        @click="openSubmitModal">
+        NỘP BẰNG CHỨNG NGAY
+      </button>
+
     </div>
+
+    <!-- Nút nộp bằng chứng — sticky trên mobile, luôn nổi trên bottom nav (giống job cơ bản khác) -->
+    <Teleport to="body">
+      <div class="fixed bottom-[90px] left-0 right-0 z-[3500] px-4 lg:hidden">
+        <button
+          class="w-full flex items-center justify-center bg-emerald-500 active:bg-emerald-400 text-[#090e17] py-4 rounded-2xl text-[13px] font-black uppercase tracking-widest shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors"
+          @click="openSubmitModal">
+          NỘP BẰNG CHỨNG NGAY
+        </button>
+      </div>
+    </Teleport>
 
     <!-- POPUP GỬI BẰNG CHỨNG -->
     <Transition name="fade">

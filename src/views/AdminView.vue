@@ -1170,7 +1170,19 @@ const approveWithdrawal = async (item: any) => {
       const currentBalance = Number(userSnap.data()?.balance) || 0
       if (currentBalance < amount) throw new Error('Số dư hiện tại của user không đủ để duyệt lệnh rút này.')
 
-      tx.update(userRef, { balance: increment(-amount), hasPendingWithdraw: false })
+      const userUpdates: Record<string, any> = { balance: increment(-amount), hasPendingWithdraw: false }
+      if (amount === 150000) {
+        // Đọc lại users/{uid}.withdraw150kUsed ngay trong transaction — chặn duyệt trùng mốc 150k
+        // (ví dụ 2 đơn 150k pending cùng lúc, hoặc admin bấm duyệt 2 lần) dù đơn đang ở trạng thái 'pending'.
+        if (userSnap.data()?.withdraw150kUsed === true) {
+          throw new Error('User này đã sử dụng mốc rút 150.000 xu rồi.')
+        }
+        userUpdates.withdraw150kUsed = true
+        userUpdates.withdraw150kUsedAt = serverTimestamp()
+        userUpdates.withdraw150kWithdrawalId = item.id
+      }
+
+      tx.update(userRef, userUpdates)
       tx.update(withdrawalRef, { status: 'approved', paidAt: serverTimestamp() })
     })
     Swal.fire('HOÀN TẤT! 🎉', 'Duyệt rút tiền thành công!', 'success')

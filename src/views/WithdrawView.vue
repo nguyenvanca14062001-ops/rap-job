@@ -17,6 +17,7 @@ const props = defineProps<{
   userFullName?: string
   userPhone?: string
   vipCompletedCount?: number
+  withdraw150kUsed?: boolean
 }>()
 
 const amount = ref<number | null>(null)
@@ -42,7 +43,9 @@ const vipCompletedCount = computed(() => Number(props.vipCompletedCount) || 0)
 const showConfirmModal = ref(false)
 const confirmStep = ref(1) // 1: xem thông tin quy đổi, 2: xác nhận cuối cùng
 
-const withdrawOptions = [250000, 500000, 650000, 800000, 1000000, 2000000]
+const withdrawOptions = [150000, 250000, 500000, 650000, 800000, 1000000, 2000000]
+const withdraw150kUsed = computed(() => props.withdraw150kUsed === true)
+const WITHDRAW_150K_USED_MESSAGE = 'Mốc 150.000 xu chỉ được rút 1 lần. Vui lòng chọn mốc rút khác.'
 
 const requiredJobs = computed(() => 3)
 const tasksUnlocked = computed(() => vipCompletedCount.value >= requiredJobs.value)
@@ -54,6 +57,18 @@ const formatNumber = (num: number) => {
 }
 
 const selectAmount = (val: number) => {
+  if (val === 150000 && withdraw150kUsed.value) {
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: 'warning',
+      title: WITHDRAW_150K_USED_MESSAGE,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true
+    })
+    return
+  }
   amount.value = val
 }
 
@@ -158,6 +173,17 @@ const triggerWithdraw = () => {
     return
   }
 
+  if (amount.value === 150000 && withdraw150kUsed.value) {
+    Swal.fire({
+      title: 'KHÔNG THỂ RÚT MỐC NÀY!',
+      text: WITHDRAW_150K_USED_MESSAGE,
+      icon: 'warning',
+      confirmButtonColor: '#eab308',
+      customClass: { popup: 'rounded-[30px]' }
+    })
+    return
+  }
+
   if (!qrBlob.value) {
     qrError.value = 'Vui lòng tải ảnh QR ngân hàng.'
     return
@@ -204,8 +230,22 @@ const handleConfirmWithdraw = async () => {
     balance: liveUserData.balance,
     coins: liveUserData.coins,
     vipCompletedCount: liveUserData.vipCompletedCount,
+    withdraw150kUsed: liveUserData.withdraw150kUsed,
     selectedAmount: amount.value
   })
+
+  // Chặn cứng mốc 150k đã dùng — dựa trên dữ liệu Firestore mới đọc lại, không dùng props/cache.
+  if (amount.value === 150000 && liveUserData.withdraw150kUsed === true) {
+    showConfirmModal.value = false
+    Swal.fire({
+      title: 'KHÔNG THỂ RÚT MỐC NÀY!',
+      text: WITHDRAW_150K_USED_MESSAGE,
+      icon: 'warning',
+      confirmButtonColor: '#eab308',
+      customClass: { popup: 'rounded-[30px]' }
+    })
+    return
+  }
 
   const liveVipCompletedCount = Number(liveUserData.vipCompletedCount) || 0
   if (liveVipCompletedCount < requiredJobs.value) {
@@ -279,7 +319,10 @@ const handleConfirmWithdraw = async () => {
     username: props.username || '',
     fullName: props.userFullName || '',
     phoneRef: props.userPhone || '',
-    amount: withdrawAmount,
+    // Ép kiểu number tường minh — amount.value vốn đã là number (withdrawOptions: number[],
+    // selectAmount(val: number)), nhưng vẫn Number(...) ở đây để payload gửi Firestore chắc chắn
+    // không bao giờ là string (Rules dùng `amount is number` + `amount in [...]`, string sẽ luôn fail).
+    amount: Number(withdrawAmount),
     realMoney: Math.floor(withdrawAmount / 12),
     bankInfo: '',
     status: 'pending',
@@ -292,15 +335,59 @@ const handleConfirmWithdraw = async () => {
     paidBy: null
   }
 
+  console.log("[Withdraw submit debug]", {
+    uid: auth.currentUser?.uid,
+    selectedAmount: withdrawAmount,
+    selectedAmountType: typeof withdrawAmount,
+    userBalance: liveUserData.balance,
+    userCoins: liveUserData.coins,
+    vipCompletedCount: liveUserData.vipCompletedCount,
+    withdraw150kUsed: liveUserData.withdraw150kUsed,
+    payload: withdrawalPayload
+  })
+
   try {
     await setDoc(withdrawalRef, withdrawalPayload)
   } catch (txError: any) {
     console.error("[Withdraw submit error]", {
-      code: txError?.code, message: txError?.message, uid: user.uid, payload: withdrawalPayload
+      code: txError?.code,
+      message: txError?.message,
+      selectedAmount: withdrawAmount,
+      withdraw150kUsed: liveUserData.withdraw150kUsed,
+      uid: user.uid
     })
+
+    // permission-denied nghĩa là Rules từ chối ghi (không phải lỗi mạng/server) — không được hiện
+    // "Không thể kết nối tới máy chủ" (sai bản chất, làm user nhầm tưởng lỗi hạ tầng). Suy ra đúng lý do
+    // từ chính dữ liệu đã đọc/kiểm tra ở trên (liveUserData/liveVipCompletedCount) để báo chính xác.
+    let errorTitle = 'LỖI HỆ THỐNG!'
+    let errorText = 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.'
+
+    if (txError?.code === 'permission-denied') {
+      if (withdrawAmount === 150000 && liveUserData.withdraw150kUsed === true) {
+        errorTitle = 'KHÔNG THỂ RÚT MỐC NÀY!'
+        errorText = WITHDRAW_150K_USED_MESSAGE
+      } else if (withdrawAmount === 150000) {
+        // Đã qua hết các kiểm tra phía client (đủ VIP, đúng mốc, chưa dùng 150k) nhưng Rules vẫn từ chối
+        // → khả năng cao nhất là bản Rules trên Firebase Console chưa được publish đúng (còn sót điều kiện
+        // amount >= 250000 cũ, hoặc validWithdrawAmount() chưa có 150000), KHÔNG phải lỗi mạng/server.
+        errorTitle = 'MỐC 150.000 CHƯA ĐƯỢC HỖ TRỢ!'
+        errorText = 'Rules chưa cho phép mốc 150.000 hoặc amount gửi lên chưa đúng kiểu number.'
+      } else if (liveVipCompletedCount < requiredJobs.value) {
+        errorTitle = 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!'
+        errorText = `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} công việc hoa hồng cao - dễ làm để rút tiền.`
+      } else if (!withdrawOptions.includes(withdrawAmount)) {
+        errorTitle = 'MỐC RÚT KHÔNG HỢP LỆ!'
+        errorText = 'Mốc rút không hợp lệ.'
+      } else {
+        errorTitle = 'KHÔNG ĐỦ ĐIỀU KIỆN!'
+        errorText = 'Không đủ điều kiện rút tiền hoặc dữ liệu chưa khớp Rules.'
+      }
+    }
+
     Swal.fire({
-      title: 'LỖI HỆ THỐNG!',
-      text: 'Không thể kết nối tới máy chủ, vui lòng thử lại sau ít phút.',
+      title: errorTitle,
+      text: errorText,
       icon: 'error',
       confirmButtonColor: '#ef4444',
       customClass: { popup: 'rounded-[30px]' }
@@ -374,13 +461,19 @@ const handleConfirmWithdraw = async () => {
                 <div v-if="opt === 500000" class="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 text-[7px] px-2 py-0.5 bg-emerald-500 text-white rounded-full font-black uppercase tracking-wider whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.4)]">
                   PHỔ BIẾN
                 </div>
+                <div v-if="opt === 150000 && withdraw150kUsed" class="absolute -top-2.5 left-1/2 -translate-x-1/2 z-10 text-[7px] px-2 py-0.5 bg-slate-600 text-white rounded-full font-black uppercase tracking-wider whitespace-nowrap shadow-[0_0_10px_rgba(0,0,0,0.4)]">
+                  ĐÃ DÙNG
+                </div>
                 <button
                   @click="selectAmount(opt)"
+                  :aria-disabled="opt === 150000 && withdraw150kUsed"
                   :class="[
                     'w-full py-3 rounded-[14px] border-2 transition-all text-xs md:text-sm active:scale-95',
-                    amount === opt
-                      ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500 text-yellow-400 shadow-[0_0_25px_rgba(234,179,8,0.35)] ring-1 ring-yellow-500/30'
-                      : 'bg-[#0d121f] border-slate-800 text-slate-500 hover:border-slate-600'
+                    opt === 150000 && withdraw150kUsed
+                      ? 'bg-[#0d121f] border-slate-800/60 text-slate-700 cursor-not-allowed opacity-60'
+                      : amount === opt
+                        ? 'bg-gradient-to-br from-yellow-500/20 to-amber-500/10 border-yellow-500 text-yellow-400 shadow-[0_0_25px_rgba(234,179,8,0.35)] ring-1 ring-yellow-500/30'
+                        : 'bg-[#0d121f] border-slate-800 text-slate-500 hover:border-slate-600'
                   ]"
                 >
                   {{ formatNumber(opt) }} XU

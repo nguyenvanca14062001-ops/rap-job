@@ -157,7 +157,7 @@ const navigateTo = (path: string, authRequired = false) => {
        ]"
                :key="job.id"
                @click="navigateTo(job.route || ('/job/' + job.id))"
-               :class="['w-full items-center justify-between px-3 py-2 rounded-[14px] hover:bg-[#1a0e0c] text-slate-400 hover:text-white transition-all group', job.mobile ? 'flex' : 'hidden lg:flex']">
+               :class="['w-full items-center justify-between px-3 py-2 rounded-[14px] hover:bg-[#1a0e0c] text-slate-400 hover:text-white transition-all group', job.id === 'google-map' ? 'flex lg:hidden' : (job.mobile ? 'flex' : 'hidden lg:flex')]">
          <div class="flex items-center gap-3">
            <div class="w-7 h-7 rounded-lg bg-[#120b0a] border border-slate-700/50 flex items-center justify-center shadow-md group-hover:scale-110 shrink-0">
               <span :class="['font-black text-[8px]', job.color]">{{ job.tag }}</span>

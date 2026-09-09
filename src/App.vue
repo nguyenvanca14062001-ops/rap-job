@@ -113,6 +113,46 @@ const sortedVipJobIds = computed(() =>
     })
 )
 
+// Job "giới thiệu bạn bè" — hiển thị thành mục con riêng ngay trong danh sách "Công việc hoa hồng cao"
+// (Screen 2b), thay cho card/nút "referral-friends" độc lập đã bỏ ở Screen 1. Đọc TRỰC TIẾP từ vipJobs
+// (raw docs vip_jobs) và dùng lại đúng bộ ID/DEFAULTS như FriendReferralSelectModal.vue — KHÔNG qua
+// mergedJobs, vì mergedJobs (dùng cho sortedVipJobIds) cố tình ẩn các id này (đã gộp vào card parent
+// 'referral-friends' trước đây) nên sẽ luôn rỗng nếu lọc qua đó. Job nào đang status !== 'hidden' thì hiện.
+const REFERRAL_SUBJOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus'] as const
+type ReferralSubJobId = typeof REFERRAL_SUBJOB_IDS[number]
+const REFERRAL_SUBJOB_DEFAULTS: Record<ReferralSubJobId, { name: string; rewardText: string; icon: string }> = {
+  referral_momo: { name: 'Giới thiệu bạn bè đăng ký Ví MoMo', rewardText: '65.000 XU', icon: '💰' },
+  referral_abbank: { name: 'Giới thiệu bạn bè đăng ký APP ABBANK', rewardText: '85.000 XU', icon: '🏦' },
+  referral_shopee_pay: { name: 'Giới thiệu bạn bè đăng ký APP SHOPEE PAY', rewardText: '90.000 XU', icon: '🛍️' },
+  referral_lpbank_plus: { name: 'Giới thiệu bạn bè đăng ký APP LPBANK PLUS', rewardText: '85.000 XU', icon: '🏦' },
+}
+// Doc ID cũ (vip_jobs/referral-hub) từng dùng cho ABBANK — cầu nối tạm giống FriendReferralSelectModal.vue.
+const REFERRAL_SUBJOB_ALIASES: Record<string, string[]> = { referral_abbank: ['referral-hub'] }
+
+const findReferralSubJobDoc = (id: string) => {
+  const primary = vipJobs.value.find(v => (v.jobId || v.id) === id)
+  if (primary) return primary
+  for (const alias of REFERRAL_SUBJOB_ALIASES[id] || []) {
+    const found = vipJobs.value.find(v => (v.jobId || v.id) === alias)
+    if (found) return found
+  }
+  return undefined
+}
+
+const referralSubJobs = computed(() => REFERRAL_SUBJOB_IDS.map(id => {
+  const cfg = findReferralSubJobDoc(id)
+  const def = REFERRAL_SUBJOB_DEFAULTS[id]
+  const rewardText = cfg?.rewardText
+    || (cfg?.reward ? `${Number(String(cfg.reward).replace(/\D/g, '')).toLocaleString('vi-VN')} xu` : def.rewardText)
+  return {
+    id,
+    icon: def.icon,
+    title: cfg?.title || def.name,
+    rewardText,
+    status: cfg?.status || 'open',
+  }
+}).filter(j => j.status !== 'hidden'))
+
 // --- Tab "Công việc dễ làm": tách 2 nhóm hiển thị ---
 // Không giới hạn: được làm/nộp nhiều lần. 'lpbank-plus' vẫn thuộc VIP_IDS (giữ nguyên ở tab hoa hồng cao),
 // ở đây chỉ hiển thị thêm cho tab dễ làm, không đổi phân loại gốc của nó.
@@ -201,6 +241,8 @@ const userBirthYear = ref('')
 // Nguồn sự thật cho điều kiện mở khóa rút tiền (>= 3 nhiệm vụ VIP) — đồng bộ với Firestore Rules
 // mới trên withdrawals, KHÔNG tự đếm từ myReports ở client nữa (dễ lệch với field thật trên server).
 const vipCompletedCount = ref(0)
+// Mốc rút 150.000 xu chỉ được dùng 1 lần/user — cờ này lấy trực tiếp từ users/{uid}.withdraw150kUsed
+const withdraw150kUsed = ref(false)
 
 const myReports = ref<any[]>([])
 const myWithdrawals = ref<any[]>([])
@@ -428,6 +470,7 @@ const initFirebaseSync = (user: any) => {
       const realBalance = data.balance ? Number(data.balance) : 0;
       userBalance.value = realBalance;
       vipCompletedCount.value = Number(data.vipCompletedCount) || 0
+      withdraw150kUsed.value = data.withdraw150kUsed === true
 
       localStorage.setItem('mmo_username', username.value)
       localStorage.setItem('mmo_balance', String(realBalance))
@@ -482,6 +525,7 @@ onMounted(() => {
     } else {
       isLoggedIn.value = false; isDataLoading.value = false; username.value = 'Member'; userBalance.value = 0;
       userFullName.value = ''; userPhone.value = ''; userBirthYear.value = ''; vipCompletedCount.value = 0
+      withdraw150kUsed.value = false
       setUserContext(null)
       myReports.value = []; myWithdrawals.value = []; localStorage.clear()
     }
@@ -555,6 +599,22 @@ const handleReceiveJob = (jobId: string) => {
   } else {
     activePopup.value = ''
     router.push(`/job/${jobId}`)
+  }
+}
+
+// Điều hướng cho các job con "Giới thiệu bạn bè" trong danh sách Công việc hoa hồng cao —
+// giống hệt hành vi @selectMomo/@selectAbbank/@selectShopeePay/@selectLpbankPlus của
+// FriendReferralSelectModal (không đổi route/modal đích).
+const handleReferralSubJob = (id: string) => {
+  activePopup.value = ''
+  if (id === 'referral_abbank') {
+    router.push('/jobs/referral-abbank')
+  } else if (id === 'referral_momo') {
+    showMomoReferralHub.value = true
+  } else if (id === 'referral_shopee_pay') {
+    showShopeePayReferralHub.value = true
+  } else if (id === 'referral_lpbank_plus') {
+    showLpbankPlusReferralHub.value = true
   }
 }
 
@@ -931,6 +991,7 @@ watch(activePopup, (val) => {
             :isDataLoading="isDataLoading"
             :vipJobs="vipJobs"
             :vipCompletedCount="vipCompletedCount"
+            :withdraw150kUsed="withdraw150kUsed"
           />
         </Transition>
       </main>
@@ -1047,16 +1108,6 @@ watch(activePopup, (val) => {
               <div class="flex-1 min-w-0">
                 <p class="text-white text-[13px] font-semibold leading-tight">Công việc hoa hồng cao - dễ làm</p>
                 <p class="text-amber-400 text-[11px] font-semibold mt-0.5">85K – 100K xu / job</p>
-              </div>
-              <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
-
-            <button @click="handleReceiveJob('referral-friends')"
-              class="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl active:bg-white/5 transition-colors text-left">
-              <div class="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-xl shrink-0">👥</div>
-              <div class="flex-1 min-w-0">
-                <p class="text-white text-[13px] font-semibold leading-tight">Giới thiệu bạn bè</p>
-                <p class="text-emerald-400 text-[11px] font-semibold mt-0.5">65K – 90K xu / lượt</p>
               </div>
               <svg class="w-4 h-4 text-slate-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
             </button>
@@ -1181,6 +1232,46 @@ watch(activePopup, (val) => {
                 </div>
               </button>
             </template>
+
+            <!-- Mục con: Giới thiệu bạn bè — gộp vào ngay trong Công việc hoa hồng cao, tách rõ bằng tông emerald -->
+            <template v-if="referralSubJobs.length">
+              <p class="px-1 pt-1.5 pb-0 text-emerald-400 text-[9.5px] font-black uppercase tracking-widest">👥 Giới thiệu bạn bè</p>
+              <template v-for="job in referralSubJobs" :key="job.id">
+                <button
+                  @click="job.status === 'paused' ? null : job.status === 'soldout' ? null : handleReferralSubJob(job.id)"
+                  class="w-full flex items-center gap-3 px-3 py-3 rounded-2xl border border-emerald-500/10 bg-emerald-500/[0.04] active:bg-emerald-500/[0.08] transition-colors text-left"
+                  :class="(job.status === 'paused' || job.status === 'soldout') ? 'opacity-50' : ''">
+
+                  <!-- Icon -->
+                  <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-base shrink-0">
+                    {{ job.icon }}
+                  </div>
+
+                  <!-- Title + reward -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-emerald-50 text-[12.5px] font-semibold leading-snug line-clamp-2">{{ job.title }}</p>
+                    <p class="text-[12px] font-bold mt-0.5 truncate"
+                       :class="(job.status === 'paused' || job.status === 'soldout') ? 'text-slate-500' : 'text-emerald-400'">
+                      {{ job.rewardText }}
+                    </p>
+                  </div>
+
+                  <!-- Badge + CTA -->
+                  <div class="flex flex-col items-end gap-1.5 shrink-0">
+                    <span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10"
+                          :class="(job.status === 'paused' || job.status === 'soldout') ? 'text-slate-400' : 'text-emerald-400'">
+                      {{ job.status === 'soldout' ? 'HẾT SUẤT' : job.status === 'paused' ? 'TẠM DỪNG' : 'VIP' }}
+                    </span>
+                    <span class="flex items-center gap-0.5 text-[10.5px] font-bold"
+                          :class="(job.status === 'paused' || job.status === 'soldout') ? 'text-slate-500' : 'text-emerald-300'">
+                      {{ job.status === 'soldout' ? 'Hết suất' : job.status === 'paused' ? 'Tạm dừng' : 'Đăng ký' }}
+                      <svg v-if="!(job.status === 'paused' || job.status === 'soldout')" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </span>
+                  </div>
+                </button>
+              </template>
+            </template>
+
             <div class="h-1"></div>
           </div>
         </div>
