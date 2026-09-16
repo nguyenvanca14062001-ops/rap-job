@@ -162,9 +162,10 @@ const statusClass = (rp: any) => {
               <span class="text-red-500 text-base shrink-0">⚠️</span>
               <p class="text-red-400 text-[10px] font-black normal-case tracking-wide leading-relaxed">{{ stepById(1).note }}</p>
             </div>
-            <div v-if="stepById(1).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
+            <div v-if="stepById(1).img" class="w-full sm:max-w-xs flex items-center justify-center rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
                  @click="openImage(baseUrl + stepById(1).img)">
-              <img class="w-full h-auto object-contain" :src="baseUrl + stepById(1).img" />
+              <img class="max-w-full max-h-[35vh] w-auto h-auto" :src="baseUrl + stepById(1).img" />
+              <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded">🔍 CHẠM ĐỂ PHÓNG TO</div>
             </div>
           </div>
 
@@ -188,19 +189,33 @@ const statusClass = (rp: any) => {
                 📋 SAO CHÉP
               </button>
             </div>
-            <div v-if="stepById(2).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
+            <div v-if="stepById(2).img" class="w-full sm:max-w-xs flex items-center justify-center rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
                  @click="openImage(baseUrl + stepById(2).img)">
-              <img class="w-full h-auto object-contain" :src="baseUrl + stepById(2).img" />
+              <img class="max-w-full max-h-[35vh] w-auto h-auto" :src="baseUrl + stepById(2).img" />
+              <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded">🔍 CHẠM ĐỂ PHÓNG TO</div>
             </div>
           </div>
 
           <div class="relative pl-9">
+            <div class="absolute left-3.5 top-1 bottom-0 w-[2px] bg-slate-700/30"></div>
             <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-xs shadow-lg">3</div>
             <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stepById(3).title }}</h4>
             <p class="text-slate-400 text-[11px] italic normal-case opacity-80 leading-relaxed mb-3 whitespace-pre-line">{{ stepById(3).content }}</p>
-            <div v-if="stepById(3).img" class="w-full sm:max-w-xs rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
+            <div v-if="stepById(3).img" class="w-full sm:max-w-xs flex items-center justify-center rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
                  @click="openImage(baseUrl + stepById(3).img)">
-              <img class="w-full h-auto object-contain" :src="baseUrl + stepById(3).img" />
+              <img class="max-w-full max-h-[35vh] w-auto h-auto" :src="baseUrl + stepById(3).img" />
+              <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded">🔍 CHẠM ĐỂ PHÓNG TO</div>
+            </div>
+          </div>
+
+          <div class="relative pl-9">
+            <div class="absolute left-0 top-0 w-7 h-7 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-xs shadow-lg">4</div>
+            <h4 class="text-sky-400 text-[13px] not-italic mb-1.5 tracking-tight">{{ stepById(4).title }}</h4>
+            <p class="text-slate-400 text-[11px] italic normal-case opacity-80 leading-relaxed mb-3 whitespace-pre-line">{{ stepById(4).content }}</p>
+            <div v-if="stepById(4).img" class="w-full sm:max-w-xs flex items-center justify-center rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
+                 @click="openImage(baseUrl + stepById(4).img)">
+              <img class="max-w-full max-h-[35vh] w-auto h-auto" :src="baseUrl + stepById(4).img" />
+              <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded">🔍 CHẠM ĐỂ PHÓNG TO</div>
             </div>
           </div>
         </div>

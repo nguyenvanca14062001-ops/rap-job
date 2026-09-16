@@ -687,6 +687,11 @@ export const jobsData: Record<string, any> = {
         title: "XÁC THỰC TÀI KHOẢN VÀ HOÀN TẤT THEO HƯỚNG DẪN",
         content: "Chụp CCCD, xác thực NFC và xác minh tài khoản đầy đủ theo hướng dẫn trong app. Sau khi hoàn thành, chụp lại 2 ảnh bằng chứng bên dưới rồi gửi nộp đơn.",
         img: "images/anh-shopee3.jpg"
+      },
+      {
+        id: 4,
+        title: "NẠP 10.000Đ VÀO SHOPEE PAY",
+        content: "Vào Shopee Pay, chọn Nạp tiền, nạp 10.000đ vào Ví Shopee Pay. Chụp lại ảnh lịch sử giao dịch để gửi bằng chứng."
       }
     ],
     steps: [
@@ -714,6 +719,11 @@ export const jobsData: Record<string, any> = {
       },
       {
         id: 4,
+        title: "NẠP 10.000Đ VÀO SHOPEE PAY",
+        content: "VÀO SHOPEE PAY, CHỌN NẠP TIỀN, NẠP 10.000Đ VÀO VÍ SHOPEE PAY."
+      },
+      {
+        id: 5,
         title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
         content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
 
