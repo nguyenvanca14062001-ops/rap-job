@@ -122,9 +122,9 @@ const REFERRAL_SUBJOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shope
 type ReferralSubJobId = typeof REFERRAL_SUBJOB_IDS[number]
 const REFERRAL_SUBJOB_DEFAULTS: Record<ReferralSubJobId, { name: string; rewardText: string; icon: string }> = {
   referral_momo: { name: 'Giới thiệu bạn bè đăng ký Ví MoMo', rewardText: '65.000 XU', icon: '💰' },
-  referral_abbank: { name: 'Giới thiệu bạn bè đăng ký APP ABBANK', rewardText: '85.000 XU', icon: '🏦' },
+  referral_abbank: { name: 'Mời bạn bè đăng ký APP ABBANK', rewardText: '85.000 XU', icon: '🏦' },
   referral_shopee_pay: { name: 'Giới thiệu bạn bè đăng ký APP SHOPEE PAY', rewardText: '90.000 XU', icon: '🛍️' },
-  referral_lpbank_plus: { name: 'Giới thiệu bạn bè đăng ký APP LPBANK PLUS', rewardText: '85.000 XU', icon: '🏦' },
+  referral_lpbank_plus: { name: 'Mời bạn bè đăng ký APP LPBANK Plus', rewardText: '85.000 XU', icon: '🏦' },
 }
 // Doc ID cũ (vip_jobs/referral-hub) từng dùng cho ABBANK — cầu nối tạm giống FriendReferralSelectModal.vue.
 const REFERRAL_SUBJOB_ALIASES: Record<string, string[]> = { referral_abbank: ['referral-hub'] }
@@ -154,13 +154,14 @@ const referralSubJobs = computed(() => REFERRAL_SUBJOB_IDS.map(id => {
 }).filter(j => j.status !== 'hidden'))
 
 // --- Tab "Công việc dễ làm": tách 2 nhóm hiển thị ---
-// Không giới hạn: được làm/nộp nhiều lần. 'lpbank-plus' vẫn thuộc VIP_IDS (giữ nguyên ở tab hoa hồng cao),
+// Không giới hạn: được làm/nộp nhiều lần. 'lpbank-plus' và 'abbank' vẫn thuộc VIP_IDS (giữ nguyên ở tab hoa hồng cao),
 // ở đây chỉ hiển thị thêm cho tab dễ làm, không đổi phân loại gốc của nó.
-const UNLIMITED_BASIC_IDS = ['daily_threads', 'shopee-pay', 'lpbank-plus']
+const UNLIMITED_BASIC_IDS = ['daily_threads', 'lpbank-plus', 'abbank']
 const basicUnlimitedIds = computed(() => UNLIMITED_BASIC_IDS.filter(id => id in mergedJobs.value))
-// Giới hạn: tất cả job dễ làm còn lại (không thuộc VIP_IDS và không nằm trong nhóm không giới hạn)
+// Giới hạn: tất cả job dễ làm còn lại (không thuộc VIP_IDS, không nằm trong nhóm không giới hạn,
+// và không phải job "giới thiệu bạn bè" đã gộp vào tab hoa hồng cao — VD 'referral_abbank')
 const basicLimitedIds = computed(() =>
-  Object.keys(mergedJobs.value).filter(id => !VIP_IDS.includes(id) && !UNLIMITED_BASIC_IDS.includes(id))
+  Object.keys(mergedJobs.value).filter(id => !VIP_IDS.includes(id) && !UNLIMITED_BASIC_IDS.includes(id) && !CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB.includes(id))
 )
 
 // --- Age confirmation modal (mobile bottom sheet) ---

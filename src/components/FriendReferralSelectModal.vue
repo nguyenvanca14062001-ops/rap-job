@@ -33,7 +33,7 @@ const DEFAULTS: Record<ReferralJobId, { name: string; subtitle: string; rewardTe
     rewardText: '65.000 XU',
   },
   referral_abbank: {
-    name: 'Giới thiệu bạn bè đăng ký APP ABBANK',
+    name: 'Mời bạn bè đăng ký APP ABBANK',
     subtitle: 'Mời bạn bè đăng ký APP ABBANK nhận 85.000 xu/lần',
     rewardText: '85.000 XU',
   },
@@ -43,7 +43,7 @@ const DEFAULTS: Record<ReferralJobId, { name: string; subtitle: string; rewardTe
     rewardText: '90.000 XU',
   },
   referral_lpbank_plus: {
-    name: 'Giới thiệu bạn bè đăng ký APP LPBANK PLUS',
+    name: 'Mời bạn bè đăng ký APP LPBANK Plus',
     subtitle: 'Mời bạn bè đăng ký APP LPBANK PLUS nhận 85.000 xu/lượt',
     rewardText: '85.000 XU',
   },
