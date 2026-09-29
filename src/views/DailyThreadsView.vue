@@ -347,8 +347,8 @@ const statusBadgeClass = (status: string) => {
         <p class="text-orange-300 text-[11px] md:text-xs font-bold normal-case leading-relaxed flex items-start gap-2">
           <span>1.</span><span>Bài đăng + mã QR ghim phải đạt đủ view/lượt xem mới được gửi bằng chứng.</span>
         </p>
-        <p class="text-orange-300 text-[11px] md:text-xs font-bold normal-case leading-relaxed flex items-start gap-2">
-          <span>2.</span><span>22h - 23h hằng ngày bên mình mới duyệt đơn và cộng xu.</span>
+        <p class="text-yellow-300 text-[12px] md:text-sm font-black normal-case leading-relaxed flex items-start gap-2">
+          <span>2.</span><span>📩 Nhắn tin trang Facebook - <span class="text-yellow-200 underline underline-offset-2 decoration-yellow-400">Fanpage Rạp Job</span> để được duyệt đơn và cộng xu.</span>
         </p>
         <p class="text-orange-300 text-[11px] md:text-xs font-bold normal-case leading-relaxed flex items-start gap-2">
           <span>3.</span><span>Có thể tạo nhiều nick Threads để đăng.</span>
@@ -398,7 +398,7 @@ const statusBadgeClass = (status: string) => {
             <p class="text-violet-400 text-[11px] tracking-widest font-bold flex items-center gap-1.5 mb-2">💡 LƯU Ý TRƯỚC KHI GỬI</p>
             <ul class="space-y-1.5">
               <li class="text-slate-400 text-[11px] leading-relaxed flex gap-2"><span class="text-violet-500 mt-0.5">•</span><span>Bài đăng + mã QR ghim phải đạt đủ view/lượt xem mới được gửi bằng chứng.</span></li>
-              <li class="text-slate-400 text-[11px] leading-relaxed flex gap-2"><span class="text-violet-500 mt-0.5">•</span><span>Từ <span class="text-white font-bold">22h – 23h</span> hằng ngày, bên mình mới duyệt đơn và cộng xu.</span></li>
+              <li class="text-yellow-300 text-[12px] font-black leading-relaxed flex gap-2"><span class="text-yellow-400 mt-0.5">•</span><span>📩 Nhắn tin trang Facebook - <span class="text-yellow-200 underline underline-offset-2 decoration-yellow-400">Fanpage Rạp Job</span> để được duyệt đơn và cộng xu.</span></li>
               <li class="text-slate-400 text-[11px] leading-relaxed flex gap-2"><span class="text-violet-500 mt-0.5">•</span><span>Có thể tạo nhiều nick Threads để đăng bài.</span></li>
               <li class="text-slate-400 text-[11px] leading-relaxed flex gap-2"><span class="text-violet-500 mt-0.5">•</span><span>Có thể xoá bài đăng lại, hoặc đăng nhiều lần để đạt đủ số view/lượt xem.</span></li>
             </ul>
@@ -460,10 +460,17 @@ const statusBadgeClass = (status: string) => {
             <span class="text-3xl">✅</span>
           </div>
           <h2 class="text-xl text-white tracking-tight mb-2">ĐÃ GỬI BẰNG CHỨNG</h2>
-          <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-4">
-            Bằng chứng đăng bài Threads hằng ngày đã được gửi.<br/>
-            Vui lòng chờ admin kiểm tra và cộng xu trong khung giờ 22h - 23h.
+          <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-3">
+            Bằng chứng đăng bài Threads hằng ngày đã được gửi.
           </p>
+
+          <div class="bg-[#1877F2]/15 border-2 border-[#1877F2]/60 rounded-2xl px-4 py-3.5 mb-4 shadow-lg shadow-blue-500/30">
+            <p class="text-white text-[13px] normal-case font-black leading-snug">
+              📩 Vui lòng nhắn tin Facebook<br/>
+              <span class="text-[#4f9bff] text-[15px] uppercase tracking-tight">Fanpage Rạp Job</span><br/>
+              để được <span class="text-yellow-300">duyệt đơn, cộng xu</span>
+            </p>
+          </div>
 
           <div class="bg-[#0d121f] border border-emerald-500/40 rounded-2xl p-4 mb-4 text-left space-y-1 font-sans not-italic normal-case text-[10px] text-slate-400">
             <p class="text-emerald-400 text-[9px] tracking-widest mb-1">THÔNG TIN ĐƠN</p>
@@ -473,6 +480,11 @@ const statusBadgeClass = (status: string) => {
           </div>
 
           <div class="space-y-2.5">
+            <a href="https://www.facebook.com/rapjobfreelance/" target="_blank" rel="noopener noreferrer"
+               class="w-full bg-[#1877F2] hover:bg-blue-600 flex items-center justify-center gap-2 text-white py-3.5 rounded-2xl text-[12px] tracking-widest active:scale-95 transition-all shadow-lg shadow-blue-900/40">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              NHẮN TIN FANPAGE
+            </a>
             <button @click="closeSuccessAndShowHistory" class="w-full bg-teal-500/20 border border-teal-500/30 text-teal-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
               XEM LỊCH SỬ
             </button>
