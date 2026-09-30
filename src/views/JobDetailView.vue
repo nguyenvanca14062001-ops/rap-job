@@ -12,6 +12,9 @@ import LpbankPlusHistoryModal from '@/components/LpbankPlusHistoryModal.vue'
 import VietcombankGuideModal from '@/components/VietcombankGuideModal.vue'
 import VietcombankProofModal from '@/components/VietcombankProofModal.vue'
 import VietcombankHistoryModal from '@/components/VietcombankHistoryModal.vue'
+import MbvBankGuideModal from '@/components/MbvBankGuideModal.vue'
+import MbvBankProofModal from '@/components/MbvBankProofModal.vue'
+import MbvBankHistoryModal from '@/components/MbvBankHistoryModal.vue'
 import ShopeePayGuideModal from '@/components/ShopeePayGuideModal.vue'
 import ShopeePayProofModal from '@/components/ShopeePayProofModal.vue'
 import ShopeePayHistoryModal from '@/components/ShopeePayHistoryModal.vue'
@@ -94,9 +97,20 @@ const openVcProof = () => { showVcGuide.value = false; showVcProof.value = true 
 const openVcHistory = () => { showVcHistory.value = true }
 const handleVcSubmitted = () => { showVcProof.value = false; showVcSuccess.value = true }
 
+// Job MBV BANK — clone y hệt khối VIETCOMBANK ở trên, dùng giao diện popup riêng tương tự
+const isMbvBank = jobId === 'mbv-bank'
+const showMbvGuide = ref(false)
+const showMbvProof = ref(false)
+const showMbvHistory = ref(false)
+const showMbvSuccess = ref(false)
+const openMbvGuide = () => { showMbvGuide.value = true }
+const openMbvProof = () => { showMbvGuide.value = false; showMbvProof.value = true }
+const openMbvHistory = () => { showMbvHistory.value = true }
+const handleMbvSubmitted = () => { showMbvProof.value = false; showMbvSuccess.value = true }
+
 // Job SHOPEE PAY — clone của khối VIETCOMBANK ở trên, dùng giao diện popup riêng tương tự
 const isShopeePay = jobId === 'shopee-pay'
-const isPopupJob = isLpbankPlus || isVietcombank || isShopeePay
+const isPopupJob = isLpbankPlus || isVietcombank || isMbvBank || isShopeePay
 const showSpGuide = ref(false)
 const showSpProof = ref(false)
 const showSpHistory = ref(false)
@@ -106,9 +120,9 @@ const openSpProof = () => { showSpGuide.value = false; showSpProof.value = true 
 const openSpHistory = () => { showSpHistory.value = true }
 const handleSpSubmitted = () => { showSpProof.value = false; showSpSuccess.value = true }
 
-const openPopupGuide = () => { isLpbankPlus ? openLpGuide() : isVietcombank ? openVcGuide() : openSpGuide() }
-const openPopupProof = () => { isLpbankPlus ? openLpProof() : isVietcombank ? openVcProof() : openSpProof() }
-const openPopupHistory = () => { isLpbankPlus ? openLpHistory() : isVietcombank ? openVcHistory() : openSpHistory() }
+const openPopupGuide = () => { isLpbankPlus ? openLpGuide() : isVietcombank ? openVcGuide() : isMbvBank ? openMbvGuide() : openSpGuide() }
+const openPopupProof = () => { isLpbankPlus ? openLpProof() : isVietcombank ? openVcProof() : isMbvBank ? openMbvProof() : openSpProof() }
+const openPopupHistory = () => { isLpbankPlus ? openLpHistory() : isVietcombank ? openVcHistory() : isMbvBank ? openMbvHistory() : openSpHistory() }
 
 const currentJob = computed((): any => {
   const override = vipJobs.value.find((v: any) => v.id === jobId)
@@ -138,11 +152,11 @@ const jobHistoryReports = computed(() =>
 // --- Giao diện gọn cho 4 job VIP đang hiện trong popup "Công việc VIP" ---
 // (ABBANK / LPBANK PLUS / VIETCOMBANK / SHOPEE PAY) — chỉ đổi cách hiển thị,
 // vẫn dùng đúng steps/quickSteps/proofSampleImages/openPopupProof/openPopupHistory sẵn có.
-const VIP_COMPACT_IDS = ['abbank', 'lpbank-plus', 'vietcombank', 'shopee-pay']
+const VIP_COMPACT_IDS = ['abbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay']
 const isVipCompactJob = VIP_COMPACT_IDS.includes(jobId)
 
 const VIP_JOB_ICON: Record<string, string> = {
-  'abbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'shopee-pay': '🛍️',
+  'abbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
 }
 const vipJobIcon = VIP_JOB_ICON[jobId] || '💎'
 
@@ -159,13 +173,14 @@ const VIP_SUBMIT_CHECKLIST: Record<string, string[]> = {
   'abbank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
   'lpbank-plus': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh chuyển tiền vào/ra'],
   'vietcombank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh chuyển tiền vào/ra'],
+  'mbv-bank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh bill chuyển tiền ra'],
   'shopee-pay': ['Ảnh nhập mã giới thiệu', 'Ảnh xác thực tài khoản hoàn tất'],
 }
 const vipSubmitChecklist = computed(() => VIP_SUBMIT_CHECKLIST[jobId] || [])
 
 // Job nào chuyển nút "VÀO NHÓM ZALO LẤY MÃ" vào trong Bước 2 của accordion (thay vì hiện phía trên accordion)
 // và ẩn nút Copy mã giới thiệu ở Bước 2 — theo yêu cầu riêng cho từng app.
-const ZALO_IN_STEP2_IDS = ['vietcombank', 'lpbank-plus']
+const ZALO_IN_STEP2_IDS = ['vietcombank', 'mbv-bank', 'lpbank-plus']
 const zaloInStep2 = ZALO_IN_STEP2_IDS.includes(jobId)
 
 // Nguồn bước hướng dẫn cho accordion: job popup (lpbank-plus/vietcombank/shopee-pay) đã có sẵn quickSteps rút gọn,
@@ -949,6 +964,35 @@ const handleCopy = (text: string) => {
                 XEM LỊCH SỬ NỘP ĐƠN
               </button>
               <button @click="showVcSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
+    <template v-if="isMbvBank">
+      <MbvBankGuideModal :show="showMbvGuide" @close="showMbvGuide = false" @openProof="openMbvProof" />
+      <MbvBankProofModal :show="showMbvProof" @close="showMbvProof = false" @submitted="handleMbvSubmitted" />
+      <MbvBankHistoryModal :show="showMbvHistory" @close="showMbvHistory = false" />
+
+      <Transition name="fade">
+        <div v-if="showMbvSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showMbvSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng MBV BANK thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showMbvSuccess = false; openMbvHistory()" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showMbvSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
                 ĐÓNG
               </button>
             </div>

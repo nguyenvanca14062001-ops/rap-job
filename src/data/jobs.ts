@@ -637,6 +637,102 @@ export const jobsData: Record<string, any> = {
     ]
   },
 
+  // Job VIP mới MBV BANK — clone y hệt cấu trúc/logic của 'vietcombank' theo yêu cầu. Ảnh các bước, ảnh mẫu
+  // bằng chứng (images/mbv-*.jpg) và link nhóm Zalo lấy mã đã cập nhật riêng cho MBV.
+  'mbv-bank': {
+    title: "MBV BANK",
+    subtitle: "Đăng ký MBV Bank nhận thưởng",
+    reward: "65.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    ageRequirement: 15,
+    zaloGuideUrl: "",
+    // Field phân loại — dùng khi seed vào Firestore vip_jobs và để nhận diện report là job VIP/bank
+    category: "vip",
+    jobCategory: "vip",
+    jobType: "vip",
+    isVip: true,
+    bankType: "mbv",
+    appType: "bank",
+    campaignType: "bank",
+    // Text ngắn hiển thị dưới khối tiêu đề ở trang chi tiết
+    shortDesc: "Hoàn thành đăng ký MBV BANK theo hướng dẫn để nhận thưởng.",
+    warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    // Link nhóm Zalo để lấy mã giới thiệu
+    zaloReferralLink: "https://zalo.me/g/ke5tadfgbjlhefh4aaqg",
+    // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
+    proofSampleImages: [
+      "images/mbv-1.jpg",
+      "images/mbv-2.jpg",
+      "images/mbv-3.jpg"
+    ],
+    // 4 bước hướng dẫn rút gọn — dùng chung cho khối "CÁC BƯỚC THỰC HIỆN" ở trang chi tiết và popup "XEM HƯỚNG DẪN"
+    quickSteps: [
+      {
+        id: 1,
+        title: "TẢI APP MBV BANK",
+        content: "Tải APP về điện thoại để đăng ký.",
+        note: "CHÚ Ý: TẢI ĐÚNG APP CHÍNH THỨC, KHÔNG CHỌN NHẦM APP KHÁC.",
+        img: "images/mbv-taiapp.jpg"
+      },
+      {
+        id: 2,
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU",
+        content: "Tham gia nhóm Zalo để lấy mã giới thiệu.",
+        referralCode: "0366045803",
+        img: "images/mbv-1.jpg"
+      },
+      {
+        id: 3,
+        title: "ĐĂNG KÝ THÀNH CÔNG VÀ CHỤP LẠI ẢNH GỬI BẰNG CHỨNG",
+        content: "Sau khi đăng ký thành công, chụp lại màn hình \"Đăng ký thành công\" để gửi bằng chứng.",
+        img: "images/mbv-2.jpg"
+      },
+      {
+        id: 4,
+        title: "CHUYỂN 50K VÀO MBV BANK VÀ CHUYỂN RA",
+        content: "Chuyển 50.000đ vào tài khoản MBV BANK, sau đó chuyển 50.000đ ra lại. Chụp lại bill chuyển tiền ra, rồi gửi đủ 3 ảnh bằng chứng để nộp đơn.",
+        img: "images/mbv-3.jpg"
+      }
+    ],
+    steps: [
+      {
+        id: 1,
+        title: "TẢI ĐÚNG APP MBV BANK",
+        content: "Tên APP: MBV BANK hoặc chọn TẢI ỨNG DỤNG.",
+        downloadLink: "https://content.lpbank.com.vn/share/down_app/index.html",
+        buttonText: "🚀 TẢI ỨNG DỤNG",
+        img: "images/mbv-taiapp.jpg"
+      },
+      {
+        id: 2,
+        title: "NHẬP MÃ GIỚI THIỆU : 0366045803",
+        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU 0366045803 VÀ CHỤP LẠI ẢNH.",
+        img: "images/mbv-1.jpg",
+        note: "NHẬP MÃ GIỚI THIỆU: 0366045803 (BẮT BUỘC)",
+        referralCode: "0366045803"
+      },
+      {
+        id: 3,
+        title: "ĐĂNG KÝ THÀNH CÔNG VÀ CHỤP LẠI ẢNH",
+        content: "CHỤP LẠI MÀN HÌNH ĐĂNG KÝ THÀNH CÔNG ĐỂ GỬI BẰNG CHỨNG.",
+        img: "images/mbv-2.jpg"
+      },
+      {
+        id: 4,
+        title: "CHUYỂN VÀO MBV BANK 50K VÀ CHUYỂN RA",
+        content: "CHỤP LẠI BILL CHUYỂN TIỀN RA VÀ GỬI BẰNG CHỨNG.",
+        img: "images/mbv-3.jpg"
+      },
+      {
+        id: 5,
+        title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
+        content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
+
+      }
+    ]
+  },
+
   // Job VIP mới SHOPEE PAY — clone cấu trúc/logic của 'vietcombank', ảnh + nội dung hướng dẫn (bước 1/2/3),
   // mã giới thiệu và 2 ảnh mẫu bằng chứng (anh-shopee2/3) đã cập nhật riêng cho Shopee Pay.
   'shopee-pay': {
