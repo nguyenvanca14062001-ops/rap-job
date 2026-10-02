@@ -491,7 +491,7 @@ export const jobsData: Record<string, any> = {
     shortDesc: "Hoàn thành đăng ký APP LPBANK PLUS theo hướng dẫn để nhận thưởng.",
     warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký LPBank Plus trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
     // Link nhóm Zalo để lấy mã giới thiệu
-    zaloReferralLink: "https://zalo.me/g/shxqdjooiubce1rnvhq8",
+    zaloReferralLink: "https://zalo.me/g/6hx6byuwxmj20dlny1pl",
     // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
     proofSampleImages: [
       "images/anh-lpbank-new2.jpg",
