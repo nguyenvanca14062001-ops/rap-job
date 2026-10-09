@@ -31,13 +31,13 @@ const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
-  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
+  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'tpbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
   'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥', 'referral-friends': '👥',
 }
-const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay', 'momo', 'referral_momo']
+const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'tpbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay', 'momo', 'referral_momo']
 // 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_IDS/jobsData
 // (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
-const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus']
+const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -92,9 +92,9 @@ const mergedJobs = computed((): Record<string, any> => {
       status:  override.status,
     }
   }
-  // Card parent 'referral-friends' tự ẩn nếu cả 4 job con (referral_momo/referral_abbank/referral_shopee_pay/referral_lpbank_plus) đều hidden
+  // Card parent 'referral-friends' tự ẩn nếu cả 5 job con (referral_momo/referral_abbank/referral_shopee_pay/referral_lpbank_plus/referral_tpbank) đều hidden
   if ('referral-friends' in result) {
-    const childIds = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus']
+    const childIds = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank']
     const allChildrenHidden = childIds.every(cid => vipJobs.value.find(v => v.id === cid)?.status === 'hidden')
     if (allChildrenHidden) delete result['referral-friends']
   }
@@ -118,13 +118,14 @@ const sortedVipJobIds = computed(() =>
 // (raw docs vip_jobs) và dùng lại đúng bộ ID/DEFAULTS như FriendReferralSelectModal.vue — KHÔNG qua
 // mergedJobs, vì mergedJobs (dùng cho sortedVipJobIds) cố tình ẩn các id này (đã gộp vào card parent
 // 'referral-friends' trước đây) nên sẽ luôn rỗng nếu lọc qua đó. Job nào đang status !== 'hidden' thì hiện.
-const REFERRAL_SUBJOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus'] as const
+const REFERRAL_SUBJOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank'] as const
 type ReferralSubJobId = typeof REFERRAL_SUBJOB_IDS[number]
 const REFERRAL_SUBJOB_DEFAULTS: Record<ReferralSubJobId, { name: string; rewardText: string; icon: string }> = {
   referral_momo: { name: 'Giới thiệu bạn bè đăng ký Ví MoMo', rewardText: '65.000 XU', icon: '💰' },
   referral_abbank: { name: 'Mời bạn bè đăng ký APP ABBANK', rewardText: '85.000 XU', icon: '🏦' },
   referral_shopee_pay: { name: 'Giới thiệu bạn bè đăng ký APP SHOPEE PAY', rewardText: '90.000 XU', icon: '🛍️' },
   referral_lpbank_plus: { name: 'Mời bạn bè đăng ký APP LPBANK Plus', rewardText: '85.000 XU', icon: '🏦' },
+  referral_tpbank: { name: 'Mời bạn bè đăng ký APP TPBANK', rewardText: '85.000 XU', icon: '🏦' },
 }
 // Doc ID cũ (vip_jobs/referral-hub) từng dùng cho ABBANK — cầu nối tạm giống FriendReferralSelectModal.vue.
 const REFERRAL_SUBJOB_ALIASES: Record<string, string[]> = { referral_abbank: ['referral-hub'] }
@@ -154,9 +155,8 @@ const referralSubJobs = computed(() => REFERRAL_SUBJOB_IDS.map(id => {
 }).filter(j => j.status !== 'hidden'))
 
 // --- Tab "Công việc dễ làm": tách 2 nhóm hiển thị ---
-// Không giới hạn: được làm/nộp nhiều lần. 'lpbank-plus' và 'abbank' vẫn thuộc VIP_IDS (giữ nguyên ở tab hoa hồng cao),
-// ở đây chỉ hiển thị thêm cho tab dễ làm, không đổi phân loại gốc của nó.
-const UNLIMITED_BASIC_IDS = ['daily_threads', 'lpbank-plus', 'abbank']
+// Không giới hạn: được làm/nộp nhiều lần. (APP LPBANK PLUS / APP ABBANK đã bỏ khỏi tab dễ làm — chỉ còn ở tab hoa hồng cao.)
+const UNLIMITED_BASIC_IDS = ['daily_threads']
 const basicUnlimitedIds = computed(() => UNLIMITED_BASIC_IDS.filter(id => id in mergedJobs.value))
 // Giới hạn: tất cả job dễ làm còn lại (không thuộc VIP_IDS, không nằm trong nhóm không giới hạn,
 // và không phải job "giới thiệu bạn bè" đã gộp vào tab hoa hồng cao — VD 'referral_abbank')
@@ -616,6 +616,9 @@ const handleReferralSubJob = (id: string) => {
     showShopeePayReferralHub.value = true
   } else if (id === 'referral_lpbank_plus') {
     showLpbankPlusReferralHub.value = true
+  } else if (id === 'referral_tpbank') {
+    // Trang chi tiết giống APP TPBANK (JobDetailView), không dùng hub modal riêng
+    router.push('/job/referral_tpbank')
   }
 }
 
@@ -1032,6 +1035,7 @@ watch(activePopup, (val) => {
       @selectAbbank="showFriendReferralSelect = false; router.push('/jobs/referral-abbank')"
       @selectShopeePay="showFriendReferralSelect = false; showShopeePayReferralHub = true"
       @selectLpbankPlus="showFriendReferralSelect = false; showLpbankPlusReferralHub = true"
+      @selectTpbank="showFriendReferralSelect = false; router.push('/job/referral_tpbank')"
     />
 
     <!-- BOTTOM SHEET BACKDROP -->

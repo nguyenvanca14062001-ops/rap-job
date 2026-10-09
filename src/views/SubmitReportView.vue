@@ -74,7 +74,7 @@ const jobSamples: Record<string, string[]> = {
   'app-chung-khoan': ['images/anh-kafi2.jpg', 'images/anh-kafi3.jpg', 'images/anh-kafi10.jpg'],
   'app-chung-khoan-3': ['images/anh-kis1.jpg', 'images/anh-kis2.jpg', 'images/anh-kis10.jpg'],
   'liobank': ['images/anh-liobank3a.jpg', 'images/anh-liobank3b.jpg', 'images/anh-liobank4.jpg'],
-  'abbank': ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank4.jpg'],
+  'abbank': jobsData['abbank'].proofSampleImages,
   'lpbank-plus': ['images/anh-lpbank3.jpg', 'images/anh-lpbank2.jpg'],
   'momo': ['images/anh-momo-2.jpg', 'images/anh-momo-6.jpg', 'images/anh-momo-7.jpg']
 }

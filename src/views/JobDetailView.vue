@@ -18,6 +18,9 @@ import MbvBankHistoryModal from '@/components/MbvBankHistoryModal.vue'
 import ShopeePayGuideModal from '@/components/ShopeePayGuideModal.vue'
 import ShopeePayProofModal from '@/components/ShopeePayProofModal.vue'
 import ShopeePayHistoryModal from '@/components/ShopeePayHistoryModal.vue'
+import TpbankProofModal from '@/components/TpbankProofModal.vue'
+import TpbankReferralProofModal from '@/components/TpbankReferralProofModal.vue'
+import { TPBANK_REFERRAL_JOB_ID } from '@/utils/referralTpbank'
 
 const props = defineProps<{ myReports?: any[] }>()
 
@@ -149,14 +152,37 @@ const jobHistoryReports = computed(() =>
   (props.myReports || []).filter((r: any) => r.jobId === jobId || r.jobName === currentJob.value.title)
 )
 
-// --- Giao diện gọn cho 4 job VIP đang hiện trong popup "Công việc VIP" ---
-// (ABBANK / LPBANK PLUS / VIETCOMBANK / SHOPEE PAY) — chỉ đổi cách hiển thị,
-// vẫn dùng đúng steps/quickSteps/proofSampleImages/openPopupProof/openPopupHistory sẵn có.
-const VIP_COMPACT_IDS = ['abbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay']
+// --- Giao diện gọn cho các job VIP dùng popup riêng (LPBANK PLUS / VIETCOMBANK / MBV BANK / SHOPEE PAY) ---
+// Chỉ đổi cách hiển thị, vẫn dùng đúng steps/quickSteps/proofSampleImages/openPopupProof/openPopupHistory sẵn có.
+// (ABBANK đã chuyển sang giao diện giống APP TPBANK — xem VIP_FULL_GUIDE_IDS bên dưới.)
+const VIP_COMPACT_IDS = ['lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay']
 const isVipCompactJob = VIP_COMPACT_IDS.includes(jobId)
 
+// Job VIP trang gọn: header + 2 nút (Hướng dẫn / Nộp bằng chứng) + 3 ảnh bằng chứng cần gửi. Bấm "Hướng dẫn" mới mở
+// popup hướng dẫn đầy đủ (port từ trang hướng dẫn của site MMO PRO: lưu ý quan trọng, mẹo kiếm tiền, các bước có ảnh lớn).
+// Nút nộp bằng chứng nổi/cuối trang giữ y hệt giao diện VIP gọn ở trên.
+const VIP_FULL_GUIDE_IDS = ['tpbank', TPBANK_REFERRAL_JOB_ID, 'abbank']
+const isVipFullGuideJob = VIP_FULL_GUIDE_IDS.includes(jobId)
+const showFullGuidePopup = ref(false)
+
+// Job APP TPBANK — gửi bằng chứng bằng popup riêng (TpbankProofModal: clone LPBANK PLUS + tháng/năm sinh),
+// không dùng form chung SubmitReportView. "Xem lịch sử" sau khi gửi mở popup lịch sử chung (showJobHistory).
+const isTpbank = jobId === 'tpbank'
+const showTpProof = ref(false)
+const showTpSuccess = ref(false)
+const openTpProof = () => { showFullGuidePopup.value = false; showTpProof.value = true }
+const handleTpSubmitted = () => { showTpProof.value = false; showTpSuccess.value = true }
+
+// Job "Mời bạn bè đăng ký APP TPBANK" — cùng giao diện với APP TPBANK, gửi bằng chứng bằng TpbankReferralProofModal
+// (tên + SĐT + tháng/năm sinh người bạn được giới thiệu).
+const isTpbankReferral = jobId === TPBANK_REFERRAL_JOB_ID
+const showTpRefProof = ref(false)
+const showTpRefSuccess = ref(false)
+const openTpRefProof = () => { showFullGuidePopup.value = false; showTpRefProof.value = true }
+const handleTpRefSubmitted = () => { showTpRefProof.value = false; showTpRefSuccess.value = true }
+
 const VIP_JOB_ICON: Record<string, string> = {
-  'abbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
+  'abbank': '🏦', 'tpbank': '🏦', [TPBANK_REFERRAL_JOB_ID]: '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
 }
 const vipJobIcon = VIP_JOB_ICON[jobId] || '💎'
 
@@ -171,6 +197,8 @@ const vipQuickSummary = ['Chọn "Hướng dẫn" để xem chi tiết các bư�
 // "Bạn cần gửi" — checklist hiển thị UI. Job chưa cấu hình riêng dùng câu mặc định.
 const VIP_SUBMIT_CHECKLIST: Record<string, string[]> = {
   'abbank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
+  'tpbank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
+  [TPBANK_REFERRAL_JOB_ID]: ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
   'lpbank-plus': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh chuyển tiền vào/ra'],
   'vietcombank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh chuyển tiền vào/ra'],
   'mbv-bank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh bill chuyển tiền ra'],
@@ -189,6 +217,7 @@ const vipSteps = computed(() => currentJob.value.quickSteps || currentJob.value.
 
 // SHOPEE PAY: thay nút "vào nhóm Zalo lấy mã" ở khu vực tóm tắt bằng nút copy mã giới thiệu thẳng —
 // lấy đúng mã đã có sẵn trong bước hướng dẫn (referralCode), không hard-code trùng lặp.
+// Cũng dùng cho dòng "Nhập mã giới thiệu" màu vàng ở header của job VIP trang gọn (VIP_FULL_GUIDE_IDS).
 const vipReferralCode = computed(() => vipSteps.value.find((s: any) => s.referralCode)?.referralCode || '')
 
 // Accordion từng bước — mặc định mở bước 1, cho phép mở nhiều bước cùng lúc để mượt trên mobile
@@ -207,12 +236,14 @@ const showVipToast = (title: string) => {
   Swal.fire({ title, icon: 'info', toast: true, position: 'top', timer: 2200, showConfirmButton: false })
 }
 
-// Nút "NỘP BẰNG CHỨNG NGAY" — job dùng popup riêng (lpbank-plus/vietcombank/shopee-pay) mở đúng Proof Modal
+// Nút "NỘP BẰNG CHỨNG NGAY" — job dùng popup riêng (lpbank-plus/vietcombank/shopee-pay/tpbank) mở đúng Proof Modal
 // sẵn có của job đó; job còn lại (abbank) điều hướng sang SubmitReportView với đúng jobId để form tự chọn job.
 const handleVipCtaClick = () => {
   if (currentJob.value.paused) { showVipToast('Công việc này đang tạm dừng, vui lòng quay lại sau.'); return }
   if (currentJob.value.soldout) { showVipToast('Công việc đã hết slot, vui lòng quay lại sau.'); return }
   if (isPopupJob) { openPopupProof(); return }
+  if (isTpbank) { openTpProof(); return }
+  if (isTpbankReferral) { openTpRefProof(); return }
   router.push(`/submit-report?job=${jobId}`)
 }
 
@@ -432,7 +463,7 @@ const handleCopy = (text: string) => {
       </Teleport>
 
       <!-- ============================================================ -->
-      <!-- GIAO DIỆN GỌN CHO JOB VIP: ABBANK / LPBANK PLUS / VIETCOMBANK / SHOPEE PAY -->
+      <!-- GIAO DIỆN GỌN CHO JOB VIP: LPBANK PLUS / VIETCOMBANK / MBV BANK / SHOPEE PAY -->
       <!-- ============================================================ -->
       <template v-if="isVipCompactJob">
         <div class="space-y-4 normal-case not-italic font-sans">
@@ -478,11 +509,10 @@ const handleCopy = (text: string) => {
           </section>
 
           <!-- Mẹo kiếm thêm — giữ nguyên nội dung gốc, gọn lại giao diện -->
-          <section v-if="jobId === 'abbank' || isPopupJob" class="bg-amber-500/[0.06] border border-amber-500/20 rounded-2xl p-4 flex items-start gap-2.5">
+          <section v-if="isPopupJob" class="bg-amber-500/[0.06] border border-amber-500/20 rounded-2xl p-4 flex items-start gap-2.5">
             <span class="text-base shrink-0">🪝</span>
             <p class="text-slate-300 text-[11px] font-medium leading-relaxed">
               Nếu bạn đã đăng ký APP này rồi, có thể <span class="text-amber-400 font-bold">giới thiệu bạn bè / người thân đăng ký</span> và chụp lại ảnh bằng chứng gửi lên hệ thống, vẫn được nhận hoa hồng bình thường.
-              <template v-if="jobId === 'abbank'"> Chỉ giới thiệu được <span class="text-amber-400 font-bold">1 lần duy nhất</span>.</template>
             </p>
           </section>
 
@@ -605,7 +635,94 @@ const handleCopy = (text: string) => {
         </Teleport>
       </template>
 
-      <div class="text-center" v-if="!isBasicTierJob && !isVipCompactJob">
+      <!-- ============================================================ -->
+      <!-- GIAO DIỆN GỌN CHO JOB VIP: APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK — header + 2 nút (Hướng dẫn / Nộp bằng chứng) + ảnh bằng chứng cần gửi. -->
+      <!-- Bấm "Hướng dẫn" mở popup hướng dẫn đầy đủ (cuối file). Nút nộp bằng chứng giữ y hệt giao diện VIP gọn. -->
+      <!-- ============================================================ -->
+      <template v-if="isVipFullGuideJob">
+        <div class="space-y-4 normal-case not-italic font-sans">
+
+          <!-- Header gọn: icon + tên + thưởng + tuổi + số ảnh cần gửi -->
+          <div class="flex items-center gap-3 bg-[#111726]/60 border border-amber-500/20 rounded-2xl p-4">
+            <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-2xl shrink-0">{{ vipJobIcon }}</div>
+            <div class="flex-1 min-w-0">
+              <h1 class="text-white text-[15px] font-black italic uppercase leading-tight tracking-tight">{{ currentJob.title }}</h1>
+              <p class="text-amber-400 text-[12px] font-bold mt-1">
+                Thưởng: {{ currentJob.reward }}
+                <span v-if="currentJob.ageRequirement" class="text-slate-400 font-semibold"> · từ {{ currentJob.ageRequirement }} tuổi</span>
+              </p>
+              <p class="text-slate-400 text-[11px] font-semibold mt-0.5">Cần gửi: {{ vipRequiredImageCount }} ảnh bằng chứng</p>
+              <p v-if="vipReferralCode" class="text-yellow-400 text-[11px] font-semibold mt-0.5">Nhập mã giới thiệu: <span class="font-black">{{ vipReferralCode }}</span></p>
+              <p v-if="currentJob.headerNote" class="text-yellow-400 text-[11px] font-semibold mt-0.5">{{ currentJob.headerNote }}</p>
+            </div>
+          </div>
+
+          <!-- 2 nút: Hướng dẫn (mở popup) / Nộp bằng chứng -->
+          <div class="grid grid-cols-2 gap-2">
+            <button @click="showFullGuidePopup = true" class="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-white/5 border border-white/10 active:bg-white/10 transition-colors">
+              <span class="text-base">📖</span>
+              <span class="text-[9.5px] font-bold text-slate-300">Hướng dẫn</span>
+            </button>
+            <button @click="handleVipCtaClick" class="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 active:bg-amber-500/25 transition-colors">
+              <span class="text-base">📥</span>
+              <span class="text-[9.5px] font-bold text-amber-400">Nộp bằng chứng</span>
+            </button>
+          </div>
+
+          <!-- Ảnh bằng chứng cần gửi — 1 hàng, chú thích dưới từng ảnh, chạm để phóng to -->
+          <section v-if="currentJob.proofSampleImages?.length" class="bg-[#111726]/60 border border-slate-800/60 rounded-2xl p-4">
+            <h3 class="text-white text-[12px] font-black uppercase tracking-widest mb-3">{{ currentJob.proofSampleImages.length }} ảnh bằng chứng cần gửi</h3>
+            <div class="grid grid-cols-3 gap-2">
+              <div v-for="(img, idx) in currentJob.proofSampleImages" :key="idx" class="space-y-1.5">
+                <div class="aspect-[3/4] rounded-lg overflow-hidden border border-slate-700/60 bg-slate-900 cursor-zoom-in" @click="openImage(baseUrl + img)">
+                  <img class="w-full h-full object-cover" loading="lazy" :src="baseUrl + img" />
+                </div>
+                <p class="text-[10.5px] leading-snug">
+                  <span class="text-amber-400 font-black">Ảnh {{ Number(idx) + 1 }}:</span> <span class="text-slate-300 font-semibold">{{ vipSubmitChecklist[Number(idx)] }}</span>
+                </p>
+              </div>
+            </div>
+            <p class="text-slate-500 text-[10px] font-medium text-center mt-3">Chạm vào ảnh để phóng to</p>
+          </section>
+
+          <!-- Chừa khoảng trống để không bị thanh nút sticky che nội dung cuối trang -->
+          <div class="h-24 lg:hidden"></div>
+
+          <!-- 2 nút cuối trang: Xem hướng dẫn / Nộp bằng chứng — bản thường cho desktop (không sticky) -->
+          <div class="hidden lg:grid grid-cols-2 gap-3">
+            <button
+              class="flex items-center justify-center bg-blue-600 active:bg-blue-500 text-white py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-colors"
+              @click="showFullGuidePopup = true">
+              📖 XEM HƯỚNG DẪN
+            </button>
+            <button
+              class="flex items-center justify-center bg-amber-500 active:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-400 text-[#090e17] py-4 rounded-2xl text-sm font-black uppercase tracking-widest transition-colors"
+              :disabled="currentJob.paused || currentJob.soldout"
+              @click="handleVipCtaClick">
+              {{ currentJob.paused ? 'CÔNG VIỆC ĐANG TẠM DỪNG' : currentJob.soldout ? 'HẾT SLOT' : '📥 NỘP BẰNG CHỨNG' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 2 nút sticky trên mobile, luôn nổi trên bottom nav: Xem hướng dẫn / Nộp bằng chứng -->
+        <Teleport to="body">
+          <div class="fixed bottom-[90px] left-0 right-0 z-[3500] px-4 lg:hidden grid grid-cols-2 gap-2">
+            <button
+              class="flex items-center justify-center px-2 bg-blue-600 active:bg-blue-500 text-white py-4 rounded-2xl text-[12px] font-black uppercase tracking-wide text-center leading-tight shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors"
+              @click="showFullGuidePopup = true">
+              📖 XEM HƯỚNG DẪN
+            </button>
+            <button
+              class="flex items-center justify-center px-2 bg-amber-500 active:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-400 text-[#090e17] py-4 rounded-2xl text-[12px] font-black uppercase tracking-wide text-center leading-tight shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors"
+              :disabled="currentJob.paused || currentJob.soldout"
+              @click="handleVipCtaClick">
+              {{ currentJob.paused ? 'TẠM DỪNG' : currentJob.soldout ? 'HẾT SLOT' : '📥 NỘP BẰNG CHỨNG' }}
+            </button>
+          </div>
+        </Teleport>
+      </template>
+
+      <div class="text-center" v-if="!isBasicTierJob && !isVipCompactJob && !isVipFullGuideJob">
         <h1 class="text-4xl md:text-5xl font-black text-white italic tracking-tighter leading-none mb-5 drop-shadow-xl">
           {{ currentJob.title }}
         </h1>
@@ -728,7 +845,7 @@ const handleCopy = (text: string) => {
         </section>
       </template>
 
-      <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative" v-if="!isPopupJob && !isBasicTierJob && !isVipCompactJob">
+      <div class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-6 md:p-10 shadow-2xl relative" v-if="!isPopupJob && !isBasicTierJob && !isVipCompactJob && !isVipFullGuideJob">
         <div class="text-center space-y-5">
 
          <div class="mb-6 bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden animate-in fade-in duration-700"
@@ -904,15 +1021,192 @@ const handleCopy = (text: string) => {
         </div>
       </div>
 
-      <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20" v-if="!isPopupJob && !isBasicTierJob && !isVipCompactJob">
+      <section class="bg-[#111726] rounded-[45px] border border-slate-800/50 p-8 md:p-10 text-center shadow-xl mb-20" v-if="!isPopupJob && !isBasicTierJob && !isVipCompactJob && !isVipFullGuideJob">
         <h2 class="text-lg text-slate-400 font-black italic mb-6 tracking-wide uppercase opacity-60">BẠN ĐÃ LÀM XONG?</h2>
 
         <button class="w-full bg-[#00df89] hover:bg-[#00c578] text-[#090e17] py-5 rounded-2xl text-xl font-black italic uppercase shadow-[0_10px_40px_rgba(0,223,137,0.25)] transition-all active:scale-95" @click="router.push(`/submit-report?job=${route.params.id}`)">
           NỘP BẰNG CHỨNG NGAY
         </button>
       </section>
-      <div class="mb-20" v-else-if="isPopupJob || isVipCompactJob"></div>
+      <div class="mb-20" v-else-if="isPopupJob || isVipCompactJob || isVipFullGuideJob"></div>
     </div>
+
+    <!-- POPUP HƯỚNG DẪN cho job VIP trang gọn (APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK) — mở từ nút "Hướng dẫn": lưu ý quan trọng, mẹo kiếm tiền,
+         các bước có ảnh lớn (giống trang hướng dẫn MMO PRO). Cuối popup có nút gửi bằng chứng. -->
+    <template v-if="isVipFullGuideJob">
+      <Transition name="fade">
+        <div v-if="showFullGuidePopup" class="fixed inset-0 z-[5300] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showFullGuidePopup = false"></div>
+
+          <div class="relative bg-[#111726] border border-slate-800 w-full max-w-lg rounded-[36px] p-5 md:p-8 shadow-2xl max-h-[85vh] overflow-y-auto text-left">
+            <div class="flex items-center justify-between gap-3 mb-5">
+              <h2 class="text-lg text-white tracking-tight">📖 HƯỚNG DẪN {{ currentJob.title }}</h2>
+              <button @click="showFullGuidePopup = false" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform shrink-0">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div class="space-y-5">
+              <div v-if="currentJob.zaloGuideUrl" class="text-center">
+                <a :href="currentJob.zaloGuideUrl" target="_blank"
+                   class="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-black uppercase transition-all active:scale-95 shadow-lg">
+                  💬 Vào nhóm Zalo xem hướng dẫn
+                </a>
+              </div>
+
+              <div class="bg-gradient-to-r from-red-950/90 to-orange-950/70 border-2 border-orange-500/60 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 flex items-start gap-3 shadow-[0_0_24px_rgba(249,115,22,0.25)]">
+                <span class="text-2xl md:text-3xl shrink-0 leading-none drop-shadow-[0_0_10px_rgba(249,115,22,0.7)]">⚠️</span>
+                <div class="text-left">
+                  <h4 class="text-orange-400 font-black uppercase text-[13px] md:text-sm tracking-wider mb-1 drop-shadow-md">
+                    Lưu ý quan trọng
+                  </h4>
+                  <p class="text-orange-50 text-[11px] md:text-[13px] font-semibold leading-relaxed normal-case">
+                    1 điện thoại chỉ được đăng ký 1 tài khoản cho mỗi APP. Không được đăng xuất ra rồi đăng ký tài khoản khác trên cùng điện thoại. Nếu vi phạm, đơn có thể bị từ chối.
+                  </p>
+                </div>
+              </div>
+
+              <div class="bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
+                <div class="text-2xl md:text-3xl animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.8)] mt-1">🪝</div>
+                <div class="text-left">
+                  <h4 class="text-yellow-400 font-black italic uppercase text-[12px] md:text-sm tracking-widest mb-1.5 drop-shadow-md">
+                    MẸO KIẾM TIỀN:
+                  </h4>
+                  <p class="text-white text-[11px] md:text-[13px] font-medium leading-relaxed normal-case">
+                    Nếu bạn đã đăng ký APP này rồi, có thể <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">giới thiệu bạn bè / người thân đăng ký</span> và chụp lại ảnh bằng chứng gửi lên hệ thống, bạn <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">vẫn được nhận hoa hồng</span> bình thường nhé! 🚀
+                    <template v-if="jobId === 'abbank'"> Chỉ giới thiệu được <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">1 lần duy nhất</span>.</template>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 space-y-8">
+              <div class="relative pl-10" v-for="step in currentJob.steps" :key="step.id">
+                <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-slate-700/30"></div>
+
+                <div class="absolute left-0 top-1 w-8 h-8 rounded-full bg-[#00df89] text-[#090e17] flex items-center justify-center text-sm font-black shadow-lg shadow-emerald-500/20">
+                  {{ step.id }}
+                </div>
+
+                <div class="pb-8">
+                  <h4 class="text-[#3b82f6] text-base md:text-lg italic font-black mb-2 uppercase tracking-tight">
+                    {{ step.title }}
+                  </h4>
+                  <p class="text-slate-400 text-xs italic normal-case opacity-80 leading-relaxed mb-5 whitespace-pre-line">
+                    {{ step.content }}
+                  </p>
+
+                  <div class="mb-5" v-if="step.referralCode">
+                    <button
+                      class="w-full bg-blue-600 hover:bg-blue-500 text-white px-4 py-3 rounded-xl text-[11px] font-black transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                      @click="handleCopy(step.referralCode)">
+                      📋 SAO CHÉP MÃ: {{ step.referralCode }}
+                    </button>
+                  </div>
+
+                  <div class="mb-6 flex flex-wrap items-center gap-3" v-if="step.downloadLink">
+                    <a class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl text-[11px] font-black uppercase hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95" :href="step.downloadLink" target="_blank">
+                      {{ step.buttonText || 'TẢI APP NGAY ➔' }}
+                    </a>
+                  </div>
+
+                  <div class="mb-6 flex flex-wrap items-center gap-3" v-if="step.extraLinks">
+                    <a v-for="link in step.extraLinks" :key="link.url"
+                       class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl text-[11px] font-black uppercase hover:shadow-lg hover:shadow-blue-500/30 transition-all active:scale-95"
+                       :href="link.url" target="_blank">
+                      {{ link.text }}
+                    </a>
+                  </div>
+
+                  <!-- Popup hẹp nên ảnh và khung "Thông tin quan trọng" luôn xếp dọc; ảnh thu nhỏ vừa mobile, chạm để phóng to -->
+                  <div class="flex flex-col gap-4">
+                    <div class="w-fit max-w-full rounded-xl overflow-hidden border border-slate-700/50 shadow-xl bg-slate-900 cursor-zoom-in relative"
+                         v-if="step.img"
+                         @click="openImage(baseUrl + step.img)">
+                      <img class="block max-w-full max-h-[35vh] w-auto h-auto" :src="baseUrl + step.img" />
+                      <div class="absolute bottom-2 right-2 bg-black/70 backdrop-blur text-white text-[8px] px-2 py-1 rounded">🔍 CHẠM ĐỂ PHÓNG TO</div>
+                    </div>
+
+                    <div class="bg-[#0d121f] border-l-4 border-blue-500 p-5 rounded-2xl shadow-lg" v-if="step.note">
+                      <p class="text-blue-400 text-[10px] font-black tracking-[2px] mb-2 uppercase italic">Thông tin quan trọng</p>
+                      <h5 class="text-white text-lg font-black italic leading-tight uppercase">{{ step.note }}</h5>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-3 gap-2 mt-4" v-if="step.images">
+                    <div class="rounded-xl overflow-hidden border border-slate-700/50 shadow-lg relative group bg-slate-900 cursor-zoom-in"
+                         v-for="(imgSrc, idx) in step.images" :key="idx"
+                         @click="openImage(baseUrl + imgSrc)">
+                      <img class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" :src="baseUrl + imgSrc" />
+                      <div class="absolute top-1.5 left-1.5 bg-blue-600/90 backdrop-blur-sm text-white text-[8px] font-black px-2 py-0.5 rounded shadow-sm">ẢNH {{ Number(idx) + 1 }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button @click="showFullGuidePopup = false; handleVipCtaClick()" class="w-full py-4 bg-amber-500 hover:bg-amber-400 text-amber-950 rounded-2xl text-[13px] font-black uppercase shadow-lg active:scale-95 transition-all">
+              📥 GỬI BẰNG CHỨNG
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
+    <template v-if="isTpbank">
+      <TpbankProofModal :show="showTpProof" @close="showTpProof = false" @submitted="handleTpSubmitted" />
+
+      <Transition name="fade">
+        <div v-if="showTpSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showTpSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng APP TPBANK thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showTpSuccess = false; showJobHistory = true" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showTpSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
+    <template v-if="isTpbankReferral">
+      <TpbankReferralProofModal :show="showTpRefProof" @close="showTpRefProof = false" @submitted="handleTpRefSubmitted" />
+
+      <Transition name="fade">
+        <div v-if="showTpRefSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showTpRefSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng giới thiệu bạn bè đăng ký APP TPBANK thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showTpRefSuccess = false; showJobHistory = true" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showTpRefSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
 
     <template v-if="isLpbankPlus">
       <LpbankPlusGuideModal :show="showLpGuide" @close="showLpGuide = false" @openProof="openLpProof" />

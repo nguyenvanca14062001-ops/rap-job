@@ -12,6 +12,7 @@ import { ABBANK_REFERRAL_JOB_ID, ABBANK_REFERRAL_REWARD } from '@/utils/referral
 import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
 import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/utils/referralLpbankPlus'
 import { SHOPEE_PAY_REFERRAL_JOB_ID, SHOPEE_PAY_REFERRAL_REWARD } from '@/utils/referralShopeePay'
+import { TPBANK_REFERRAL_JOB_ID, TPBANK_REFERRAL_REWARD } from '@/utils/referralTpbank'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
@@ -395,12 +396,12 @@ const editingVipJob = ref<Record<string, any>>({})
 const newVipJobId = ref('')
 let unsubVipJobs: any = null
 
-const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID, SHOPEE_PAY_REFERRAL_JOB_ID]
+const VIP_JOB_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan', 'app-chung-khoan-2', 'abbank', 'tpbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay', 'momo', MOMO_REFERRAL_JOB_ID, ABBANK_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_JOB_ID, SHOPEE_PAY_REFERRAL_JOB_ID, TPBANK_REFERRAL_JOB_ID]
 
 // Các job VIP ngân hàng/chứng khoán không tự điền họ tên/SĐT từ hồ sơ web — report của các job này
 // tách riêng "thông tin chủ tài khoản ngân hàng" (bankAccountHolderName/bankRegisteredPhone) khỏi
 // "hồ sơ web thật" (userFullName/userPhoneRef) để admin đối soát rõ ràng.
-const BANK_ACCOUNT_JOB_IDS = ['vietcombank', 'mbv-bank', 'shopee-pay', 'lpbank-plus', 'abbank']
+const BANK_ACCOUNT_JOB_IDS = ['vietcombank', 'mbv-bank', 'shopee-pay', 'lpbank-plus', 'abbank', 'tpbank']
 
 // Doc ID cũ trùng tên hiển thị "GIỚI THIỆU BẠN BÈ ABBANK" với job referral_abbank chuẩn — popup/trang
 // ABBANK ngoài user chỉ đọc doc này khi CHƯA có doc referral_abbank. Sửa ABBANK thì hãy sửa job có
@@ -1003,6 +1004,7 @@ const getTrustedReward = (jobId: string): number => {
     jobId === ABBANK_REFERRAL_JOB_ID ? ABBANK_REFERRAL_REWARD :
     jobId === LPBANK_PLUS_REFERRAL_JOB_ID ? LPBANK_PLUS_REFERRAL_REWARD :
     jobId === SHOPEE_PAY_REFERRAL_JOB_ID ? SHOPEE_PAY_REFERRAL_REWARD :
+    jobId === TPBANK_REFERRAL_JOB_ID ? TPBANK_REFERRAL_REWARD :
     jobId === MOMO_REFERRAL_JOB_ID ? MOMO_REFERRAL_REWARD : undefined
   const staticReward = (jobsData as Record<string, any>)[jobId]?.reward
   const source = override ?? fixedReferral ?? staticReward
@@ -1102,6 +1104,13 @@ const approveReport = async (report: any) => {
         reportUpdates.isVip = true
         reportUpdates.bankType = 'shopeepay'
         reportUpdates.referralProgram = 'shopeepay'
+      } else if (report.jobId === TPBANK_REFERRAL_JOB_ID) {
+        reportUpdates.jobCategory = 'vip'
+        reportUpdates.category = 'vip'
+        reportUpdates.jobType = 'vip'
+        reportUpdates.isVip = true
+        reportUpdates.bankType = 'tpbank'
+        reportUpdates.referralProgram = 'tpbank'
       }
 
       // Chỉ update/increment field cần thiết — không bao giờ setDoc ghi đè toàn bộ users/{uid}.
@@ -1556,7 +1565,7 @@ const handleAdminLogout = async () => {
                   <div class="text-[var(--admin-text)] text-xs font-black truncate max-w-[200px]">{{ rp.bankAccountHolderName || rp.fullName || 'N/A' }}</div>
                   <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">SĐT đăng ký NH: {{ rp.bankRegisteredPhone || rp.phoneRef || '—' }}</div>
                   <div class="text-[var(--admin-muted)] text-[10px] font-sans not-italic">
-                    Năm sinh: <span class="text-[var(--admin-warning)] font-bold" v-if="rp.birthYear">{{ rp.birthYear }}</span>
+                    Năm sinh: <span class="text-[var(--admin-warning)] font-bold" v-if="rp.birthYear"><span v-if="rp.birthMonth">T{{ rp.birthMonth }}/</span>{{ rp.birthYear }}</span>
                     <span class="text-slate-400" v-else>—</span>
                   </div>
                   <div class="mt-1" v-if="!usersMap[effUid(rp)]">
@@ -1580,10 +1589,11 @@ const handleAdminLogout = async () => {
               </td>
               <td class="p-6">
                 <div class="text-[var(--admin-text)] text-[11px] leading-tight mb-1">{{ rp.jobName }}</div>
-                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID || rp.jobId === MOMO_REFERRAL_JOB_ID || rp.jobId === LPBANK_PLUS_REFERRAL_JOB_ID || rp.jobId === SHOPEE_PAY_REFERRAL_JOB_ID">
+                <template v-if="rp.jobId === ABBANK_REFERRAL_JOB_ID || rp.jobId === MOMO_REFERRAL_JOB_ID || rp.jobId === LPBANK_PLUS_REFERRAL_JOB_ID || rp.jobId === SHOPEE_PAY_REFERRAL_JOB_ID || rp.jobId === TPBANK_REFERRAL_JOB_ID">
                   <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
                     <div class="text-[10px] text-[var(--admin-warning)]">Bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendName || '—' }}</span></div>
                     <div class="text-[10px] text-[var(--admin-warning)]">SĐT bạn bè: <span class="text-[var(--admin-text)] font-bold">{{ rp.friendPhone || '—' }}</span></div>
+                    <div class="text-[10px] text-[var(--admin-warning)]" v-if="rp.friendBirthYear">Năm sinh bạn bè: <span class="text-[var(--admin-text)] font-bold"><span v-if="rp.friendBirthMonth">T{{ rp.friendBirthMonth }}/</span>{{ rp.friendBirthYear }}</span></div>
                     <div class="text-[10px] text-[var(--admin-warning)]">Mã đơn: <span class="text-[var(--admin-text)] font-bold break-all">{{ rp.referralOrderCode || '—' }}</span></div>
                   </div>
                   <div class="text-[var(--admin-success)] text-sm font-black" v-if="rp.status === 'pending'">

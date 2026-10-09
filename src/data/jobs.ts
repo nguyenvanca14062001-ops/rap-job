@@ -11,6 +11,50 @@ const MOMO_CONFIG = {
   momoTopupImage: "images/anh-momo-6.jpg",
 }
 
+// ==============================================
+// HƯỚNG DẪN APP TPBANK — dùng chung cho 'tpbank' (APP TPBANK) và 'referral_tpbank' (Mời bạn bè đăng ký APP TPBANK).
+// Sửa bước / ảnh / mã giới thiệu ở đây là cả 2 trang cùng cập nhật.
+// ==============================================
+const TPBANK_GUIDE = {
+  // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + làm ảnh mẫu trong popup gửi bằng chứng
+  proofSampleImages: [
+    "images/anh-tpbank2.jpg",
+    "images/anh-tpbank3.jpg",
+    "images/anh-tpbank6.jpg"
+  ],
+  // Dòng chữ vàng ở header trang chi tiết, ngay dưới dòng "Nhập mã giới thiệu" (mã lấy từ referralCode của bước 2)
+  headerNote: "Phát sinh giao dịch 50k",
+  steps: [
+    {
+      id: 1,
+      title: "VÀO CHPLAY HOẶC APPSTORE TẢI APP",
+      content: "Tải APP TPBank Mobile về điện thoại theo hình hướng dẫn bên dưới.",
+      img: "images/anh-tpbank1.jpg"
+    },
+    {
+      id: 2,
+      title: "NHẬP MÃ GIỚI THIỆU: AT09",
+      content: "Bắt buộc nhập mã giới thiệu AT09 và chụp lại ảnh màn hình.",
+      img: "images/anh-tpbank2.jpg",
+      note: "NHẬP MÃ GIỚI THIỆU AT09 (BẮT BUỘC)",
+      referralCode: "AT09"
+    },
+    {
+      id: 3,
+      title: "ĐĂNG KÝ TÀI KHOẢN THÀNH CÔNG VÀ CHỤP ẢNH LẠI",
+      content: "Sau khi đăng ký tài khoản TPBANK thành công, chụp lại ảnh màn hình hoàn tất.",
+      img: "images/anh-tpbank3.jpg"
+    },
+    {
+      id: 4,
+      title: "PHÁT SINH GIAO DỊCH 50K",
+      content: "Sau khi đăng nhập APP TPBANK, bạn cần phát sinh giao dịch 50k theo hướng dẫn dưới đây:\n✅ Chuyển vào tài khoản TPBANK: 50k\n✅ Chuyển ra lại: 50k\n\nLàm đủ các bước trên rồi chụp lại bill chuyển tiền ra theo ảnh mẫu để gửi bằng chứng.",
+      note: "LƯU Ý: CHUYỂN RA CHO 1 NGƯỜI KHÁC (NGƯỜI CHUYỂN RA VÀ NGƯỜI NHẬN TIỀN TÊN KHÁC NHAU)",
+      img: "images/anh-tpbank6.jpg"
+    }
+  ]
+}
+
 export const jobsData: Record<string, any> = {
 
   // Card tổng/parent gộp 3 job "giới thiệu bạn bè" (MoMo/ABBANK/LPBank Plus) — click mở popup chọn job con,
@@ -447,6 +491,16 @@ export const jobsData: Record<string, any> = {
     ageRequirement: 15,
     zaloGuideUrl: "",
     warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký ABBANK trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    // Trang chi tiết dùng giao diện gọn + popup hướng dẫn giống APP TPBANK (VIP_FULL_GUIDE_IDS trong JobDetailView);
+    // nộp bằng chứng vẫn qua form chung SubmitReportView.
+    // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + làm ảnh mẫu trong form nộp bằng chứng chung
+    proofSampleImages: [
+      "images/anh-abbank1.jpg",
+      "images/anh-abbank2.jpg",
+      "images/anh-abbank4.jpg"
+    ],
+    // Dòng chữ vàng ở header trang chi tiết, ngay dưới dòng "Nhập mã giới thiệu" (mã lấy từ referralCode của bước 2)
+    headerNote: "Phát sinh giao dịch tổng 30k",
     steps: [
       {
         id: 1,
@@ -477,6 +531,41 @@ export const jobsData: Record<string, any> = {
         img: "images/anh-abbank4.jpg"
       }
     ]
+  },
+
+  // Job VIP mới APP TPBANK — gửi bằng chứng qua popup riêng (TpbankProofModal); trang chi tiết dùng giao diện
+  // gọn + popup hướng dẫn riêng (VIP_FULL_GUIDE_IDS trong JobDetailView). Bước hướng dẫn / ảnh mẫu / dòng ghi chú
+  // nằm ở TPBANK_GUIDE đầu file (dùng chung với job giới thiệu bạn bè 'referral_tpbank').
+  'tpbank': {
+    title: "APP TPBANK",
+    subtitle: "Mở tài khoản TPBANK",
+    reward: "80.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    ageRequirement: 18,
+    zaloGuideUrl: "",
+    warning: "Người đăng ký phải từ 18 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký TPBANK trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    proofSampleImages: TPBANK_GUIDE.proofSampleImages,
+    headerNote: TPBANK_GUIDE.headerNote,
+    steps: TPBANK_GUIDE.steps
+  },
+
+  // Job giới thiệu bạn bè "Mời bạn bè đăng ký APP TPBANK" (TPBANK_REFERRAL_JOB_ID) — trang chi tiết giống hệt
+  // APP TPBANK (dùng chung TPBANK_GUIDE), gửi bằng chứng qua TpbankReferralProofModal (thông tin người bạn).
+  'referral_tpbank': {
+    title: "Mời bạn bè đăng ký APP TPBANK",
+    subtitle: "Mời bạn bè đăng ký APP TPBANK nhận 85.000 xu/lượt",
+    reward: "85.000 xu",
+    rewardText: "85.000 xu",
+    color: "text-orange-500",
+    badge: "VIP 💎",
+    type: "friend_referral",
+    bankType: "tpbank",
+    referralProgram: "tpbank",
+    ageRequirement: 18,
+    proofSampleImages: TPBANK_GUIDE.proofSampleImages,
+    headerNote: TPBANK_GUIDE.headerNote,
+    steps: TPBANK_GUIDE.steps
   },
 
   'lpbank-plus': {
