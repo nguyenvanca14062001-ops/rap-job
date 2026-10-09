@@ -211,6 +211,9 @@ const vipSubmitChecklist = computed(() => VIP_SUBMIT_CHECKLIST[jobId] || [])
 const ZALO_IN_STEP2_IDS = ['vietcombank', 'mbv-bank', 'lpbank-plus']
 const zaloInStep2 = ZALO_IN_STEP2_IDS.includes(jobId)
 
+// Chữ trên nút vào nhóm Zalo — riêng LPBANK PLUS dùng chữ khác, các job còn lại giữ nguyên
+const zaloCtaLabel = isLpbankPlus ? 'THAM GIA NHÓM ZALO - XEM MÃ GIỚI THIỆU' : 'VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN'
+
 // Nguồn bước hướng dẫn cho accordion: job popup (lpbank-plus/vietcombank/shopee-pay) đã có sẵn quickSteps rút gọn,
 // abbank dùng steps gốc (đã ngắn, 4 bước) — không tạo dữ liệu bước mới.
 const vipSteps = computed(() => currentJob.value.quickSteps || currentJob.value.steps || [])
@@ -520,7 +523,7 @@ const handleCopy = (text: string) => {
           <a v-if="(currentJob.zaloGuideUrl || currentJob.zaloReferralLink) && jobId !== 'shopee-pay'" :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
              class="flex items-center justify-center gap-2 bg-[#0068FF] active:bg-blue-500 text-white px-4 py-3 rounded-xl text-[11px] font-black uppercase transition-colors">
             <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-5 h-5" />
-            VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN
+            {{ zaloCtaLabel }}
           </a>
 
           <!-- SHOPEE PAY: nút copy mã giới thiệu thẳng, thay cho nút vào nhóm Zalo -->
@@ -564,7 +567,7 @@ const handleCopy = (text: string) => {
                      :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
                      class="flex items-center justify-center gap-2 bg-[#0068FF] active:bg-blue-500 text-white px-4 py-3 rounded-xl text-[11px] font-black uppercase transition-colors">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-5 h-5" />
-                    VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN
+                    {{ zaloCtaLabel }}
                   </a>
 
                   <div v-if="step.downloadLink" class="flex flex-wrap items-center gap-2">
