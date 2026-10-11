@@ -152,16 +152,17 @@ const jobHistoryReports = computed(() =>
   (props.myReports || []).filter((r: any) => r.jobId === jobId || r.jobName === currentJob.value.title)
 )
 
-// --- Giao diện gọn cho các job VIP dùng popup riêng (LPBANK PLUS / VIETCOMBANK / MBV BANK / SHOPEE PAY) ---
+// --- Giao diện gọn cho các job VIP dùng popup riêng (VIETCOMBANK / MBV BANK / SHOPEE PAY) ---
 // Chỉ đổi cách hiển thị, vẫn dùng đúng steps/quickSteps/proofSampleImages/openPopupProof/openPopupHistory sẵn có.
-// (ABBANK đã chuyển sang giao diện giống APP TPBANK — xem VIP_FULL_GUIDE_IDS bên dưới.)
-const VIP_COMPACT_IDS = ['lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay']
+// (ABBANK và LPBANK PLUS đã chuyển sang giao diện giống APP TPBANK — xem VIP_FULL_GUIDE_IDS bên dưới.)
+const VIP_COMPACT_IDS = ['vietcombank', 'mbv-bank', 'shopee-pay']
 const isVipCompactJob = VIP_COMPACT_IDS.includes(jobId)
 
 // Job VIP trang gọn: header + 2 nút (Hướng dẫn / Nộp bằng chứng) + 3 ảnh bằng chứng cần gửi. Bấm "Hướng dẫn" mới mở
 // popup hướng dẫn đầy đủ (port từ trang hướng dẫn của site MMO PRO: lưu ý quan trọng, mẹo kiếm tiền, các bước có ảnh lớn).
 // Nút nộp bằng chứng nổi/cuối trang giữ y hệt giao diện VIP gọn ở trên.
-const VIP_FULL_GUIDE_IDS = ['tpbank', TPBANK_REFERRAL_JOB_ID, 'abbank']
+// LPBANK PLUS: nộp bằng chứng vẫn qua popup riêng LpbankPlusProofModal (isPopupJob), mã giới thiệu lấy trong nhóm Zalo.
+const VIP_FULL_GUIDE_IDS = ['tpbank', TPBANK_REFERRAL_JOB_ID, 'abbank', 'lpbank-plus']
 const isVipFullGuideJob = VIP_FULL_GUIDE_IDS.includes(jobId)
 const showFullGuidePopup = ref(false)
 
@@ -208,14 +209,15 @@ const vipSubmitChecklist = computed(() => VIP_SUBMIT_CHECKLIST[jobId] || [])
 
 // Job nào chuyển nút "VÀO NHÓM ZALO LẤY MÃ" vào trong Bước 2 của accordion (thay vì hiện phía trên accordion)
 // và ẩn nút Copy mã giới thiệu ở Bước 2 — theo yêu cầu riêng cho từng app.
-const ZALO_IN_STEP2_IDS = ['vietcombank', 'mbv-bank', 'lpbank-plus']
+const ZALO_IN_STEP2_IDS = ['vietcombank', 'mbv-bank']
 const zaloInStep2 = ZALO_IN_STEP2_IDS.includes(jobId)
 
-// Chữ trên nút vào nhóm Zalo — riêng LPBANK PLUS dùng chữ khác, các job còn lại giữ nguyên
-const zaloCtaLabel = isLpbankPlus ? 'THAM GIA NHÓM ZALO - XEM MÃ GIỚI THIỆU' : 'VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN'
+// Chữ trên nút vào nhóm Zalo — riêng LPBANK PLUS (nút "XEM MÃ GIỚI THIỆU" ở trang chi tiết + Bước 2 popup hướng dẫn) dùng chữ khác,
+// các job còn lại giữ nguyên
+const zaloCtaLabel = isLpbankPlus ? 'XEM MÃ GIỚI THIỆU' : 'VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN'
 
-// Nguồn bước hướng dẫn cho accordion: job popup (lpbank-plus/vietcombank/shopee-pay) đã có sẵn quickSteps rút gọn,
-// abbank dùng steps gốc (đã ngắn, 4 bước) — không tạo dữ liệu bước mới.
+// Nguồn bước hướng dẫn cho accordion: job popup trang gọn (vietcombank/mbv-bank/shopee-pay) đã có sẵn quickSteps rút gọn,
+// job không có quickSteps dùng steps gốc — không tạo dữ liệu bước mới.
 const vipSteps = computed(() => currentJob.value.quickSteps || currentJob.value.steps || [])
 
 // SHOPEE PAY: thay nút "vào nhóm Zalo lấy mã" ở khu vực tóm tắt bằng nút copy mã giới thiệu thẳng —
@@ -466,7 +468,7 @@ const handleCopy = (text: string) => {
       </Teleport>
 
       <!-- ============================================================ -->
-      <!-- GIAO DIỆN GỌN CHO JOB VIP: LPBANK PLUS / VIETCOMBANK / MBV BANK / SHOPEE PAY -->
+      <!-- GIAO DIỆN GỌN CHO JOB VIP: VIETCOMBANK / MBV BANK / SHOPEE PAY -->
       <!-- ============================================================ -->
       <template v-if="isVipCompactJob">
         <div class="space-y-4 normal-case not-italic font-sans">
@@ -562,7 +564,7 @@ const handleCopy = (text: string) => {
                     <button class="bg-amber-500 active:bg-amber-400 text-[#090e17] px-3 py-2 rounded-lg text-[9.5px] font-black uppercase shrink-0" @click="handleCopy(step.referralCode)">Copy</button>
                   </div>
 
-                  <!-- VIETCOMBANK / LPBANK PLUS: nút vào nhóm Zalo lấy mã chuyển vào đây (Bước 2) thay vì hiện phía trên accordion -->
+                  <!-- VIETCOMBANK / MBV BANK: nút vào nhóm Zalo lấy mã chuyển vào đây (Bước 2) thay vì hiện phía trên accordion -->
                   <a v-if="zaloInStep2 && step.id === 2 && (currentJob.zaloGuideUrl || currentJob.zaloReferralLink)"
                      :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
                      class="flex items-center justify-center gap-2 bg-[#0068FF] active:bg-blue-500 text-white px-4 py-3 rounded-xl text-[11px] font-black uppercase transition-colors">
@@ -639,7 +641,7 @@ const handleCopy = (text: string) => {
       </template>
 
       <!-- ============================================================ -->
-      <!-- GIAO DIỆN GỌN CHO JOB VIP: APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK — header + 2 nút (Hướng dẫn / Nộp bằng chứng) + ảnh bằng chứng cần gửi. -->
+      <!-- GIAO DIỆN GỌN CHO JOB VIP: APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK / APP LPBANK PLUS — header + 2 nút (Hướng dẫn / Nộp bằng chứng) + ảnh bằng chứng cần gửi. -->
       <!-- Bấm "Hướng dẫn" mở popup hướng dẫn đầy đủ (cuối file). Nút nộp bằng chứng giữ y hệt giao diện VIP gọn. -->
       <!-- ============================================================ -->
       <template v-if="isVipFullGuideJob">
@@ -655,7 +657,9 @@ const handleCopy = (text: string) => {
                 <span v-if="currentJob.ageRequirement" class="text-slate-400 font-semibold"> · từ {{ currentJob.ageRequirement }} tuổi</span>
               </p>
               <p class="text-slate-400 text-[11px] font-semibold mt-0.5">Cần gửi: {{ vipRequiredImageCount }} ảnh bằng chứng</p>
-              <p v-if="vipReferralCode" class="text-yellow-400 text-[11px] font-semibold mt-0.5">Nhập mã giới thiệu: <span class="font-black">{{ vipReferralCode }}</span></p>
+              <!-- LPBANK PLUS (có zaloReferralLink): mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" nên không hiện mã trực tiếp -->
+              <p v-if="currentJob.zaloReferralLink" class="text-yellow-400 text-[11px] font-semibold mt-0.5">Nhập mã giới thiệu: <span class="font-black">chọn "{{ zaloCtaLabel }}" để lấy</span></p>
+              <p v-else-if="vipReferralCode" class="text-yellow-400 text-[11px] font-semibold mt-0.5">Nhập mã giới thiệu: <span class="font-black">{{ vipReferralCode }}</span></p>
               <p v-if="currentJob.headerNote" class="text-yellow-400 text-[11px] font-semibold mt-0.5">{{ currentJob.headerNote }}</p>
             </div>
           </div>
@@ -669,6 +673,23 @@ const handleCopy = (text: string) => {
             <button @click="handleVipCtaClick" class="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 active:bg-amber-500/25 transition-colors">
               <span class="text-base">📥</span>
               <span class="text-[9.5px] font-bold text-amber-400">Nộp bằng chứng</span>
+            </button>
+          </div>
+
+          <!-- LPBANK PLUS: hàng mã giới thiệu — nút "XEM MÃ GIỚI THIỆU" dẫn vào nhóm Zalo lấy mã -->
+          <div v-if="currentJob.zaloReferralLink" class="bg-[#111726]/60 border border-amber-500/20 rounded-xl px-3 py-1.5 flex items-center gap-3">
+            <p class="flex-1 min-w-0 text-slate-400 text-[11px] font-semibold">Mã giới thiệu: <span class="text-white font-black">chọn</span></p>
+            <a :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
+               class="shrink-0 inline-flex items-center gap-1.5 bg-[#0068FF] active:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-[10px] font-black uppercase transition-colors">
+              💬 {{ zaloCtaLabel }}
+            </a>
+          </div>
+          <!-- APP ABBANK / APP TPBANK: hàng mã giới thiệu + nút sao chép mã (mã lấy từ referralCode của bước hướng dẫn) -->
+          <div v-else-if="vipReferralCode" class="bg-[#111726]/60 border border-amber-500/20 rounded-xl px-3 py-1.5 flex items-center gap-3">
+            <p class="flex-1 min-w-0 truncate text-slate-400 text-[11px] font-semibold">Mã giới thiệu: <span class="text-yellow-400 text-[14px] font-black tracking-wide select-all">{{ vipReferralCode }}</span></p>
+            <button @click="handleCopy(vipReferralCode)"
+               class="shrink-0 inline-flex items-center gap-1.5 bg-[#0068FF] active:bg-blue-500 text-white px-3.5 py-2 rounded-lg text-[10px] font-black uppercase transition-colors">
+              📋 Sao chép
             </button>
           </div>
 
@@ -775,7 +796,7 @@ const handleCopy = (text: string) => {
       </div>
 
       <!-- KHỐI RIÊNG CHO APP LPBANK PLUS / VIETCOMBANK: 3 nút CTA mở popup tại chỗ -->
-      <template v-if="isPopupJob && !isVipCompactJob">
+      <template v-if="isPopupJob && !isVipCompactJob && !isVipFullGuideJob">
         <section class="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button @click="openPopupGuide" class="py-4 px-3 rounded-2xl text-[11px] font-black uppercase tracking-tight bg-[#0d121f] border border-slate-700 hover:border-emerald-500/60 text-white active:scale-95 transition-all">
             📖 XEM HƯỚNG DẪN
@@ -1034,7 +1055,7 @@ const handleCopy = (text: string) => {
       <div class="mb-20" v-else-if="isPopupJob || isVipCompactJob || isVipFullGuideJob"></div>
     </div>
 
-    <!-- POPUP HƯỚNG DẪN cho job VIP trang gọn (APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK) — mở từ nút "Hướng dẫn": lưu ý quan trọng, mẹo kiếm tiền,
+    <!-- POPUP HƯỚNG DẪN cho job VIP trang gọn (APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK / APP LPBANK PLUS) — mở từ nút "Hướng dẫn": lưu ý quan trọng, mẹo kiếm tiền,
          các bước có ảnh lớn (giống trang hướng dẫn MMO PRO). Cuối popup có nút gửi bằng chứng. -->
     <template v-if="isVipFullGuideJob">
       <Transition name="fade">
@@ -1106,6 +1127,14 @@ const handleCopy = (text: string) => {
                       @click="handleCopy(step.referralCode)">
                       📋 SAO CHÉP MÃ: {{ step.referralCode }}
                     </button>
+                  </div>
+
+                  <!-- LPBANK PLUS: mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" (nhóm Zalo) ở Bước 2, thay cho nút sao chép mã -->
+                  <div class="mb-5" v-if="step.id === 2 && currentJob.zaloReferralLink">
+                    <a :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
+                       class="w-full bg-[#0068FF] hover:bg-blue-500 text-white px-4 py-3 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
+                      💬 {{ zaloCtaLabel }}
+                    </a>
                   </div>
 
                   <div class="mb-6 flex flex-wrap items-center gap-3" v-if="step.downloadLink">

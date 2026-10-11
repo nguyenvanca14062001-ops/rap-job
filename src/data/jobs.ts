@@ -569,6 +569,8 @@ export const jobsData: Record<string, any> = {
     steps: TPBANK_GUIDE.steps
   },
 
+  // Job VIP APP LPBANK PLUS — trang chi tiết dùng giao diện gọn + popup hướng dẫn giống APP TPBANK / APP ABBANK
+  // (VIP_FULL_GUIDE_IDS trong JobDetailView); gửi bằng chứng vẫn qua popup riêng LpbankPlusProofModal.
   'lpbank-plus': {
     title: "APP LPBANK PLUS",
     subtitle: "Mở tài khoản LPBank Plus",
@@ -580,7 +582,7 @@ export const jobsData: Record<string, any> = {
     // Text ngắn hiển thị dưới khối tiêu đề ở trang chi tiết
     shortDesc: "Hoàn thành đăng ký APP LPBANK PLUS theo hướng dẫn để nhận thưởng.",
     warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký LPBank Plus trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
-    // Link nhóm Zalo để lấy mã giới thiệu
+    // Link nhóm Zalo để lấy mã giới thiệu — trang chi tiết không hiện mã trực tiếp, nút "XEM MÃ GIỚI THIỆU" dẫn vào đây
     zaloReferralLink: "https://zalo.me/g/6hx6byuwxmj20dlny1pl",
     // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + trong popup gửi bằng chứng
     proofSampleImages: [
@@ -588,7 +590,9 @@ export const jobsData: Record<string, any> = {
       "images/anh-lpbank-new3.jpg",
       "images/anh-lpbank-new4.jpg"
     ],
-    // 3 bước hướng dẫn rút gọn — dùng chung cho khối "CÁC BƯỚC THỰC HIỆN" ở trang chi tiết và popup "XEM HƯỚNG DẪN"
+    // Dòng chữ vàng ở header trang chi tiết, ngay dưới dòng "Nhập mã giới thiệu"
+    headerNote: "Phát sinh giao dịch 100k",
+    // 3 bước hướng dẫn rút gọn — dùng cho popup hướng dẫn "Mời bạn bè đăng ký APP LPBANK Plus" (LpbankPlusReferralHubModal)
     quickSteps: [
       {
         id: 1,
@@ -611,34 +615,30 @@ export const jobsData: Record<string, any> = {
         img: "images/anh-lpbank-new4.jpg"
       }
     ],
+    // 3 bước hướng dẫn (cùng khuôn với APP TPBANK / APP ABBANK) — hiển thị trong popup "Hướng dẫn" của trang chi tiết.
+    // Bước 2 không có referralCode vì mã lấy qua nút "XEM MÃ GIỚI THIỆU" (dẫn vào nhóm Zalo zaloReferralLink).
     steps: [
       {
         id: 1,
         title: "TẢI ĐÚNG APP LPBANK PLUS - CHÚ Ý CHỮ PLUS",
-        content: "Tên APP: LPBANK Plus hoặc chọn TẢI ỨNG DỤNG.",
+        content: "Tải APP LPBank Plus về điện thoại để đăng ký. Tên APP: LPBank Plus hoặc chọn TẢI ỨNG DỤNG.",
         downloadLink: "https://content.lpbank.com.vn/share/down_app/index.html",
         buttonText: "🚀 TẢI ỨNG DỤNG",
+        note: "CHÚ Ý: CÓ 2 APP LPBANK, PHẢI TẢI ĐÚNG APP LPBANK PLUS CÓ CHỮ PLUS MỚI ĐÚNG NHÉ, KHÔNG CHỌN NHẦM APP LPBANK KHÁC.",
         img: "images/anh-lpbank-buoc1.jpg"
       },
       {
         id: 2,
-        title: "NHẬP MÃ GIỚI THIỆU : 0366045803",
-        content: "BẮT BUỘC NHẬP MÃ GIỚI THIỆU 0366045803 VÀ CHỤP LẠI ẢNH.",
-        img: "images/anh-lpbank1.jpg",
-        note: "NHẬP MÃ GIỚI THIỆU: 0366045803 (BẮT BUỘC)",
-        referralCode: "0366045803"
+        title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU",
+        content: "Chọn nút \"XEM MÃ GIỚI THIỆU\" để lấy mã giới thiệu.",
+        note: "NHẬP MÃ GIỚI THIỆU LẤY TỪ NHÓM ZALO (BẮT BUỘC)",
+        img: "images/anh-lpbank-new1.jpg"
       },
       {
         id: 3,
-        title: "CHUYỂN VÀO LPBANK PLUS 50K VÀ CHUYỂN RA",
-        content: "CHỤP LẠI ẢNH CHUYỂN TIỀN RA VÀ GỬI BẰNG CHỨNG.",
-        img: "images/anh-lpbank4.jpg"
-      },
-      {
-        id: 4,
-        title: "VÀO GỬI BẰNG CHỨNG ĐỂ XEM ẢNH CẦN GỬI",
-        content: "CHỜ ĐỢI BÊN MÌNH DUYỆT ĐƠN VÀ NHẬN HOA HỒNG.",
-
+        title: "PHÁT SINH GIAO DỊCH 100K",
+        content: "Sau khi đăng ký thành công, bạn cần phát sinh giao dịch 100k theo hướng dẫn dưới đây:\n✅ Chuyển vào tài khoản LPBank Plus: 100k\n✅ Chuyển ra lại: 100k\n\nLàm đủ các bước trên rồi chụp lại bill chuyển tiền ra theo ảnh mẫu, sau đó gửi đủ 3 ảnh bằng chứng.",
+        img: "images/anh-lpbank-new4.jpg"
       }
     ]
   },
