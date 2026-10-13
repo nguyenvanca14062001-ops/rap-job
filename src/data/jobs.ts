@@ -14,6 +14,7 @@ const MOMO_CONFIG = {
 // ==============================================
 // HƯỚNG DẪN APP TPBANK — dùng chung cho 'tpbank' (APP TPBANK) và 'referral_tpbank' (Mời bạn bè đăng ký APP TPBANK).
 // Sửa bước / ảnh / mã giới thiệu ở đây là cả 2 trang cùng cập nhật.
+// APP TPBANK (NEW) chỉ dùng chung Bước 1 (tải app) — phần còn lại nằm ở TPBANK_NEW_GUIDE bên dưới.
 // ==============================================
 const TPBANK_GUIDE = {
   // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + làm ảnh mẫu trong popup gửi bằng chứng
@@ -51,6 +52,49 @@ const TPBANK_GUIDE = {
       content: "Sau khi đăng nhập APP TPBANK, bạn cần phát sinh giao dịch 50k theo hướng dẫn dưới đây:\n✅ Chuyển vào tài khoản TPBANK: 50k\n✅ Chuyển ra lại: 50k\n\nLàm đủ các bước trên rồi chụp lại bill chuyển tiền ra theo ảnh mẫu để gửi bằng chứng.",
       note: "LƯU Ý: CHUYỂN RA CHO 1 NGƯỜI KHÁC (NGƯỜI CHUYỂN RA VÀ NGƯỜI NHẬN TIỀN TÊN KHÁC NHAU)",
       img: "images/anh-tpbank6.jpg"
+    }
+  ]
+}
+
+// ==============================================
+// HƯỚNG DẪN APP TPBANK (NEW) — dùng chung cho 'tpbank-new' (APP TPBANK (NEW)) và 'referral_tpbank_new'
+// (Mời bạn bè đăng ký APP TPBANK (NEW)). Sửa bước / ảnh / link nhóm Zalo ở đây là cả 2 trang cùng cập nhật.
+// Không có mã AT09 / nút sao chép — mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" (dẫn vào zaloReferralLink).
+// ==============================================
+const TPBANK_NEW_GUIDE = {
+  // Link nhóm Zalo để lấy mã giới thiệu — nút "XEM MÃ GIỚI THIỆU" (hàng mã giới thiệu ở trang chi tiết, Bước 2 popup
+  // hướng dẫn, thanh nút cuối trang) dẫn vào đây. Để trống thì nút không hiện.
+  zaloReferralLink: "https://zalo.me/g/qojnuzrueomzhhy0wmsf",
+  // 3 ảnh mẫu bằng chứng cần gửi — hiển thị ở trang chi tiết + làm ảnh mẫu trong popup gửi bằng chứng
+  proofSampleImages: [
+    "images/tpbank-new1.jpg",
+    "images/tpbank-new2.jpg",
+    "images/tpbank-new3.jpg"
+  ],
+  // Dòng chữ vàng ở header trang chi tiết — khớp yêu cầu giao dịch của Bước 4
+  headerNote: "Phát sinh giao dịch 60k trở lên",
+  // Bước 1 y hệt APP TPBANK. Bước 2 không có referralCode (bỏ nút sao chép AT09) — hiện nút "XEM MÃ GIỚI THIỆU" thay thế.
+  steps: [
+    TPBANK_GUIDE.steps[0],
+    {
+      id: 2,
+      title: "ĐĂNG KÝ VÀ NHẬP MÃ GIỚI THIỆU",
+      content: "Chọn nút \"XEM MÃ GIỚI THIỆU\" để lấy mã giới thiệu, nhập mã rồi chụp lại ảnh màn hình.",
+      img: "images/tpbank-new1.jpg",
+      note: "NHẬP MÃ GIỚI THIỆU LẤY TỪ NHÓM ZALO (BẮT BUỘC)"
+    },
+    {
+      id: 3,
+      title: "ĐĂNG KÝ TÀI KHOẢN THÀNH CÔNG VÀ CHỤP ẢNH LẠI",
+      content: "Sau khi đăng ký tài khoản TPBANK thành công, chụp lại ảnh màn hình hoàn tất.",
+      img: "images/tpbank-new2.jpg"
+    },
+    {
+      id: 4,
+      title: "PHÁT SINH GIAO DỊCH 60K TRỞ LÊN",
+      content: "Sau khi đăng nhập APP TPBANK, bạn cần phát sinh giao dịch 60k trở lên theo hướng dẫn dưới đây:\n✅ Chuyển vào tài khoản TPBANK: 61k\n✅ Chuyển ra lại: 61k\n\nLàm đủ các bước trên rồi chụp lại bill chuyển tiền ra theo ảnh mẫu để gửi bằng chứng.",
+      note: "LƯU Ý: CHUYỂN RA CHO 1 NGƯỜI KHÁC (NGƯỜI CHUYỂN RA VÀ NGƯỜI NHẬN TIỀN TÊN KHÁC NHAU)",
+      img: "images/tpbank-new3.jpg"
     }
   ]
 }
@@ -551,6 +595,25 @@ export const jobsData: Record<string, any> = {
     steps: TPBANK_GUIDE.steps
   },
 
+  // Job VIP APP TPBANK (NEW) — giao diện giống hệt APP TPBANK (trang chi tiết gọn + popup hướng dẫn, VIP_FULL_GUIDE_IDS trong
+  // JobDetailView), gửi bằng chứng qua popup riêng TpbankNewProofModal. Khác APP TPBANK: không hiện mã AT09 / nút sao chép,
+  // mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" (dẫn vào nhóm Zalo zaloReferralLink) giống APP LPBANK PLUS. Link nhóm Zalo,
+  // ảnh mẫu, các bước và dòng ghi chú header nằm ở TPBANK_NEW_GUIDE đầu file (dùng chung với 'referral_tpbank_new').
+  'tpbank-new': {
+    title: "APP TPBANK (NEW)",
+    subtitle: "Mở tài khoản TPBANK",
+    reward: "90.000 xu",
+    color: "text-orange-500",
+    badge: "SIÊU HOT",
+    ageRequirement: 15,
+    zaloGuideUrl: "",
+    warning: "Người đăng ký phải từ 15 tuổi trở lên. Số điện thoại và CCCD/CMND chưa từng đăng ký TPBANK trước đó. Phải hoàn tất xác thực tài khoản mới được tính thưởng. Nghiêm cấm gian lận hoặc gửi bằng chứng giả.",
+    zaloReferralLink: TPBANK_NEW_GUIDE.zaloReferralLink,
+    proofSampleImages: TPBANK_NEW_GUIDE.proofSampleImages,
+    headerNote: TPBANK_NEW_GUIDE.headerNote,
+    steps: TPBANK_NEW_GUIDE.steps
+  },
+
   // Job giới thiệu bạn bè "Mời bạn bè đăng ký APP TPBANK" (TPBANK_REFERRAL_JOB_ID) — trang chi tiết giống hệt
   // APP TPBANK (dùng chung TPBANK_GUIDE), gửi bằng chứng qua TpbankReferralProofModal (thông tin người bạn).
   'referral_tpbank': {
@@ -569,12 +632,33 @@ export const jobsData: Record<string, any> = {
     steps: TPBANK_GUIDE.steps
   },
 
+  // Job giới thiệu bạn bè "Mời bạn bè đăng ký APP TPBANK (NEW)" (TPBANK_NEW_REFERRAL_JOB_ID) — trang chi tiết, popup hướng dẫn,
+  // thanh nút cuối trang giống hệt APP TPBANK (NEW) (dùng chung TPBANK_NEW_GUIDE), gửi bằng chứng qua
+  // TpbankNewReferralProofModal (thông tin người bạn).
+  'referral_tpbank_new': {
+    title: "Mời bạn bè đăng ký APP TPBANK (NEW)",
+    subtitle: "Mời bạn bè đăng ký APP TPBANK (NEW) nhận 100.000 xu/lượt",
+    reward: "100.000 xu",
+    rewardText: "100.000 xu",
+    color: "text-orange-500",
+    badge: "VIP 💎",
+    type: "friend_referral",
+    bankType: "tpbank",
+    referralProgram: "tpbank",
+    ageRequirement: 15,
+    zaloGuideUrl: "",
+    zaloReferralLink: TPBANK_NEW_GUIDE.zaloReferralLink,
+    proofSampleImages: TPBANK_NEW_GUIDE.proofSampleImages,
+    headerNote: TPBANK_NEW_GUIDE.headerNote,
+    steps: TPBANK_NEW_GUIDE.steps
+  },
+
   // Job VIP APP LPBANK PLUS — trang chi tiết dùng giao diện gọn + popup hướng dẫn giống APP TPBANK / APP ABBANK
   // (VIP_FULL_GUIDE_IDS trong JobDetailView); gửi bằng chứng vẫn qua popup riêng LpbankPlusProofModal.
   'lpbank-plus': {
     title: "APP LPBANK PLUS",
     subtitle: "Mở tài khoản LPBank Plus",
-    reward: "85.000 xu",
+    reward: "75.000 xu",
     color: "text-orange-500",
     badge: "SIÊU HOT",
     ageRequirement: 15,

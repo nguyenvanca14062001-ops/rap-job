@@ -31,13 +31,13 @@ const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
-  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'tpbank': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
+  'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'tpbank': '🏦', 'tpbank-new': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
   'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥', 'referral-friends': '👥',
 }
-const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'tpbank', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay', 'momo', 'referral_momo']
+const VIP_IDS = ['referral-friends', 'referral-hub', 'liobank', 'app-chung-khoan-3', 'app-chung-khoan-4', 'msb-bank', 'vpbank', 'app-chung-khoan-2', 'app-chung-khoan', 'abbank', 'tpbank', 'tpbank-new', 'lpbank-plus', 'vietcombank', 'mbv-bank', 'shopee-pay', 'momo', 'referral_momo']
 // 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_IDS/jobsData
 // (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
-const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank']
+const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank', 'referral_tpbank_new']
 
 // VIP JOBS + APP CONFIG + SUPPORT CONFIG — realtime từ Firestore
 const { vipJobs, ready: vipJobsReady } = useVipJobs()
@@ -92,9 +92,9 @@ const mergedJobs = computed((): Record<string, any> => {
       status:  override.status,
     }
   }
-  // Card parent 'referral-friends' tự ẩn nếu cả 5 job con (referral_momo/referral_abbank/referral_shopee_pay/referral_lpbank_plus/referral_tpbank) đều hidden
+  // Card parent 'referral-friends' tự ẩn nếu cả 6 job con (referral_momo/referral_abbank/referral_shopee_pay/referral_lpbank_plus/referral_tpbank/referral_tpbank_new) đều hidden
   if ('referral-friends' in result) {
-    const childIds = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank']
+    const childIds = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank', 'referral_tpbank_new']
     const allChildrenHidden = childIds.every(cid => vipJobs.value.find(v => v.id === cid)?.status === 'hidden')
     if (allChildrenHidden) delete result['referral-friends']
   }
@@ -118,14 +118,15 @@ const sortedVipJobIds = computed(() =>
 // (raw docs vip_jobs) và dùng lại đúng bộ ID/DEFAULTS như FriendReferralSelectModal.vue — KHÔNG qua
 // mergedJobs, vì mergedJobs (dùng cho sortedVipJobIds) cố tình ẩn các id này (đã gộp vào card parent
 // 'referral-friends' trước đây) nên sẽ luôn rỗng nếu lọc qua đó. Job nào đang status !== 'hidden' thì hiện.
-const REFERRAL_SUBJOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank'] as const
+const REFERRAL_SUBJOB_IDS = ['referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank', 'referral_tpbank_new'] as const
 type ReferralSubJobId = typeof REFERRAL_SUBJOB_IDS[number]
 const REFERRAL_SUBJOB_DEFAULTS: Record<ReferralSubJobId, { name: string; rewardText: string; icon: string }> = {
-  referral_momo: { name: 'Giới thiệu bạn bè đăng ký Ví MoMo', rewardText: '65.000 XU', icon: '💰' },
-  referral_abbank: { name: 'Mời bạn bè đăng ký APP ABBANK', rewardText: '85.000 XU', icon: '🏦' },
-  referral_shopee_pay: { name: 'Giới thiệu bạn bè đăng ký APP SHOPEE PAY', rewardText: '90.000 XU', icon: '🛍️' },
-  referral_lpbank_plus: { name: 'Mời bạn bè đăng ký APP LPBANK Plus', rewardText: '85.000 XU', icon: '🏦' },
-  referral_tpbank: { name: 'Mời bạn bè đăng ký APP TPBANK', rewardText: '85.000 XU', icon: '🏦' },
+  referral_momo: { name: 'Giới thiệu bạn bè đăng ký Ví MoMo', rewardText: '65.000 xu', icon: '💰' },
+  referral_abbank: { name: 'Mời bạn bè đăng ký APP ABBANK', rewardText: '85.000 xu', icon: '🏦' },
+  referral_shopee_pay: { name: 'Giới thiệu bạn bè đăng ký APP SHOPEE PAY', rewardText: '90.000 xu', icon: '🛍️' },
+  referral_lpbank_plus: { name: 'Mời bạn bè đăng ký APP LPBANK Plus', rewardText: '75.000 xu', icon: '🏦' },
+  referral_tpbank: { name: 'Mời bạn bè đăng ký APP TPBANK', rewardText: '85.000 xu', icon: '🏦' },
+  referral_tpbank_new: { name: 'Mời bạn bè đăng ký APP TPBANK (NEW)', rewardText: '100.000 xu', icon: '🏦' },
 }
 // Doc ID cũ (vip_jobs/referral-hub) từng dùng cho ABBANK — cầu nối tạm giống FriendReferralSelectModal.vue.
 const REFERRAL_SUBJOB_ALIASES: Record<string, string[]> = { referral_abbank: ['referral-hub'] }
@@ -619,6 +620,9 @@ const handleReferralSubJob = (id: string) => {
   } else if (id === 'referral_tpbank') {
     // Trang chi tiết giống APP TPBANK (JobDetailView), không dùng hub modal riêng
     router.push('/job/referral_tpbank')
+  } else if (id === 'referral_tpbank_new') {
+    // Trang chi tiết giống APP TPBANK (NEW) (JobDetailView), không dùng hub modal riêng
+    router.push('/job/referral_tpbank_new')
   }
 }
 
@@ -1036,6 +1040,7 @@ watch(activePopup, (val) => {
       @selectShopeePay="showFriendReferralSelect = false; showShopeePayReferralHub = true"
       @selectLpbankPlus="showFriendReferralSelect = false; showLpbankPlusReferralHub = true"
       @selectTpbank="showFriendReferralSelect = false; router.push('/job/referral_tpbank')"
+      @selectTpbankNew="showFriendReferralSelect = false; router.push('/job/referral_tpbank_new')"
     />
 
     <!-- BOTTOM SHEET BACKDROP -->
@@ -1218,7 +1223,7 @@ watch(activePopup, (val) => {
                   <p class="text-[12px] font-bold mt-0.5 truncate"
                      :class="(mergedJobs[id as string]?.paused || mergedJobs[id as string]?.soldout) ? 'text-slate-500' : 'text-amber-400'">
                     <template v-if="mergedJobs[id as string]?.rewardText">{{ mergedJobs[id as string]?.rewardText }}</template>
-                    <template v-else>{{ String(mergedJobs[id as string]?.reward || '0').replace(/\D/g,'') }} xu</template>
+                    <template v-else>{{ fmtXu(Number(String(mergedJobs[id as string]?.reward || '0').replace(/\D/g,''))) }} xu</template>
                     <span v-if="mergedJobs[id as string]?.ageRequirement" class="text-slate-500 font-medium"> · từ {{ mergedJobs[id as string]?.ageRequirement }} tuổi</span>
                   </p>
                 </div>

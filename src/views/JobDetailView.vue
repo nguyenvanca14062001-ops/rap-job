@@ -19,8 +19,11 @@ import ShopeePayGuideModal from '@/components/ShopeePayGuideModal.vue'
 import ShopeePayProofModal from '@/components/ShopeePayProofModal.vue'
 import ShopeePayHistoryModal from '@/components/ShopeePayHistoryModal.vue'
 import TpbankProofModal from '@/components/TpbankProofModal.vue'
+import TpbankNewProofModal from '@/components/TpbankNewProofModal.vue'
 import TpbankReferralProofModal from '@/components/TpbankReferralProofModal.vue'
+import TpbankNewReferralProofModal from '@/components/TpbankNewReferralProofModal.vue'
 import { TPBANK_REFERRAL_JOB_ID } from '@/utils/referralTpbank'
+import { TPBANK_NEW_REFERRAL_JOB_ID } from '@/utils/referralTpbankNew'
 
 const props = defineProps<{ myReports?: any[] }>()
 
@@ -162,7 +165,9 @@ const isVipCompactJob = VIP_COMPACT_IDS.includes(jobId)
 // popup hướng dẫn đầy đủ (port từ trang hướng dẫn của site MMO PRO: lưu ý quan trọng, mẹo kiếm tiền, các bước có ảnh lớn).
 // Nút nộp bằng chứng nổi/cuối trang giữ y hệt giao diện VIP gọn ở trên.
 // LPBANK PLUS: nộp bằng chứng vẫn qua popup riêng LpbankPlusProofModal (isPopupJob), mã giới thiệu lấy trong nhóm Zalo.
-const VIP_FULL_GUIDE_IDS = ['tpbank', TPBANK_REFERRAL_JOB_ID, 'abbank', 'lpbank-plus']
+// APP TPBANK (NEW) + Mời bạn bè APP TPBANK (NEW): giống APP TPBANK, nhưng mã giới thiệu cũng lấy trong nhóm Zalo
+// (zaloReferralLink) như LPBANK PLUS.
+const VIP_FULL_GUIDE_IDS = ['tpbank', 'tpbank-new', TPBANK_REFERRAL_JOB_ID, TPBANK_NEW_REFERRAL_JOB_ID, 'abbank', 'lpbank-plus']
 const isVipFullGuideJob = VIP_FULL_GUIDE_IDS.includes(jobId)
 const showFullGuidePopup = ref(false)
 
@@ -174,6 +179,14 @@ const showTpSuccess = ref(false)
 const openTpProof = () => { showFullGuidePopup.value = false; showTpProof.value = true }
 const handleTpSubmitted = () => { showTpProof.value = false; showTpSuccess.value = true }
 
+// Job APP TPBANK (NEW) — cùng giao diện với APP TPBANK, gửi bằng chứng bằng TpbankNewProofModal (clone TpbankProofModal).
+// Mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" (zaloReferralLink) thay cho nút sao chép mã AT09.
+const isTpbankNew = jobId === 'tpbank-new'
+const showTpNewProof = ref(false)
+const showTpNewSuccess = ref(false)
+const openTpNewProof = () => { showFullGuidePopup.value = false; showTpNewProof.value = true }
+const handleTpNewSubmitted = () => { showTpNewProof.value = false; showTpNewSuccess.value = true }
+
 // Job "Mời bạn bè đăng ký APP TPBANK" — cùng giao diện với APP TPBANK, gửi bằng chứng bằng TpbankReferralProofModal
 // (tên + SĐT + tháng/năm sinh người bạn được giới thiệu).
 const isTpbankReferral = jobId === TPBANK_REFERRAL_JOB_ID
@@ -182,8 +195,20 @@ const showTpRefSuccess = ref(false)
 const openTpRefProof = () => { showFullGuidePopup.value = false; showTpRefProof.value = true }
 const handleTpRefSubmitted = () => { showTpRefProof.value = false; showTpRefSuccess.value = true }
 
+// Job "Mời bạn bè đăng ký APP TPBANK (NEW)" — cùng giao diện với APP TPBANK (NEW), gửi bằng chứng bằng
+// TpbankNewReferralProofModal (clone TpbankReferralProofModal: tên + SĐT + tháng/năm sinh người bạn được giới thiệu).
+const isTpbankNewReferral = jobId === TPBANK_NEW_REFERRAL_JOB_ID
+const showTpNewRefProof = ref(false)
+const showTpNewRefSuccess = ref(false)
+const openTpNewRefProof = () => { showFullGuidePopup.value = false; showTpNewRefProof.value = true }
+const handleTpNewRefSubmitted = () => { showTpNewRefProof.value = false; showTpNewRefSuccess.value = true }
+
+// APP TPBANK (NEW) và Mời bạn bè APP TPBANK (NEW) dùng chung giao diện riêng: nút "XEM MÃ GIỚI THIỆU", ẩn khung
+// "Lưu ý quan trọng" trong popup hướng dẫn, thanh 3 nút xếp tam giác cuối trang (mobile).
+const isTpbankNewLayout = isTpbankNew || isTpbankNewReferral
+
 const VIP_JOB_ICON: Record<string, string> = {
-  'abbank': '🏦', 'tpbank': '🏦', [TPBANK_REFERRAL_JOB_ID]: '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
+  'abbank': '🏦', 'tpbank': '🏦', 'tpbank-new': '🏦', [TPBANK_REFERRAL_JOB_ID]: '🏦', [TPBANK_NEW_REFERRAL_JOB_ID]: '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
 }
 const vipJobIcon = VIP_JOB_ICON[jobId] || '💎'
 
@@ -199,7 +224,9 @@ const vipQuickSummary = ['Chọn "Hướng dẫn" để xem chi tiết các bư�
 const VIP_SUBMIT_CHECKLIST: Record<string, string[]> = {
   'abbank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
   'tpbank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
+  'tpbank-new': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
   [TPBANK_REFERRAL_JOB_ID]: ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
+  [TPBANK_NEW_REFERRAL_JOB_ID]: ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh giao dịch/hoàn tất'],
   'lpbank-plus': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh chuyển tiền vào/ra'],
   'vietcombank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh chuyển tiền vào/ra'],
   'mbv-bank': ['Ảnh nhập mã giới thiệu', 'Ảnh đăng ký thành công', 'Ảnh bill chuyển tiền ra'],
@@ -212,9 +239,9 @@ const vipSubmitChecklist = computed(() => VIP_SUBMIT_CHECKLIST[jobId] || [])
 const ZALO_IN_STEP2_IDS = ['vietcombank', 'mbv-bank']
 const zaloInStep2 = ZALO_IN_STEP2_IDS.includes(jobId)
 
-// Chữ trên nút vào nhóm Zalo — riêng LPBANK PLUS (nút "XEM MÃ GIỚI THIỆU" ở trang chi tiết + Bước 2 popup hướng dẫn) dùng chữ khác,
-// các job còn lại giữ nguyên
-const zaloCtaLabel = isLpbankPlus ? 'XEM MÃ GIỚI THIỆU' : 'VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN'
+// Chữ trên nút vào nhóm Zalo — riêng LPBANK PLUS / APP TPBANK (NEW) + mời bạn bè (nút "XEM MÃ GIỚI THIỆU" ở trang chi tiết
+// + Bước 2 popup hướng dẫn) dùng chữ khác, các job còn lại giữ nguyên
+const zaloCtaLabel = (isLpbankPlus || isTpbankNewLayout) ? 'XEM MÃ GIỚI THIỆU' : 'VÀO NHÓM ZALO LẤY MÃ / XEM HƯỚNG DẪN'
 
 // Nguồn bước hướng dẫn cho accordion: job popup trang gọn (vietcombank/mbv-bank/shopee-pay) đã có sẵn quickSteps rút gọn,
 // job không có quickSteps dùng steps gốc — không tạo dữ liệu bước mới.
@@ -241,14 +268,16 @@ const showVipToast = (title: string) => {
   Swal.fire({ title, icon: 'info', toast: true, position: 'top', timer: 2200, showConfirmButton: false })
 }
 
-// Nút "NỘP BẰNG CHỨNG NGAY" — job dùng popup riêng (lpbank-plus/vietcombank/shopee-pay/tpbank) mở đúng Proof Modal
+// Nút "NỘP BẰNG CHỨNG NGAY" — job dùng popup riêng (lpbank-plus/vietcombank/shopee-pay/tpbank/tpbank-new/referral_tpbank*) mở đúng Proof Modal
 // sẵn có của job đó; job còn lại (abbank) điều hướng sang SubmitReportView với đúng jobId để form tự chọn job.
 const handleVipCtaClick = () => {
   if (currentJob.value.paused) { showVipToast('Công việc này đang tạm dừng, vui lòng quay lại sau.'); return }
   if (currentJob.value.soldout) { showVipToast('Công việc đã hết slot, vui lòng quay lại sau.'); return }
   if (isPopupJob) { openPopupProof(); return }
   if (isTpbank) { openTpProof(); return }
+  if (isTpbankNew) { openTpNewProof(); return }
   if (isTpbankReferral) { openTpRefProof(); return }
+  if (isTpbankNewReferral) { openTpNewRefProof(); return }
   router.push(`/submit-report?job=${jobId}`)
 }
 
@@ -641,7 +670,7 @@ const handleCopy = (text: string) => {
       </template>
 
       <!-- ============================================================ -->
-      <!-- GIAO DIỆN GỌN CHO JOB VIP: APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK / APP LPBANK PLUS — header + 2 nút (Hướng dẫn / Nộp bằng chứng) + ảnh bằng chứng cần gửi. -->
+      <!-- GIAO DIỆN GỌN CHO JOB VIP: APP TPBANK / APP TPBANK (NEW) / MỜI BẠN BÈ TPBANK (+ NEW) / APP ABBANK / APP LPBANK PLUS — header + 2 nút (Hướng dẫn / Nộp bằng chứng) + ảnh bằng chứng cần gửi. -->
       <!-- Bấm "Hướng dẫn" mở popup hướng dẫn đầy đủ (cuối file). Nút nộp bằng chứng giữ y hệt giao diện VIP gọn. -->
       <!-- ============================================================ -->
       <template v-if="isVipFullGuideJob">
@@ -657,7 +686,7 @@ const handleCopy = (text: string) => {
                 <span v-if="currentJob.ageRequirement" class="text-slate-400 font-semibold"> · từ {{ currentJob.ageRequirement }} tuổi</span>
               </p>
               <p class="text-slate-400 text-[11px] font-semibold mt-0.5">Cần gửi: {{ vipRequiredImageCount }} ảnh bằng chứng</p>
-              <!-- LPBANK PLUS (có zaloReferralLink): mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" nên không hiện mã trực tiếp -->
+              <!-- LPBANK PLUS / APP TPBANK (NEW) + mời bạn bè (có zaloReferralLink): mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" nên không hiện mã trực tiếp -->
               <p v-if="currentJob.zaloReferralLink" class="text-yellow-400 text-[11px] font-semibold mt-0.5">Nhập mã giới thiệu: <span class="font-black">chọn "{{ zaloCtaLabel }}" để lấy</span></p>
               <p v-else-if="vipReferralCode" class="text-yellow-400 text-[11px] font-semibold mt-0.5">Nhập mã giới thiệu: <span class="font-black">{{ vipReferralCode }}</span></p>
               <p v-if="currentJob.headerNote" class="text-yellow-400 text-[11px] font-semibold mt-0.5">{{ currentJob.headerNote }}</p>
@@ -676,7 +705,7 @@ const handleCopy = (text: string) => {
             </button>
           </div>
 
-          <!-- LPBANK PLUS: hàng mã giới thiệu — nút "XEM MÃ GIỚI THIỆU" dẫn vào nhóm Zalo lấy mã -->
+          <!-- LPBANK PLUS / APP TPBANK (NEW) + mời bạn bè: hàng mã giới thiệu — nút "XEM MÃ GIỚI THIỆU" dẫn vào nhóm Zalo lấy mã -->
           <div v-if="currentJob.zaloReferralLink" class="bg-[#111726]/60 border border-amber-500/20 rounded-xl px-3 py-1.5 flex items-center gap-3">
             <p class="flex-1 min-w-0 text-slate-400 text-[11px] font-semibold">Mã giới thiệu: <span class="text-white font-black">chọn</span></p>
             <a :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
@@ -728,9 +757,32 @@ const handleCopy = (text: string) => {
           </div>
         </div>
 
-        <!-- 2 nút sticky trên mobile, luôn nổi trên bottom nav: Xem hướng dẫn / Nộp bằng chứng -->
+        <!-- Nút sticky trên mobile, luôn nổi trên bottom nav -->
         <Teleport to="body">
-          <div class="fixed bottom-[90px] left-0 right-0 z-[3500] px-4 lg:hidden grid grid-cols-2 gap-2">
+          <!-- APP TPBANK (NEW) + mời bạn bè: 3 nút xếp hình tam giác — Xem mã giới thiệu (xanh Zalo, giống hàng mã giới thiệu) ở giữa phía trên,
+               bên dưới là Xem hướng dẫn (nút phụ, xám) + Nộp bằng chứng (nút chính, vàng). Khung ngoài pointer-events-none
+               để 2 góc trống cạnh nút trên không chặn bấm nội dung phía sau. -->
+          <div v-if="isTpbankNewLayout && currentJob.zaloReferralLink" class="fixed bottom-[90px] left-0 right-0 z-[3500] px-4 lg:hidden flex flex-col items-center gap-2 pointer-events-none">
+            <a :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
+               class="pointer-events-auto w-2/3 flex items-center justify-center px-2 bg-[#0068FF] active:bg-blue-500 text-white py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-wide text-center leading-tight shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors">
+              💬 XEM MÃ GIỚI THIỆU
+            </a>
+            <div class="pointer-events-auto w-full grid grid-cols-2 gap-2">
+              <button
+                class="flex items-center justify-center px-2 bg-slate-700 active:bg-slate-600 border border-white/10 text-white py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-wide text-center leading-tight shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors"
+                @click="showFullGuidePopup = true">
+                📖 XEM HƯỚNG DẪN
+              </button>
+              <button
+                class="flex items-center justify-center px-2 bg-amber-500 active:bg-amber-400 disabled:bg-slate-700 disabled:text-slate-400 text-[#090e17] py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-wide text-center leading-tight shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors"
+                :disabled="currentJob.paused || currentJob.soldout"
+                @click="handleVipCtaClick">
+                {{ currentJob.paused ? 'TẠM DỪNG' : currentJob.soldout ? 'HẾT SLOT' : '📥 NỘP BẰNG CHỨNG' }}
+              </button>
+            </div>
+          </div>
+          <!-- Các job còn lại: 2 nút Xem hướng dẫn / Nộp bằng chứng -->
+          <div v-else class="fixed bottom-[90px] left-0 right-0 z-[3500] px-4 lg:hidden grid grid-cols-2 gap-2">
             <button
               class="flex items-center justify-center px-2 bg-blue-600 active:bg-blue-500 text-white py-4 rounded-2xl text-[12px] font-black uppercase tracking-wide text-center leading-tight shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-colors"
               @click="showFullGuidePopup = true">
@@ -1055,7 +1107,7 @@ const handleCopy = (text: string) => {
       <div class="mb-20" v-else-if="isPopupJob || isVipCompactJob || isVipFullGuideJob"></div>
     </div>
 
-    <!-- POPUP HƯỚNG DẪN cho job VIP trang gọn (APP TPBANK / MỜI BẠN BÈ TPBANK / APP ABBANK / APP LPBANK PLUS) — mở từ nút "Hướng dẫn": lưu ý quan trọng, mẹo kiếm tiền,
+    <!-- POPUP HƯỚNG DẪN cho job VIP trang gọn (APP TPBANK / APP TPBANK (NEW) / MỜI BẠN BÈ TPBANK (+ NEW) / APP ABBANK / APP LPBANK PLUS) — mở từ nút "Hướng dẫn": lưu ý quan trọng, mẹo kiếm tiền,
          các bước có ảnh lớn (giống trang hướng dẫn MMO PRO). Cuối popup có nút gửi bằng chứng. -->
     <template v-if="isVipFullGuideJob">
       <Transition name="fade">
@@ -1078,7 +1130,8 @@ const handleCopy = (text: string) => {
                 </a>
               </div>
 
-              <div class="bg-gradient-to-r from-red-950/90 to-orange-950/70 border-2 border-orange-500/60 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 flex items-start gap-3 shadow-[0_0_24px_rgba(249,115,22,0.25)]">
+              <!-- Khung "Lưu ý quan trọng" — ẩn riêng ở APP TPBANK (NEW) + mời bạn bè theo yêu cầu, các job khác giữ nguyên -->
+              <div v-if="!isTpbankNewLayout" class="bg-gradient-to-r from-red-950/90 to-orange-950/70 border-2 border-orange-500/60 rounded-2xl px-4 md:px-5 py-3.5 md:py-4 flex items-start gap-3 shadow-[0_0_24px_rgba(249,115,22,0.25)]">
                 <span class="text-2xl md:text-3xl shrink-0 leading-none drop-shadow-[0_0_10px_rgba(249,115,22,0.7)]">⚠️</span>
                 <div class="text-left">
                   <h4 class="text-orange-400 font-black uppercase text-[13px] md:text-sm tracking-wider mb-1 drop-shadow-md">
@@ -1129,7 +1182,7 @@ const handleCopy = (text: string) => {
                     </button>
                   </div>
 
-                  <!-- LPBANK PLUS: mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" (nhóm Zalo) ở Bước 2, thay cho nút sao chép mã -->
+                  <!-- LPBANK PLUS / APP TPBANK (NEW) + mời bạn bè: mã giới thiệu lấy qua nút "XEM MÃ GIỚI THIỆU" (nhóm Zalo) ở Bước 2, thay cho nút sao chép mã -->
                   <div class="mb-5" v-if="step.id === 2 && currentJob.zaloReferralLink">
                     <a :href="currentJob.zaloGuideUrl || currentJob.zaloReferralLink" target="_blank"
                        class="w-full bg-[#0068FF] hover:bg-blue-500 text-white px-4 py-3 rounded-xl text-[11px] font-black uppercase transition-all active:scale-95 shadow-lg flex items-center justify-center gap-2">
@@ -1213,6 +1266,33 @@ const handleCopy = (text: string) => {
       </Transition>
     </template>
 
+    <template v-if="isTpbankNew">
+      <TpbankNewProofModal :show="showTpNewProof" @close="showTpNewProof = false" @submitted="handleTpNewSubmitted" />
+
+      <Transition name="fade">
+        <div v-if="showTpNewSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showTpNewSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng APP TPBANK (NEW) thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showTpNewSuccess = false; showJobHistory = true" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showTpNewSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
     <template v-if="isTpbankReferral">
       <TpbankReferralProofModal :show="showTpRefProof" @close="showTpRefProof = false" @submitted="handleTpRefSubmitted" />
 
@@ -1232,6 +1312,33 @@ const handleCopy = (text: string) => {
                 XEM LỊCH SỬ NỘP ĐƠN
               </button>
               <button @click="showTpRefSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
+                ĐÓNG
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </template>
+
+    <template v-if="isTpbankNewReferral">
+      <TpbankNewReferralProofModal :show="showTpNewRefProof" @close="showTpNewRefProof = false" @submitted="handleTpNewRefSubmitted" />
+
+      <Transition name="fade">
+        <div v-if="showTpNewRefSuccess" class="fixed inset-0 z-[5600] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-black/90 backdrop-blur-md" @click="showTpNewRefSuccess = false"></div>
+          <div class="relative bg-[#111726] border border-emerald-500/30 w-full max-w-sm rounded-[36px] p-7 text-center shadow-2xl font-black italic uppercase">
+            <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/30">
+              <span class="text-3xl">✅</span>
+            </div>
+            <h2 class="text-lg text-white tracking-tight mb-2">GỬI BẰNG CHỨNG THÀNH CÔNG</h2>
+            <p class="text-slate-400 text-[10px] normal-case font-bold leading-relaxed mb-6">
+              Đã gửi bằng chứng giới thiệu bạn bè đăng ký APP TPBANK (NEW) thành công. Vui lòng chờ admin xét duyệt.
+            </p>
+            <div class="space-y-2.5">
+              <button @click="showTpNewRefSuccess = false; showJobHistory = true" class="w-full bg-amber-500/20 border border-amber-500/30 text-amber-400 py-3 rounded-2xl text-[11px] tracking-widest active:scale-95 transition-all">
+                XEM LỊCH SỬ NỘP ĐƠN
+              </button>
+              <button @click="showTpNewRefSuccess = false" class="w-full text-slate-500 py-2 text-[10px] tracking-widest hover:text-white transition-colors">
                 ĐÓNG
               </button>
             </div>

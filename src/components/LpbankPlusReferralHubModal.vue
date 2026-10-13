@@ -108,7 +108,7 @@ const statusClass = (rp: any) => {
         <h2 class="text-xl md:text-2xl text-white tracking-tighter leading-tight mb-2">GIỚI THIỆU BẠN BÈ<br/><span class="text-amber-400">ĐĂNG KÝ APP LPBANK PLUS</span></h2>
         <div class="bg-[#052e1f] border border-[#005c3c] rounded-full px-5 py-2 w-max mx-auto flex items-center gap-2 shadow-inner mb-6">
           <span class="text-[#f59e0b] text-lg">⚡</span>
-          <span class="text-[#00df89] text-[12px] md:text-sm tracking-tighter">THƯỞNG 85.000 XU / LƯỢT HỢP LỆ</span>
+          <span class="text-[#00df89] text-[12px] md:text-sm tracking-tighter">THƯỞNG 75.000 XU / LƯỢT HỢP LỆ</span>
         </div>
 
         <div class="space-y-2">

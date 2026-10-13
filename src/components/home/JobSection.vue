@@ -17,7 +17,7 @@ const emit = defineEmits(['receiveJob', 'contactSupport', 'routerPush']);
 const VIP_JOBS = VIP_JOB_IDS;
 // 2 job "giới thiệu bạn bè" cũ đã gộp vào card parent 'referral-friends' — vẫn giữ nguyên trong VIP_JOBS/jobsData
 // (report/logic không đổi), chỉ ẩn khỏi lưới card VIP để tránh hiện trùng với card parent.
-const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank'];
+const CONSOLIDATED_INTO_FRIEND_REFERRAL_HUB = ['referral-hub', 'referral_momo', 'referral_abbank', 'referral_shopee_pay', 'referral_lpbank_plus', 'referral_tpbank', 'referral_tpbank_new'];
 
 // Lọc hidden + job đã gộp + sắp xếp theo order từ Firestore (nếu có); fallback về vị trí gốc trong VIP_JOBS
 const sortedVipJobIds = computed(() =>
@@ -65,6 +65,7 @@ const getJobIcon = (id: string) => {
     'app-chung-khoan-4': { t: '📈', c: 'text-white' },
     'abbank': { t: 'ABB', c: 'text-white' },
     'tpbank': { t: 'TPB', c: 'text-white' },
+    'tpbank-new': { t: 'TPB', c: 'text-white' },
     'lpbank-plus': { t: 'LPB', c: 'text-white' },
     'vietcombank': { t: 'VCB', c: 'text-white' },
     'mbv-bank': { t: 'MBV', c: 'text-white' },
@@ -128,6 +129,7 @@ const getShortDesc = (id: string) => {
     'msb-bank': 'Nhận quà tặng khi mở thẻ MSB',
     'abbank': 'Mở tài khoản ABBANK',
     'tpbank': 'Mở tài khoản TPBANK',
+    'tpbank-new': 'Mở tài khoản TPBANK',
     'lpbank-plus': 'Đăng ký APP LPBANK PLUS nhận thưởng',
     'vietcombank': 'Đăng ký VIETCOMBANK nhận thưởng',
     'mbv-bank': 'Đăng ký MBV BANK nhận thưởng',
@@ -529,7 +531,7 @@ function getAgeBadgeClass(age: number): string {
                 </div>
                 <div v-else class="flex items-center gap-1.5">
                   <p class="font-black text-2xl md:text-4xl tracking-tighter italic leading-none text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-500">
-                    {{ formatReward(jobList[id as string]?.reward).toLocaleString() }}
+                    {{ Number(formatReward(jobList[id as string]?.reward)).toLocaleString('vi-VN') }}
                   </p>
                   <div class="flex flex-col items-start translate-y-[-2px]">
                     <svg class="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)]" viewBox="0 0 24 24">

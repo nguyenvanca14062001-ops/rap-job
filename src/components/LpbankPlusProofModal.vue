@@ -189,7 +189,7 @@ const submitProof = async () => {
       isVip: true,
       bankType: 'lpbank',
 
-      reward: 85000,
+      reward: 75000,
       actualReward: 0,
 
       proofImages,
