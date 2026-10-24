@@ -1143,7 +1143,21 @@ const handleCopy = (text: string) => {
                 </div>
               </div>
 
-              <div class="bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden">
+              <!-- ABBANK: thay khung "Mẹo kiếm tiền" bằng quy định chỉ nhận đơn chính chủ, không nhờ người khác đăng ký -->
+              <div v-if="jobId === 'abbank'" class="bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
+                <div class="text-2xl md:text-3xl animate-pulse drop-shadow-[0_0_15px_rgba(239,68,68,0.6)] mt-1">🚫</div>
+                <div class="text-left">
+                  <h4 class="text-yellow-400 font-black italic uppercase text-[12px] md:text-sm tracking-widest mb-2 drop-shadow-md">
+                    RIÊNG ĐỐI VỚI ABBANK:
+                  </h4>
+                  <ul class="space-y-1.5 text-white text-[12px] md:text-[14px] font-bold leading-relaxed normal-case">
+                    <li class="flex items-start gap-2"><span class="text-yellow-400 shrink-0">•</span><span><span class="text-red-400 font-black uppercase">Không được</span> nhờ người khác đăng ký.</span></li>
+                    <li class="flex items-start gap-2"><span class="text-yellow-400 shrink-0">•</span><span>Chỉ nhận đơn <span class="text-yellow-400 font-black uppercase">chính chủ</span>.</span></li>
+                  </ul>
+                </div>
+              </div>
+              <div v-else class="bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
                 <div class="text-2xl md:text-3xl animate-bounce drop-shadow-[0_0_15px_rgba(234,179,8,0.8)] mt-1">🪝</div>
                 <div class="text-left">
@@ -1152,7 +1166,6 @@ const handleCopy = (text: string) => {
                   </h4>
                   <p class="text-white text-[11px] md:text-[13px] font-medium leading-relaxed normal-case">
                     Nếu bạn đã đăng ký APP này rồi, có thể <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">giới thiệu bạn bè / người thân đăng ký</span> và chụp lại ảnh bằng chứng gửi lên hệ thống, bạn <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">vẫn được nhận hoa hồng</span> bình thường nhé! 🚀
-                    <template v-if="jobId === 'abbank'"> Chỉ giới thiệu được <span class="text-yellow-400 font-black italic text-[12px] md:text-[14px]">1 lần duy nhất</span>.</template>
                   </p>
                 </div>
               </div>
