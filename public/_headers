@@ -1,0 +1,13 @@
+# Header cache cho Cloudflare Pages (tương đương phần "headers" trong vercel.json).
+
+# index.html không có hash trong tên → không cho trình duyệt lưu, mỗi lần mở/F5 đều tải bản mới nhất.
+/
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate, max-age=0
+
+# JS/CSS do Vite build ra đều có hash trong tên (index-[hash].js), đổi nội dung là đổi tên → cache 1 năm.
+# Không đặt file vào public/assets/: file ở đó không có hash nhưng vẫn bị cache 1 năm.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
