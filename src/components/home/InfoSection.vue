@@ -99,8 +99,8 @@ const trustBadges = [
         </div>
       </section>
 
-      <!-- SECTION 3: JOB TYPES -->
-      <section class="mb-20">
+      <!-- SECTION 3: JOB TYPES — ẩn với khách trên mobile (trang chủ khách đã có danh sách công việc thật ở landing) -->
+      <section class="mb-20" :class="props.isLoggedIn ? '' : 'hidden lg:block'">
         <!-- Header -->
         <div class="flex items-center gap-4 mb-10">
           <div class="w-2.5 h-10 bg-amber-500 rounded-full shadow-[0_0_20px_rgba(245,158,11,0.5)]"></div>

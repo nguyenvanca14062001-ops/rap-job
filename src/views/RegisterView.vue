@@ -204,18 +204,19 @@ const handleRegister = async () => {
 <template>
   <div class="min-h-screen bg-[#0e0a09] flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
 
-    <!-- Background glows -->
-    <div class="absolute -top-32 -left-32 w-[500px] h-[500px] bg-red-900/10 rounded-full blur-[120px] pointer-events-none"></div>
-    <div class="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-amber-900/8 rounded-full blur-[100px] pointer-events-none"></div>
+    <!-- Background glows — dùng radial-gradient (cùng tâm/màu/độ lan) thay cho filter: blur() cỡ lớn:
+         WebKit trên iPhone (Safari/Chrome iOS) có thể vẽ lớp blur lớn thành ô đen che ô Họ tên/Tên đăng nhập -->
+    <div class="absolute -top-[278px] -left-[278px] w-[800px] h-[800px] pointer-events-none bg-[radial-gradient(closest-side,rgba(127,29,29,0.09),rgba(127,29,29,0.04)_55%,transparent)]"></div>
+    <div class="absolute -bottom-[268px] -right-[268px] w-[680px] h-[680px] pointer-events-none bg-[radial-gradient(closest-side,rgba(120,53,15,0.07),rgba(120,53,15,0.03)_55%,transparent)]"></div>
 
     <div class="max-w-5xl w-full flex flex-col lg:flex-row overflow-hidden rounded-[32px] border border-slate-800/60 shadow-[0_30px_80px_rgba(0,0,0,0.7)] relative z-10">
 
       <!-- ===== LEFT PANEL ===== -->
       <div class="w-full lg:w-[42%] bg-gradient-to-br from-[#1c0e0b] to-[#120a08] p-8 md:p-12 flex flex-col justify-between relative overflow-hidden text-left order-last lg:order-first border-r border-red-900/20">
 
-        <!-- Decorative glows -->
-        <div class="absolute -top-20 -left-20 w-64 h-64 bg-red-800/15 rounded-full blur-[80px] pointer-events-none"></div>
-        <div class="absolute bottom-10 right-0 w-48 h-48 bg-amber-800/10 rounded-full blur-[70px] pointer-events-none"></div>
+        <!-- Decorative glows — radial-gradient thay cho filter: blur() (cùng lý do WebKit iOS như glow nền ở trên) -->
+        <div class="absolute -top-[240px] -left-[240px] w-[576px] h-[576px] pointer-events-none bg-[radial-gradient(closest-side,rgba(153,27,27,0.11),rgba(153,27,27,0.05)_55%,transparent)]"></div>
+        <div class="absolute -bottom-[100px] -right-[140px] w-[472px] h-[472px] pointer-events-none bg-[radial-gradient(closest-side,rgba(146,64,14,0.06),rgba(146,64,14,0.03)_55%,transparent)]"></div>
 
         <div class="relative z-10">
           <!-- Logo -->
@@ -228,7 +229,8 @@ const handleRegister = async () => {
 
           <!-- Heading -->
           <p class="text-red-500/70 font-black tracking-[3px] text-[9px] mb-3 uppercase">Đã có tài khoản?</p>
-          <h2 class="text-2xl md:text-4xl font-black tracking-tighter mb-4 leading-tight uppercase italic text-white drop-shadow-md">
+          <!-- Không dùng filter (drop-shadow) quanh chữ gradient bg-clip-text — Safari iOS có lỗi vẽ tổ hợp này -->
+          <h2 class="text-2xl md:text-4xl font-black tracking-tighter mb-4 leading-tight uppercase italic text-white">
             Kiếm tiền<br/>online cùng<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-rose-400">RẠP JOB</span>
           </h2>
           <p class="text-slate-500 text-sm font-medium leading-relaxed mb-8 hidden md:block">

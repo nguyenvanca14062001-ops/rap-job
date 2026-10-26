@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { auth, db, storage } from '@/firebase'
 import { onAuthStateChanged } from "firebase/auth"
@@ -149,6 +149,20 @@ const isFanpageTask = computed(() =>
 
 const isBankAccountJob = computed(() => NO_PREFILL_BANK_JOB_IDS.includes(selectedJob.value.id))
 
+// Job VIP dùng chung form này (bank/chứng khoán) vẫn giữ năm/tháng sinh để Admin đối chiếu độ tuổi; job thường đã bỏ.
+// Khi danh sách job chưa tải xong thì dựa vào ?job= để không nháy giao diện.
+const isVipJob = computed(() => VIP_JOB_IDS_SUBMIT.includes(selectedJob.value.id || String(route.query.job || '')))
+
+// Bố cục gọn chỉ dành cho job thường trên mobile (< 1024px — cùng mốc ẩn/hiện thanh điều hướng dưới);
+// job VIP dùng chung form và giao diện desktop giữ nguyên như cũ.
+const isMobileViewport = ref(window.innerWidth < 1024)
+const updateViewport = () => { isMobileViewport.value = window.innerWidth < 1024 }
+onMounted(() => window.addEventListener('resize', updateViewport))
+onUnmounted(() => window.removeEventListener('resize', updateViewport))
+const compactUi = computed(() => !isVipJob.value && isMobileViewport.value)
+const labelClass = computed(() => compactUi.value ? 'block text-[12px] tracking-wider ml-0.5' : 'text-[11px] tracking-widest ml-1')
+const fieldClass = computed(() => compactUi.value ? 'h-11 rounded-xl px-3.5 text-[16px]' : 'rounded-[20px] py-4 px-5 text-[15px]')
+
 const fullNameLabel = computed(() => isBankAccountJob.value ? 'HỌ TÊN CHỦ TÀI KHOẢN ABBANK *' : 'HỌ VÀ TÊN XÁC THỰC')
 const fullNamePlaceholder = computed(() => isBankAccountJob.value ? 'Nhập họ tên đúng trên tài khoản ABBANK' : 'Nhập họ tên chính xác của bạn...')
 const phoneLabel = computed(() => {
@@ -252,7 +266,9 @@ const submitReport = async () => {
     return
   }
 
-  if (!fullName.value || !phoneNumber.value || !birthYear.value || !birthMonth.value || images.value.length === 0) {
+  // Năm/tháng sinh chỉ còn bắt buộc với job VIP dùng chung form (Admin đối chiếu độ tuổi) — form job thường đã bỏ 2 trường này
+  const needsBirthInfo = isVipJob.value
+  if (!fullName.value || !phoneNumber.value || (needsBirthInfo && (!birthYear.value || !birthMonth.value)) || images.value.length === 0) {
     alert('⚠️ VUI LÒNG NHẬP ĐỦ THÔNG TIN VÀ TẢI ẢNH XÁC THỰC!')
     return
   }
@@ -263,7 +279,7 @@ const submitReport = async () => {
     return
   }
 
-  if (birthYear.value.toString().length !== 4) {
+  if (needsBirthInfo && birthYear.value.toString().length !== 4) {
     alert('⚠️ VUI LÒNG NHẬP ĐÚNG NĂM SINH 4 SỐ (VD: 2000)!')
     return
   }
@@ -404,14 +420,18 @@ const submitReport = async () => {
       rewardSnapshot: selectedJob.value.reward,
       fullName: fullName.value.toUpperCase(),
       phoneRef: phoneNumber.value,
-      birthYear: birthYear.value,
-      birthMonth: birthMonth.value,
       exif: exifData.value,
       proofImages,
       imageCount: proofImages.length,
       storageCleaned: false,
       status: 'pending',
       createdAt: serverTimestamp()
+    }
+
+    // Năm/tháng sinh chỉ gửi kèm đơn VIP; đơn job thường không còn 2 field này (giống đơn khảo sát ở SurveyView)
+    if (needsBirthInfo) {
+      reportData.birthYear = birthYear.value
+      reportData.birthMonth = birthMonth.value
     }
 
     if (isBankAccountJob.value) {
@@ -458,7 +478,7 @@ const openFanpage = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-transparent py-10 px-4 md:px-0 flex flex-col items-center font-black italic uppercase relative text-left">
+  <div class="min-h-screen bg-transparent flex flex-col items-center font-black italic uppercase relative text-left" :class="compactUi ? 'pt-1 pb-4' : 'py-10 px-4 md:px-0'">
 
     <!-- ZOOM ẢNH -->
     <Transition name="fade">
@@ -471,13 +491,17 @@ const openFanpage = () => {
     </Transition>
 
     <div class="w-full max-w-xl relative animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <button @click="router.back()" class="text-slate-500 hover:text-white flex items-center gap-2 text-[10px] md:text-xs tracking-[3px] transition-colors mb-8">
-        <span class="font-sans not-italic">✕</span> TRỞ LẠI
-      </button>
+      <!-- Bản gọn (job thường, mobile): tiêu đề + nút trở lại chung 1 hàng để bớt khoảng trống phía trên -->
+      <div :class="compactUi ? 'flex items-center justify-between gap-2 mb-3' : ''">
+        <button @click="router.back()" class="text-slate-500 hover:text-white flex items-center transition-colors"
+                :class="compactUi ? 'order-last shrink-0 gap-1.5 text-[10px] tracking-wider py-1.5' : 'gap-2 text-[10px] md:text-xs tracking-[3px] mb-8'">
+          <span class="font-sans not-italic">✕</span> TRỞ LẠI
+        </button>
 
-      <h1 class="text-4xl md:text-6xl text-white tracking-tighter leading-none mb-10 drop-shadow-xl">
-        NỘP <span class="text-blue-500">BẰNG CHỨNG</span>
-      </h1>
+        <h1 class="text-white tracking-tighter leading-none drop-shadow-xl" :class="compactUi ? 'text-[24px] min-[375px]:text-[26px]' : 'text-4xl md:text-6xl mb-10'">
+          NỘP <span class="text-blue-500">BẰNG CHỨNG</span>
+        </h1>
+      </div>
 
       <!-- Loading khi chưa có config Firestore -->
       <div v-if="!vipJobsReady" class="flex flex-col items-center justify-center py-20 space-y-4">
@@ -485,43 +509,48 @@ const openFanpage = () => {
         <p class="text-xs text-slate-500 tracking-widest uppercase">ĐANG TẢI DANH SÁCH CÔNG VIỆC...</p>
       </div>
 
-      <div v-else class="space-y-6 bg-[#111726]/50 p-6 md:p-10 rounded-[30px] border border-slate-800/50 shadow-2xl">
+      <div v-else class="bg-[#111726]/50 border border-slate-800/50 shadow-2xl" :class="compactUi ? 'space-y-3 p-4 rounded-2xl' : 'space-y-6 p-6 md:p-10 rounded-[30px]'">
 
-        <div class="space-y-2 text-left relative z-10">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">CÔNG VIỆC HOÀN THÀNH</label>
+        <div class="text-left relative z-10" :class="compactUi ? 'space-y-1.5' : 'space-y-2'">
+          <label class="text-blue-400 font-black" :class="labelClass">CÔNG VIỆC HOÀN THÀNH</label>
           <div class="relative">
             <select
               v-model="selectedJob"
               :disabled="!!route.query.job"
-              :class="['w-full bg-[#0d121f] border rounded-[20px] py-4 px-5 text-white outline-none appearance-none font-sans font-bold text-[14px] md:text-[15px] not-italic transition-all', !!route.query.job ? 'border-slate-700/80 text-emerald-400 bg-[#0d121f]/80 cursor-not-allowed shadow-inner' : 'border-slate-800 focus:border-blue-500 cursor-pointer']"
+              :class="['w-full bg-[#0d121f] border text-white outline-none appearance-none font-sans font-bold not-italic transition-all', compactUi ? 'select-compact h-11 rounded-xl pl-3.5 pr-9 text-[16px]' : 'rounded-[20px] py-4 px-5 text-[14px] md:text-[15px]', !!route.query.job ? 'border-slate-700/80 text-emerald-400 bg-[#0d121f]/80 cursor-not-allowed shadow-inner' : 'border-slate-800 focus:border-blue-500 cursor-pointer']"
             >
               <option v-for="job in dynamicJobOptions" :key="job.id" :value="job">{{ job.name }}</option>
             </select>
-            <span v-if="!route.query.job" class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs font-sans not-italic">⌄</span>
-            <span v-else class="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-500 text-lg font-sans not-italic font-black">✓</span>
+            <span v-if="route.query.job" class="absolute top-1/2 -translate-y-1/2 text-emerald-500 text-lg font-sans not-italic font-black" :class="compactUi ? 'right-3.5' : 'right-5'">✓</span>
+            <span v-else-if="!compactUi" class="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs font-sans not-italic">⌄</span>
           </div>
         </div>
 
-        <div class="space-y-2 text-left mt-4">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">{{ fullNameLabel }}</label>
+        <div class="text-left" :class="compactUi ? 'space-y-1.5' : 'space-y-2 mt-4'">
+          <label class="text-blue-400 font-black" :class="labelClass">{{ fullNameLabel }}</label>
           <input
             v-model="fullName"
             type="text"
             :placeholder="fullNamePlaceholder"
-            class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
+            class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold shadow-inner transition-colors"
+            :class="fieldClass"
           />
         </div>
 
-        <div class="space-y-2 text-left">
-          <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">{{ phoneLabel }}</label>
+        <div class="text-left" :class="compactUi ? 'space-y-1.5' : 'space-y-2'">
+          <label class="text-blue-400 font-black" :class="labelClass">{{ phoneLabel }}</label>
           <input
             v-model="phoneNumber"
             type="text"
+            :inputmode="compactUi ? 'tel' : undefined"
             :placeholder="phonePlaceholder"
-            class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 rounded-[20px] py-4 px-5 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold text-[15px] shadow-inner transition-colors"
+            class="w-full bg-[#0d121f] border border-slate-800 focus:border-blue-500 text-white outline-none placeholder:text-slate-500 placeholder:normal-case font-sans not-italic font-semibold shadow-inner transition-colors"
+            :class="fieldClass"
           />
         </div>
 
+        <!-- Năm/tháng sinh: chỉ còn ở job VIP dùng chung form (Admin đối chiếu độ tuổi) — form job thường đã bỏ -->
+        <template v-if="isVipJob">
         <div class="space-y-2 text-left">
           <label class="text-blue-400 text-[11px] tracking-widest ml-1 font-black">NĂM SINH NGƯỜI ĐĂNG KÝ</label>
           <input
@@ -543,27 +572,40 @@ const openFanpage = () => {
             <option v-for="m in 12" :key="m" :value="String(m)">Tháng {{ m }}</option>
           </select>
         </div>
+        </template>
 
-        <div class="space-y-2 text-left mt-2">
-          <div class="flex items-center justify-between gap-2 ml-1">
-            <label class="text-blue-400 text-[11px] tracking-widest font-black">ẢNH BẰNG CHỨNG * (TỐI ĐA {{ MAX_PROOF_IMAGES }} ẢNH)</label>
+        <div class="text-left" :class="compactUi ? 'space-y-1.5' : 'space-y-2 mt-2'">
+          <div class="flex items-center justify-between gap-2" :class="compactUi ? 'ml-0.5' : 'ml-1'">
+            <label class="text-blue-400 font-black" :class="compactUi ? 'text-[12px] tracking-wider' : 'text-[11px] tracking-widest'">{{ compactUi ? 'ẢNH BẰNG CHỨNG *' : `ẢNH BẰNG CHỨNG * (TỐI ĐA ${MAX_PROOF_IMAGES} ẢNH)` }}</label>
             <span :class="['text-[10px] font-sans not-italic font-bold whitespace-nowrap', images.length >= MAX_PROOF_IMAGES ? 'text-rose-400' : 'text-slate-500']">
               Đã chọn {{ images.length }}/{{ MAX_PROOF_IMAGES }} ảnh
             </span>
           </div>
+          <!-- Bản gọn: khung tải ảnh nhỏ chỉ hiện khi chưa có ảnh; có ảnh rồi thì thêm tiếp bằng ô "+" trong lưới bên dưới -->
           <div
+            v-if="!compactUi || images.length === 0"
             @click="triggerFileInput"
-            class="w-full border-2 border-dashed border-slate-700/60 hover:border-blue-500/50 bg-[#0d121f]/30 rounded-[30px] py-12 px-6 flex flex-col items-center justify-center cursor-pointer transition-all group"
+            class="w-full border-2 border-dashed border-slate-700/60 hover:border-blue-500/50 bg-[#0d121f]/30 flex flex-col items-center justify-center cursor-pointer transition-all group"
+            :class="compactUi ? 'h-[104px] rounded-xl px-4 gap-1' : 'rounded-[30px] py-12 px-6'"
           >
-            <div class="text-4xl group-hover:scale-110 transition-transform mb-3">📸</div>
-            <p :class="[
-                 'text-[11px] md:text-[12px] tracking-widest transition-colors uppercase text-center leading-relaxed font-black',
-                 fourImageJobs.includes(selectedJob.id) || threeImageJobs.includes(selectedJob.id)
-                   ? 'text-rose-400'
-                   : 'text-slate-400 group-hover:text-white'
-               ]">
-              {{ imageRequirementText }}
-            </p>
+            <template v-if="compactUi">
+              <span class="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-400">
+                <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </span>
+              <p class="text-slate-300 text-[13px] font-sans not-italic normal-case font-semibold">Chạm để tải ảnh bằng chứng</p>
+              <p class="text-slate-500 text-[11px] font-sans not-italic normal-case font-medium">Tối đa {{ MAX_PROOF_IMAGES }} ảnh · JPG, PNG</p>
+            </template>
+            <template v-else>
+              <div class="text-4xl group-hover:scale-110 transition-transform mb-3">📸</div>
+              <p :class="[
+                   'text-[11px] md:text-[12px] tracking-widest transition-colors uppercase text-center leading-relaxed font-black',
+                   fourImageJobs.includes(selectedJob.id) || threeImageJobs.includes(selectedJob.id)
+                     ? 'text-rose-400'
+                     : 'text-slate-400 group-hover:text-white'
+                 ]">
+                {{ imageRequirementText }}
+              </p>
+            </template>
           </div>
           <input type="file" ref="fileInput" @change="handleFileUpload" multiple accept="image/jpeg, image/png, image/jpg" class="hidden" />
 
@@ -585,21 +627,32 @@ const openFanpage = () => {
             </div>
           </div>
 
-          <div v-if="images.length > 0" class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+          <div v-if="images.length > 0" class="grid" :class="compactUi ? 'grid-cols-5 gap-2' : 'grid-cols-2 md:grid-cols-3 gap-4 mt-4'">
             <div v-for="(img, index) in images" :key="index"
                  @click="openImage(img)"
-                 class="relative group rounded-[18px] overflow-hidden border border-slate-800 bg-[#0d121f] aspect-square cursor-zoom-in">
+                 class="relative group overflow-hidden border border-slate-800 bg-[#0d121f] aspect-square cursor-zoom-in"
+                 :class="compactUi ? 'rounded-lg' : 'rounded-[18px]'">
               <img class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity bg-white" :src="img" />
-              <button class="absolute top-1.5 right-1.5 w-6 h-6 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-[10px] font-sans not-italic z-10 shadow-lg" @click.stop="removeImage(index)">✕</button>
+              <button class="absolute bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center text-white font-sans not-italic z-10 shadow-lg"
+                      :class="compactUi ? 'top-1 right-1 w-5 h-5 text-[9px]' : 'top-1.5 right-1.5 w-6 h-6 text-[10px]'"
+                      @click.stop="removeImage(index)">✕</button>
             </div>
+            <!-- Ô thêm ảnh (bản gọn) — thay cho khung tải ảnh lớn khi đã có ảnh -->
+            <button v-if="compactUi && images.length < MAX_PROOF_IMAGES" type="button" @click="triggerFileInput"
+                    class="aspect-square rounded-lg border-2 border-dashed border-slate-700/60 bg-[#0d121f]/30 flex flex-col items-center justify-center gap-0.5 text-blue-400 active:bg-[#0d121f]/60 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m7-7H5"/></svg>
+              <span class="text-[9px] font-sans not-italic normal-case font-bold text-slate-400">Thêm</span>
+            </button>
           </div>
         </div>
 
         <button
           @click="submitReport"
           :disabled="isLoading"
-          class="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-[20px] text-xl font-black italic shadow-[0_10px_30px_rgba(37,99,235,0.3)] transition-all active:scale-95 disabled:opacity-50"
+          class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black italic transition-all disabled:opacity-50"
+          :class="compactUi ? 'h-12 rounded-xl text-[15px] inline-flex items-center justify-center gap-2 shadow-[0_8px_20px_rgba(37,99,235,0.3)] active:scale-[0.98]' : 'mt-4 py-5 rounded-[20px] text-xl shadow-[0_10px_30px_rgba(37,99,235,0.3)] active:scale-95'"
         >
+          <span v-if="compactUi && isLoading" class="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin"></span>
           {{ submitStage === 'uploading' ? `ĐANG TẢI ẢNH ${uploadedCount}/${imageBlobs.length}...` : submitStage === 'saving' ? 'ĐANG GỬI BẰNG CHỨNG...' : isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN GỬI ĐƠN' }}
         </button>
 
@@ -658,6 +711,8 @@ select {
   background-size: 0.8rem;
 }
 select:disabled { background-image: none; }
+/* Bản gọn (job thường, mobile): mũi tên dropdown sát lề phải ô cao 44px */
+.select-compact { background-position: right 0.875rem center; }
 
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {

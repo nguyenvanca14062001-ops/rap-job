@@ -166,8 +166,8 @@ function getAgeBadgeClass(age: number): string {
       </defs>
     </svg>
 
-    <!-- HERO SECTION -->
-    <div class="flex flex-col lg:flex-row gap-3">
+    <!-- HERO SECTION — chỉ hiện desktop; mobile đã thay bằng cụm lời chào + số dư + thống kê (ProfileCard trong App.vue) -->
+    <div class="hidden lg:flex flex-col lg:flex-row gap-3">
       <section class="welcome-hero-mobile lg:w-2/3 relative bg-gradient-to-br from-[#1a1100] via-[#130d00] to-[#0c0800] rounded-[30px] border border-yellow-600/25 p-6 md:p-10 overflow-hidden flex items-center min-h-[200px] md:min-h-[400px] shadow-[0_0_60px_rgba(234,179,8,0.12),0_20px_80px_rgba(0,0,0,0.6)]">
 
         <!-- Gold glow orbs -->

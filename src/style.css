@@ -108,10 +108,6 @@ body.lite-effects .cta-shimmer,
 body.lite-effects .logged-shimmer,
 body.lite-effects .highlight-text,
 body.lite-effects .rap-text { animation: none; }
-body.lite-effects .confetti-layer-2,
-body.lite-effects .confetti-layer-3 { display: none; }
-body.lite-effects .reward-popup-card { animation: none; }
-body.lite-effects .reward-amount-glow { animation: none; }
 body.lite-effects .welcome-mascot-mobile .coin-fx:nth-of-type(n+5) { display: none; }
 
 /* backdrop-filter blur là một trong những hiệu ứng tốn GPU nhất khi phần tử

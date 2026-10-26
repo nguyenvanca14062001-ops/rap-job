@@ -130,7 +130,12 @@ const handleLogin = async () => {
     </div>
 
     <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white relative">
-      <button class="absolute top-6 left-6 lg:hidden z-50 text-2xl text-slate-800">☰</button>
+      <!-- Mobile: nút trở lại trang chủ (landing) — thay cho nút ☰ cũ không có chức năng -->
+      <button @click="router.push('/')" aria-label="Trở lại trang chủ"
+              class="absolute top-5 left-5 lg:hidden z-50 h-10 pl-2.5 pr-3.5 rounded-xl bg-slate-100 active:bg-slate-200 text-slate-700 flex items-center gap-1 text-[12px] font-black uppercase tracking-wide transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        <span class="max-[359px]:hidden">Trở lại</span>
+      </button>
 
       <div class="w-full max-w-md space-y-10">
         <div class="lg:hidden text-center mb-10">
