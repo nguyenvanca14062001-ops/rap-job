@@ -8,7 +8,10 @@ import { useVipJobs } from '@/composables/useVipJobs'
 import { usePostThreadsConfig } from '@/composables/usePostThreadsConfig'
 import { POST_THREADS_JOB_ID } from '@/utils/postThreadsConfig'
 import { startAppConfigListener } from '@/composables/useAppConfig'
-import { startSupportListener, supportConfig, supportBadge, shouldAutoPopup, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
+import { startSupportListener, supportConfig, supportBadge, markSupportSeen, setUserContext } from '@/composables/useSupportConfig'
+import { incomeStats, startIncomeStats, stopIncomeStats } from '@/composables/useIncomeStats'
+import { openFanpageMessenger } from '@/utils/fanpage'
+import { isNewAccountFirstSession, jobIntroSeenKey } from '@/utils/jobIntro'
 import SupportPanel from '@/components/SupportPanel.vue'
 import Swal from 'sweetalert2'
 
@@ -24,12 +27,27 @@ import MomoReferralHubModal from '@/components/MomoReferralHubModal.vue'
 import LpbankPlusReferralHubModal from '@/components/LpbankPlusReferralHubModal.vue'
 import ShopeePayReferralHubModal from '@/components/ShopeePayReferralHubModal.vue'
 import FriendReferralSelectModal from '@/components/FriendReferralSelectModal.vue'
+import MusicVoteModal from '@/components/MusicVoteModal.vue'
+import PosterDesignModal from '@/components/PosterDesignModal.vue'
+import StoryChoiceModal from '@/components/StoryChoiceModal.vue'
+import ThreadsCommentModal from '@/components/ThreadsCommentModal.vue'
+import ThreadsSeedingModal from '@/components/ThreadsSeedingModal.vue'
 import { jobsData } from '@/data/jobs'
+import { MUSIC_VOTE_JOB_ID } from '@/utils/musicVote'
+import { POSTER_DESIGN_JOB_ID } from '@/utils/posterDesign'
+import { STORY_CHOICE_JOB_ID } from '@/utils/storyChoice'
+import { THREADS_COMMENT_JOB_ID } from '@/utils/threadsComment'
+import { THREADS_SEEDING_JOB_ID } from '@/utils/threadsSeeding'
+import { JOB_SHORT_DESCS } from '@/utils/jobShortDesc'
 
 // --- JOB BROWSER (dùng trong CÔNG VIỆC bottom sheet) ---
 const jobIconMap: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸',
   'survey-cinema': '📋', 'post-threads': '🧵', 'join-zalo': '💬',
+  'view-tiktok': '🎵', 'view-youtube': '▶️', 'music-vote': '🎧', 'poster-design': '🎨',
+  [STORY_CHOICE_JOB_ID]: jobsData[STORY_CHOICE_JOB_ID].icon,
+  [THREADS_COMMENT_JOB_ID]: jobsData[THREADS_COMMENT_JOB_ID].icon,
+  [THREADS_SEEDING_JOB_ID]: jobsData[THREADS_SEEDING_JOB_ID].icon,
   'app-chung-khoan': '📈', 'app-chung-khoan-2': '📈', 'app-chung-khoan-3': '📈',
   'app-chung-khoan-4': '📈', 'msb-bank': '🏦', 'vpbank': '🏦', 'liobank': '🏦', 'abbank': '🏦', 'tpbank': '🏦', 'tpbank-new': '🏦', 'lpbank-plus': '🏦', 'vietcombank': '🏦', 'mbv-bank': '🏦', 'shopee-pay': '🛍️',
   'referral-hub': '👥', 'daily_threads': '🧵', 'momo': '💰', 'referral_momo': '👥', 'referral-friends': '👥',
@@ -46,9 +64,9 @@ const { config: postThreadsConfig } = usePostThreadsConfig()
 startAppConfigListener()
 startSupportListener()
 
+// Bảng Hỗ trợ chỉ mở khi bấm nút ở desktop — không còn tự bật khi vào trang (xem useSupportConfig.ts).
+// Nút HỖ TRỢ trên thanh điều hướng mobile mở thẳng Messenger Fanpage (openFanpageMessenger).
 const showSupportPanel = ref(false)
-
-watch(shouldAutoPopup, (val) => { if (val) showSupportPanel.value = true })
 
 const handleSupportClose = () => { markSupportSeen() }
 
@@ -156,8 +174,9 @@ const referralSubJobs = computed(() => REFERRAL_SUBJOB_IDS.map(id => {
 }).filter(j => j.status !== 'hidden'))
 
 // --- Tab "Công việc dễ làm": tách 2 nhóm hiển thị ---
-// Không giới hạn: được làm/nộp nhiều lần. (APP LPBANK PLUS / APP ABBANK đã bỏ khỏi tab dễ làm — chỉ còn ở tab hoa hồng cao.)
-const UNLIMITED_BASIC_IDS = ['daily_threads']
+// Không giới hạn: được làm/nộp nhiều lần — Thread hằng ngày + Bình luận dạo Threads + Đăng bài Threads – Seeding.
+// (APP LPBANK PLUS / APP ABBANK đã bỏ khỏi tab dễ làm — chỉ còn ở tab hoa hồng cao.)
+const UNLIMITED_BASIC_IDS = ['daily_threads', THREADS_COMMENT_JOB_ID, THREADS_SEEDING_JOB_ID]
 const basicUnlimitedIds = computed(() => UNLIMITED_BASIC_IDS.filter(id => id in mergedJobs.value))
 // Giới hạn: tất cả job dễ làm còn lại (không thuộc VIP_IDS, không nằm trong nhóm không giới hạn,
 // và không phải job "giới thiệu bạn bè" đã gộp vào tab hoa hồng cao — VD 'referral_abbank')
@@ -176,6 +195,7 @@ function getBadgeTextClass(badge: string): string {
   const b = (badge || '').toUpperCase()
   if (b.includes('HOT')) return 'text-red-400'
   if (b.includes('HẰNG NGÀY')) return 'text-teal-400'
+  if (b.includes('KHÔNG GIỚI HẠN')) return 'text-emerald-400'
   if (b.includes('SURVEY')) return 'text-violet-400'
   if (b.includes('VIP')) return 'text-amber-400'
   return 'text-slate-400'
@@ -207,9 +227,17 @@ const showMomoReferralHub = ref(false)
 const showLpbankPlusReferralHub = ref(false)
 const showShopeePayReferralHub = ref(false)
 const showFriendReferralSelect = ref(false)
-const activePopup = ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
+const showMusicVote = ref(false)
+const showPosterDesign = ref(false)
+const showStoryChoice = ref(false)
+const showThreadsComment = ref(false)
+const showThreadsSeeding = ref(false)
+const activePopup =ref<'nop-bai' | 'cong-viec' | 'lich-su' | ''>('')
 const mobileRejectNote = ref<string | null>(null)
 const jobCategory = ref<'basic' | 'vip' | ''>('')
+// Bottom sheet "Công việc" đang ở chế độ giới thiệu cho tài khoản mới: tiêu đề "Khám phá công việc dễ làm", ẩn banner
+// VIP, thêm nút "Khám phá tất cả công việc" — vẫn là đúng popup + danh sách job dễ làm hiện tại (mergedJobs).
+const isJobIntro = ref(false)
 
 const isAdminRoute = computed(() => route.path.includes('admin'))
 const isAuthRoute = computed(() => route.path.includes('/login') || route.path.includes('/register'))
@@ -230,6 +258,11 @@ const shouldHideWithdrawTicker = computed(() => {
     showMomoReferralHub.value ||
     showLpbankPlusReferralHub.value ||
     showShopeePayReferralHub.value ||
+    showMusicVote.value ||
+    showPosterDesign.value ||
+    showStoryChoice.value ||
+    showThreadsComment.value ||
+    showThreadsSeeding.value ||
     showBankModal.value
 
   return isJobRoute || hasWorkModalOpen
@@ -320,7 +353,7 @@ const jobList = [
 
 const fmtXu = (n: number) => n.toLocaleString('vi-VN')
 
-// Số xu hiển thị của 1 job — dùng CHUNG cho popup "Công việc dễ làm" và trang chủ khách (cùng nguồn mergedJobs)
+// Số xu hiển thị của 1 job trong popup "Công việc dễ làm" (nguồn mergedJobs). Trang chủ khách không hiện số xu.
 const jobRewardText = (id: string) => {
   const job = mergedJobs.value[id]
   return job?.rewardText || `${fmtXu(Number(String(job?.reward).replace(/\D/g, '')))} xu`
@@ -461,6 +494,7 @@ const initFirebaseSync = (user: any) => {
   if (unsubscribeUser) { if (import.meta.env.DEV) console.log('[Firestore] STOP user/reports/withdrawals listeners'); unsubscribeUser() }
   if (unsubscribeReports) unsubscribeReports()
   if (unsubscribeWithdrawals) unsubscribeWithdrawals()
+  stopIncomeStats()
 
   if (!user || isAdminRoute.value) return
 
@@ -504,6 +538,10 @@ const initFirebaseSync = (user: any) => {
       console.error('[Firestore] Lỗi tải lịch sử rút tiền (withdrawals listener):', error)
     }
   )
+
+  // Card Hôm nay / Tuần này (ProfileCard) — listener riêng lọc theo thời điểm Admin cộng xu (approvedAt/paidAt),
+  // không dùng myReports (giới hạn 50 đơn mới nhất theo ngày tạo, không có đơn Thread hằng ngày)
+  startIncomeStats(user.uid)
 }
 
 // Tự động bật "lite-effects" (tắt animation nền/glow liên tục, giữ nguyên bố cục & màu sắc)
@@ -534,6 +572,7 @@ onMounted(() => {
       isLoggedIn.value = false; isDataLoading.value = false; username.value = 'Member'; userBalance.value = 0;
       userFullName.value = ''; userPhone.value = ''; userBirthYear.value = ''; vipCompletedCount.value = 0
       withdraw150kUsed.value = false
+      stopIncomeStats()
       setUserContext(null)
       myReports.value = []; myWithdrawals.value = []; localStorage.clear()
     }
@@ -583,6 +622,7 @@ const handleReceiveJob = (jobId: string) => {
     return
   }
   if (jobId === 'survey-cinema') {
+    activePopup.value = ''
     router.push('/survey-cinema')
   } else if (jobId === 'APP NGÂN HÀNG' || jobId === 'app-ngan-hang') {
     showBankModal.value = true
@@ -598,6 +638,26 @@ const handleReceiveJob = (jobId: string) => {
   } else if (jobId === 'referral_momo') {
     activePopup.value = ''
     showMomoReferralHub.value = true
+  } else if (jobId === MUSIC_VOTE_JOB_ID) {
+    // Job nghe nhạc không có trang hướng dẫn/nộp ảnh — mở thẳng popup nghe & bình chọn
+    activePopup.value = ''
+    showMusicVote.value = true
+  } else if (jobId === POSTER_DESIGN_JOB_ID) {
+    // Job thiết kế poster: chọn nghệ sĩ + hướng dẫn + gửi 1 ảnh gom trong 1 popup
+    activePopup.value = ''
+    showPosterDesign.value = true
+  } else if (jobId === STORY_CHOICE_JOB_ID) {
+    // Job đọc truyện: đọc + chọn A/B/C + xem đoạn kết + gửi đơn gom trong 1 popup, không cần ảnh
+    activePopup.value = ''
+    showStoryChoice.value = true
+  } else if (jobId === THREADS_COMMENT_JOB_ID) {
+    // Job bình luận dạo Threads (làm nhiều lần): hướng dẫn + nội dung mẫu + gửi bằng chứng gom trong 1 popup
+    activePopup.value = ''
+    showThreadsComment.value = true
+  } else if (jobId === THREADS_SEEDING_JOB_ID) {
+    // Job đăng bài Threads – seeding (làm nhiều lần): thưởng / nội dung mẫu / ảnh + popup hướng dẫn + nộp bằng chứng gom trong 1 popup
+    activePopup.value = ''
+    showThreadsSeeding.value = true
   } else if (VIP_IDS.includes(jobId)) {
     activePopup.value = ''
     ageConfirmJobId.value = jobId
@@ -610,8 +670,44 @@ const handleReceiveJob = (jobId: string) => {
   }
 }
 
-// Trang chủ khách (mobile, chưa đăng nhập): bấm job → popup yêu cầu đăng ký tài khoản (tên job + số xu lấy từ
-// cùng nguồn mergedJobs). Job tạm dừng/hết slot vẫn báo như người đã đăng nhập. handleReceiveJob giữ nguyên.
+// Trang chủ khách (mobile, chưa đăng nhập): lưới ô vuông chỉ có icon + tên. Job lấy từ basicUnlimitedIds/basicLimitedIds
+// (mergedJobs — thêm/xoá job trong jobs.ts, Admin ẩn/tạm dừng là lưới đổi theo). GUEST_LANDING_ORDER chỉ quyết định thứ tự
+// ưu tiên; job không có trong đó (vd job mới thêm) đứng sau theo thứ tự gốc. GUEST_LANDING_EXCLUDED: job dễ làm không đưa lên
+// trang này. 'daily_threads' = "Đăng bài Threads" (job 'post-threads' đang bị Admin ẩn).
+const GUEST_LANDING_ORDER = [
+  MUSIC_VOTE_JOB_ID, STORY_CHOICE_JOB_ID, 'view-tiktok', 'daily_threads', 'view-youtube', THREADS_COMMENT_JOB_ID,
+  THREADS_SEEDING_JOB_ID, 'follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema',
+]
+const GUEST_LANDING_EXCLUDED = [POSTER_DESIGN_JOB_ID, 'join-zalo']
+const guestLandingJobIds = computed(() => {
+  const rank = (id: string) => { const i = GUEST_LANDING_ORDER.indexOf(id); return i === -1 ? GUEST_LANDING_ORDER.length : i }
+  return [...basicUnlimitedIds.value, ...basicLimitedIds.value]
+    .filter(id => !GUEST_LANDING_EXCLUDED.includes(id))
+    .sort((a, b) => rank(a) - rank(b))
+})
+// Tên ngắn cho ô 4 cột (tên đầy đủ như "CHECK-IN TẠI RẠP + ĐĂNG MẠNG XÃ HỘI" không vừa 2 dòng), tra theo ĐÚNG tiêu đề hiện tại
+// của job: đổi tiêu đề trong jobs.ts hoặc ở Admin (vip_jobs) thì ô tự hiện tiêu đề mới. \u00a0 (khoảng trắng không ngắt) và
+// \u2011 (gạch nối không ngắt) giữ chữ xuống dòng đúng chỗ.
+const GUEST_TILE_SHORT_TITLES: Record<string, string> = {
+  'NGHE NHẠC – CHỌN BÀI HAY HƠN': 'Nghe nhạc',
+  'ĐỌC TRUYỆN – CHỌN CÁCH XỬ LÝ': 'Đọc truyện',
+  'CÀY VIEW TIKTOK': 'Cày view TikTok',
+  'ĐĂNG BÀI THREAD HẰNG NGÀY': 'Đăng bài Threads',
+  'CÀY VIEW YOUTUBE': 'Cày view YouTube',
+  'BÌNH LUẬN DẠO': 'Bình luận dạo',
+  'ĐĂNG BÀI THREADS – SEEDING': 'Threads – Seeding',
+  'FOLLOW FANPAGE RẠP PHIM': 'Follow Fanpage',
+  'ĐÁNH GIÁ 5 SAO RẠP PHIM': 'Đánh giá 5\u00a0sao',
+  'CHECK-IN TẠI RẠP + ĐĂNG MẠNG XÃ HỘI': 'Check\u2011in tại\u00a0rạp',
+  'KHẢO SÁT THÓI QUEN XEM PHIM': 'Khảo sát phim',
+}
+const guestTileTitle = (id: string) => {
+  const title = mergedJobs.value[id]?.title
+  return GUEST_TILE_SHORT_TITLES[title] || title
+}
+
+// Bấm ô công việc → popup giới thiệu ngắn (icon, tên đầy đủ, mô tả công khai JOB_SHORT_DESCS — cùng nguồn card desktop) + nút
+// đăng ký; không hiện số xu, không cho làm/nộp đơn. Job tạm dừng/hết slot vẫn báo như người đã đăng nhập. handleReceiveJob giữ nguyên.
 const guestSignupJobId = ref<string | null>(null)
 const openGuestJob = (jobId: string) => {
   const job = mergedJobs.value[jobId]
@@ -688,7 +784,18 @@ const handleScrollToVip = () => {
   if (windowWidth.value < 1024) isMenuOpen.value = false
 }
 
-const logout = async () => { 
+// CTA "Khám phá công việc VIP" ở popup chưa đủ điều kiện rút tiền (WithdrawView): mobile mở thẳng danh sách
+// Công việc VIP trong bottom sheet "Công việc"; desktop không có bottom sheet nên về trang chủ, cuộn tới khu VIP.
+const openVipJobs = () => {
+  if (windowWidth.value < 1024) {
+    activePopup.value = 'cong-viec'
+    jobCategory.value = 'vip'
+  } else {
+    handleScrollToVip()
+  }
+}
+
+const logout = async () => {
   if(confirm('Xác nhận đăng xuất?')) { await signOut(auth); localStorage.clear(); router.push('/login') } 
 }
 
@@ -697,8 +804,25 @@ const contactSupport = (t: string) => {
 }
 
 watch(activePopup, (val) => {
-  if (val !== 'cong-viec') jobCategory.value = ''
+  if (val !== 'cong-viec') { jobCategory.value = ''; isJobIntro.value = false }
 })
+
+// Tự mở popup Khám phá công việc dễ làm 1 lần cho tài khoản mới (điều kiện: utils/jobIntro.ts) — chỉ trên mobile
+// (desktop không có bottom sheet), ở trang chủ, đã đăng nhập, không phải trang Admin, không đè popup đang mở, và đợi
+// danh sách job tải xong. Ghi cờ đã xem ngay lúc mở để F5 / chuyển trang không bật lại dù chưa kịp bấm đóng.
+const tryShowJobIntro = () => {
+  const user = auth.currentUser
+  if (!user || !isLoggedIn.value || isAdminRoute.value || route.path !== '/' || windowWidth.value >= 1024) return
+  if (activePopup.value || !vipJobsReady.value || !isNewAccountFirstSession(user.metadata)) return
+  try {
+    if (localStorage.getItem(jobIntroSeenKey(user.uid))) return
+    localStorage.setItem(jobIntroSeenKey(user.uid), '1')
+  } catch { return } // không lưu được cờ (storage bị chặn) → không tự mở, tránh bật lại mỗi lần F5
+  jobCategory.value = 'basic'
+  isJobIntro.value = true
+  activePopup.value = 'cong-viec'
+}
+watch([isLoggedIn, () => route.path, vipJobsReady], tryShowJobIntro)
 </script>
 
 <template>
@@ -818,6 +942,10 @@ watch(activePopup, (val) => {
                       <span class="text-[9px] text-yellow-500 font-black not-italic tracking-tighter leading-none">XU</span>
                     </div>
                   </div>
+                  <!-- Job BÌNH LUẬN DẠO: thưởng theo số bình luận Admin xác minh hợp lệ -->
+                  <p v-if="unreadApprovedReport.verifiedCommentCount != null" class="mt-1 text-emerald-300/90 text-[12px] font-bold">
+                    {{ unreadApprovedReport.verifiedCommentCount }}<template v-if="unreadApprovedReport.commentCount">/{{ unreadApprovedReport.commentCount }}</template> bình luận hợp lệ × {{ fmtXu(Number(unreadApprovedReport.rewardPerComment) || 0) }} xu
+                  </p>
                 </div>
               </div>
 
@@ -858,7 +986,9 @@ watch(activePopup, (val) => {
 
     <div class="flex-1 flex flex-col transition-all duration-500 min-w-0 bg-transparent w-full relative">
       
-      <header class="h-16 md:h-20 flex items-center justify-between px-4 md:px-10 sticky top-0 bg-[#130c0a]/95 backdrop-blur-xl z-[1100] border-b border-red-900/25 shadow-sm">
+      <!-- Khách chưa đăng nhập: header mobile thấp hơn (h-14) để landing vừa 1 màn hình; từ md trở lên giữ nguyên -->
+      <header class="md:h-20 flex items-center justify-between px-4 md:px-10 sticky top-0 bg-[#130c0a]/95 backdrop-blur-xl z-[1100] border-b border-red-900/25 shadow-sm"
+              :class="isLoggedIn ? 'h-16' : 'h-14'">
         <div class="flex items-center gap-3">
           <button @click.stop="isMenuOpen = !isMenuOpen" class="p-2 md:p-3 bg-[#150f0d] border border-slate-800 rounded-xl md:rounded-2xl transition-all active:scale-95 hidden lg:block">
             <svg v-if="!isMenuOpen" class="w-5 h-5 md:w-6 md:h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -867,8 +997,9 @@ watch(activePopup, (val) => {
           <Logo />
         </div>
         
-        <!-- Khách chưa đăng nhập (mobile): thay cụm ví "0 xu" bằng nút Đăng nhập; desktop giữ nguyên cụm ví -->
-        <button v-if="!isLoggedIn" @click="handleNav('/login')" class="lg:hidden ml-auto h-9 px-4 rounded-xl bg-red-600 active:bg-red-500 text-white text-[12px] font-black uppercase tracking-wide shadow-[0_0_14px_rgba(220,38,38,0.35)] active:scale-95 transition-transform">
+        <!-- Khách chưa đăng nhập (mobile): thay cụm ví "0 xu" bằng nút Đăng nhập; desktop giữ nguyên cụm ví.
+             Kiểu nút viền (phụ) để nút ĐĂNG KÝ cố định dưới đáy là điểm nổi bật nhất trang. -->
+        <button v-if="!isLoggedIn" @click="handleNav('/login')" class="lg:hidden ml-auto shrink-0 whitespace-nowrap h-9 px-2.5 min-[360px]:px-4 rounded-xl border border-white/20 bg-white/[0.06] active:bg-white/[0.12] text-white text-[11px] min-[360px]:text-[12px] font-black uppercase tracking-wide active:scale-95 transition-transform">
           Đăng nhập
         </button>
         <div class="items-center gap-2 md:gap-4 bg-[#150f0d] border border-slate-900 pl-3 md:pl-5 pr-1 py-1 md:py-1.5 rounded-full shadow-inner ml-auto" :class="isLoggedIn ? 'flex' : 'hidden lg:flex'">
@@ -894,7 +1025,9 @@ watch(activePopup, (val) => {
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto p-4 md:p-10 pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-10 space-y-10 custom-scrollbar relative text-left">
+      <!-- Khách trên mobile: không cách khối (landing chỉ còn 1 khối) — khoảng cách cũ của các khối rỗng/ẩn làm trang dư chiều cao -->
+      <main class="flex-1 overflow-y-auto p-4 md:p-10 pb-[calc(96px+env(safe-area-inset-bottom))] md:pb-10 custom-scrollbar relative text-left"
+            :class="isLoggedIn ? 'space-y-10' : 'lg:space-y-10'">
         <template v-if="route.path === '/'">
            <!-- Mobile: lời chào + số dư + thống kê (thay card hồ sơ + card chào mừng cũ) -->
            <div v-if="isLoggedIn" class="lg:hidden mb-2">
@@ -905,88 +1038,63 @@ watch(activePopup, (val) => {
                :isDataLoading="isDataLoading"
                :userBalance="userBalance"
                :isBalanceVisible="isBalanceVisible"
+               :income="incomeStats"
                @routerPush="handleNav"
              />
            </div>
 
-           <!-- Mobile — khách chưa đăng nhập: landing giới thiệu công việc cơ bản. Dùng CHUNG nguồn dữ liệu với popup
-                "Công việc dễ làm": mergedJobs (jobs.ts + cấu hình Admin vip_jobs), basicUnlimitedIds/basicLimitedIds,
-                jobIconMap, jobRewardText → thêm/sửa/xoá job ở đó là cả 2 nơi cùng đổi, không có danh sách thứ hai. -->
-           <section v-else class="lg:hidden space-y-4">
-             <div class="px-0.5">
-               <h1 class="text-white text-[26px] leading-[1.15] tracking-tight">
-                 Khám phá <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-400">công việc dễ làm</span>
-               </h1>
-               <!-- Cam kết nổi bật -->
-               <div class="mt-3 grid grid-cols-2 gap-x-2 gap-y-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
-                 <span v-for="t in ['Không phí', 'Không cọc tiền', 'Không nạp tiền', 'Không bỏ vốn']" :key="t"
-                       class="flex items-center gap-1.5 text-emerald-300 text-[11px] min-[360px]:text-[11.5px] font-black uppercase tracking-normal min-[360px]:tracking-wide whitespace-nowrap">
-                   <svg class="w-3.5 h-3.5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                   {{ t }}
+           <!-- Mobile — khách chưa đăng nhập: landing gọn = tiêu đề + cam kết + mô tả + lưới ô vuông (icon + tên, không số xu)
+                + 3 bước tham gia + nút ĐĂNG KÝ cố định dưới đáy. Ô lấy từ guestLandingJobIds (job dễ làm trong mergedJobs, xếp theo
+                GUEST_LANDING_ORDER); bấm ô → popup giới thiệu job + nút đăng ký (openGuestJob). -->
+           <section v-else class="lg:hidden max-w-[520px] mx-auto">
+             <h1 class="text-white text-[22px] min-[375px]:text-[24px] leading-tight tracking-tight">
+               Khám phá <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-400">công việc dễ làm</span>
+             </h1>
+             <!-- Cam kết nổi bật -->
+             <div class="mt-3 grid grid-cols-2 gap-x-2 gap-y-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2.5">
+               <span v-for="t in ['Không phí', 'Không cọc tiền', 'Không nạp tiền', 'Không bỏ vốn']" :key="t"
+                     class="flex items-center gap-1.5 text-emerald-300 text-[11px] min-[360px]:text-[11.5px] font-black uppercase tracking-normal min-[360px]:tracking-wide whitespace-nowrap">
+                 <svg class="w-3.5 h-3.5 shrink-0 text-emerald-400" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                 {{ t }}
+               </span>
+             </div>
+             <p class="mt-2 text-slate-400 text-[12.5px] min-[375px]:text-[13px] font-medium leading-snug">
+               Chọn công việc yêu thích, làm theo hướng dẫn và nhận xu sau khi được duyệt. Đăng ký hoàn toàn miễn phí!
+             </p>
+
+             <div class="mt-3 grid grid-cols-4 auto-rows-fr gap-2">
+               <button v-for="id in guestLandingJobIds" :key="id" @click="openGuestJob(id)"
+                 class="min-w-0 flex flex-col items-center px-1 pt-2 pb-1.5 rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.02] active:scale-95 active:bg-white/10 transition"
+                 :class="(mergedJobs[id]?.paused || mergedJobs[id]?.soldout) ? 'opacity-50' : ''">
+                 <span class="w-10 h-10 min-[375px]:w-11 min-[375px]:h-11 rounded-xl bg-red-500/10 border border-red-400/20 flex items-center justify-center text-[22px] min-[375px]:text-[24px] leading-none">
+                   {{ jobIconMap[id] || '🎯' }}
                  </span>
-               </div>
-               <p class="mt-3 text-slate-400 text-[13px] font-medium leading-relaxed">
-                 Đăng ký miễn phí, chọn việc và làm theo hướng dẫn. Gửi ảnh bằng chứng, Admin duyệt xong là xu vào ví — rút về ngân hàng 24/7.
-               </p>
+                 <!-- Vùng tên luôn cao đúng 2 dòng (tên 1 dòng nằm giữa) để icon các ô cùng hàng thẳng nhau -->
+                 <span class="mt-1.5 w-full h-[2.5em] flex items-center justify-center text-[11px] min-[375px]:text-[12px] font-bold leading-[1.25] text-slate-100 text-center">
+                   <span class="min-w-0 line-clamp-2 wrap-break-word">{{ guestTileTitle(id) }}</span>
+                 </span>
+               </button>
              </div>
 
-             <!-- Không giới hạn — làm nhiều lần (Thread hằng ngày, chỉ hiện khi đang được bật) -->
-             <template v-if="basicUnlimitedIds.length">
-               <div class="flex items-center gap-1.5 px-0.5 pt-1">
-                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] shrink-0"></span>
-                 <p class="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Không giới hạn — làm nhiều lần</p>
-               </div>
-               <button v-for="id in basicUnlimitedIds" :key="id" @click="openGuestJob(id as string)"
-                 class="w-full flex items-center gap-3 px-3 py-3 rounded-xl border transition-colors text-left relative overflow-hidden"
-                 :class="[
-                   mergedJobs[id as string]?.paused ? 'opacity-50' : '',
-                   id === 'daily_threads'
-                     ? 'border-teal-400/60 bg-gradient-to-r from-teal-500/20 to-emerald-500/10 active:from-teal-500/25 active:to-emerald-500/15'
-                     : 'border-white/10 bg-white/[0.03] active:bg-white/[0.07]'
-                 ]">
-                 <span v-if="id === 'daily_threads'" class="absolute top-0 right-0 bg-gradient-to-r from-teal-400 to-emerald-400 text-teal-950 text-[7px] font-black uppercase px-2 py-0.5 rounded-bl-lg tracking-wide">🔥 Nổi bật</span>
-                 <div class="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
-                      :class="id === 'daily_threads' ? 'bg-teal-500/25 border border-teal-400/50' : 'bg-white/5 border border-white/10'">
-                   {{ jobIconMap[id as string] || '🎯' }}
+             <!-- Bắt đầu chỉ với 3 bước — 3 card nhỏ cùng hàng, chỉ để xem (đăng ký bằng nút cố định dưới đáy) -->
+             <div class="mt-3.5">
+               <p class="text-amber-400 text-[11px] font-black uppercase tracking-widest">Bắt đầu chỉ với 3 bước</p>
+               <div class="mt-2 grid grid-cols-3 gap-2">
+                 <div class="h-[60px] flex flex-col items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/[0.04]">
+                   <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                   <span class="text-slate-100 text-[11px] font-black uppercase tracking-wide">Đăng ký</span>
                  </div>
-                 <div class="flex-1 min-w-0">
-                   <p class="text-[12.5px] font-semibold leading-snug line-clamp-2" :class="id === 'daily_threads' ? 'text-teal-50' : 'text-white'">{{ mergedJobs[id as string]?.title }}</p>
-                   <span class="inline-block mt-1 text-[7.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10" :class="mergedJobs[id as string]?.paused ? 'text-slate-400' : getBadgeTextClass(mergedJobs[id as string]?.badge || 'CƠ BẢN')">
-                     {{ mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'CƠ BẢN') }}
-                   </span>
+                 <div class="h-[60px] flex flex-col items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/[0.04]">
+                   <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                   <span class="text-slate-100 text-[11px] font-black uppercase tracking-wide">Chọn việc</span>
                  </div>
-                 <div class="flex items-center gap-0.5 shrink-0 max-w-[40%]">
-                   <span class="min-w-0 text-right text-[11px] font-black leading-tight line-clamp-3 text-balance" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : (id === 'daily_threads' ? 'text-teal-300' : 'text-yellow-400')">
-                     {{ jobRewardText(id as string) }}
-                   </span>
-                   <svg v-if="!mergedJobs[id as string]?.paused" class="w-4 h-4 shrink-0" :class="id === 'daily_threads' ? 'text-teal-300' : 'text-slate-400'" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                 <div class="h-[60px] flex flex-col items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/[0.04]">
+                   <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3"/></svg>
+                   <span class="text-slate-100 text-[11px] font-black uppercase tracking-wide">Nhận xu</span>
                  </div>
-               </button>
-             </template>
-
-             <!-- Giới hạn — chỉ làm 1 lần: lưới 2 cột -->
-             <template v-if="basicLimitedIds.length">
-               <div class="flex items-center gap-1.5 px-0.5 pt-1">
-                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)] shrink-0"></span>
-                 <p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Giới hạn — chỉ làm 1 lần</p>
                </div>
-               <div class="grid grid-cols-2 gap-2.5">
-                 <button v-for="id in basicLimitedIds" :key="id" @click="openGuestJob(id as string)"
-                   class="min-w-0 flex flex-col p-3 rounded-xl border border-slate-700/40 bg-[#150f0d] active:bg-white/[0.06] transition-colors text-left"
-                   :class="mergedJobs[id as string]?.paused ? 'opacity-50' : ''">
-                   <div class="flex items-center justify-between gap-1 min-w-0">
-                     <span class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-[15px] shrink-0">{{ jobIconMap[id as string] || '🎯' }}</span>
-                     <span class="min-w-0 truncate text-[7px] font-bold uppercase leading-none px-1 py-[3px] rounded bg-white/10" :class="mergedJobs[id as string]?.paused ? 'text-slate-400' : getBadgeTextClass(mergedJobs[id as string]?.badge || 'CƠ BẢN')">
-                       {{ mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'CƠ BẢN') }}
-                     </span>
-                   </div>
-                   <p class="mt-2 text-white text-[11.5px] font-semibold leading-[1.3] line-clamp-2 wrap-break-word">{{ mergedJobs[id as string]?.title }}</p>
-                   <p class="mt-auto pt-1.5 text-[13px] font-black leading-tight truncate" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : 'text-yellow-400'">
-                     {{ jobRewardText(id as string) }}
-                   </p>
-                 </button>
-               </div>
-             </template>
+               <p class="mt-1.5 text-slate-500 text-[11px] font-medium leading-snug text-balance">Hoàn thành nhiệm vụ, gửi bằng chứng và nhận xu sau khi Admin duyệt.</p>
+             </div>
            </section>
 
            <JobSection
@@ -1025,7 +1133,7 @@ watch(activePopup, (val) => {
                  <div class="w-11 h-11 rounded-xl bg-red-500/15 border border-red-500/20 flex items-center justify-center text-xl shrink-0">⚡</div>
                  <div class="flex-1 min-w-0">
                    <p class="text-white text-[12.5px] font-black italic uppercase tracking-tight truncate">Công việc cơ bản</p>
-                   <p class="text-yellow-400 text-[13px] font-black italic tracking-tighter">10.000 – 30.000 xu / job</p>
+                   <p class="text-yellow-400 text-[13px] font-black italic tracking-tighter">10.000 – 20.000 xu / job</p>
                  </div>
                  <button @click="activePopup = 'cong-viec'; jobCategory = 'basic'" class="shrink-0 bg-red-600 active:bg-red-500 text-white px-4 py-2.5 rounded-xl text-[10.5px] font-black uppercase tracking-wide">Đăng ký</button>
                </div>
@@ -1040,9 +1148,11 @@ watch(activePopup, (val) => {
                </div>
              </div>
            </div>
-           <InfoSection :isLoggedIn="isLoggedIn" @contactSupport="contactSupport" />
-           
-           <footer class="mt-20 bg-gradient-to-b from-[#0f0907] to-[#120b0a] pt-16 pb-28 md:pb-8 relative z-[100] italic uppercase font-black rounded-t-3xl overflow-hidden">
+           <!-- Khách trên mobile: landing chỉ gồm tiêu đề, cam kết, mô tả, lưới công việc + nút đăng ký → ẩn phần giới thiệu và footer (desktop giữ nguyên) -->
+           <InfoSection :isLoggedIn="isLoggedIn" @contactSupport="contactSupport" :class="isLoggedIn ? '' : 'hidden lg:block'" />
+
+           <footer class="mt-20 bg-gradient-to-b from-[#0f0907] to-[#120b0a] pt-16 pb-28 md:pb-8 relative z-[100] italic uppercase font-black rounded-t-3xl overflow-hidden"
+                   :class="isLoggedIn ? '' : 'hidden lg:block'">
              <!-- Gradient top line -->
              <div class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-700/60 to-transparent"></div>
              <!-- Ambient top glow -->
@@ -1109,6 +1219,7 @@ watch(activePopup, (val) => {
             :vipJobs="vipJobs"
             :vipCompletedCount="vipCompletedCount"
             :withdraw150kUsed="withdraw150kUsed"
+            @openVipJobs="openVipJobs"
           />
         </Transition>
       </main>
@@ -1137,7 +1248,8 @@ watch(activePopup, (val) => {
       </div>
     </div>
 
-    <!-- Popup yêu cầu đăng ký — khách chưa đăng nhập bấm vào công việc trên trang chủ -->
+    <!-- Popup giới thiệu job — khách chưa đăng nhập bấm vào ô công việc trên trang chủ: icon + tên đầy đủ + mô tả công khai
+         (JOB_SHORT_DESCS, cùng nguồn card desktop) + nút đăng ký. Không hiện số xu, không có nút làm/nộp bằng chứng. -->
     <Transition name="fade">
       <div v-if="guestSignupJobId" class="fixed inset-0 z-[4600] flex items-center justify-center px-5">
         <div class="absolute inset-0 bg-black/75" @click="guestSignupJobId = null"></div>
@@ -1149,15 +1261,17 @@ watch(activePopup, (val) => {
           <div class="w-16 h-16 mx-auto rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-3xl">
             {{ jobIconMap[guestSignupJobId] || '🎯' }}
           </div>
-          <h3 class="mt-4 text-white text-[19px] leading-tight">Bạn cần đăng ký tài khoản để tham gia công việc</h3>
-          <p class="mt-2 text-slate-400 text-[13px] font-medium leading-relaxed">
-            Đăng ký miễn phí để làm <span class="text-white font-bold">{{ mergedJobs[guestSignupJobId]?.title }}</span>
-            và nhận <span class="text-yellow-400 font-bold">{{ jobRewardText(guestSignupJobId) }}</span>.
+          <h3 class="mt-4 px-2 text-white text-[18px] leading-tight">{{ mergedJobs[guestSignupJobId]?.title }}</h3>
+          <p v-if="JOB_SHORT_DESCS[guestSignupJobId]" class="mt-2 text-slate-300 text-[14px] font-medium leading-relaxed">
+            {{ JOB_SHORT_DESCS[guestSignupJobId] }}
+          </p>
+          <p class="mt-3 text-slate-500 text-[12px] font-medium leading-snug">
+            Đăng ký tài khoản miễn phí để xem hướng dẫn chi tiết và tham gia công việc này.
           </p>
 
           <button @click="goGuestAuth('/register')"
-                  class="mt-5 w-full h-12 rounded-xl bg-gradient-to-r from-yellow-300 to-amber-400 text-[#3a0a00] text-[14px] font-black uppercase tracking-wide shadow-[0_4px_16px_rgba(251,191,36,0.35)] active:scale-[0.98] transition-transform">
-            Đăng ký tài khoản miễn phí
+                  class="mt-5 w-full h-12 rounded-xl bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-400 text-[#3a0a00] text-[14px] font-black uppercase tracking-wide shadow-[0_4px_16px_rgba(251,191,36,0.35)] active:scale-[0.98] transition-transform">
+            Đăng ký để tham gia
           </button>
           <p class="mt-3 text-slate-500 text-[12px] font-medium">
             Đã có tài khoản?
@@ -1181,6 +1295,11 @@ watch(activePopup, (val) => {
       @selectTpbank="showFriendReferralSelect = false; router.push('/job/referral_tpbank')"
       @selectTpbankNew="showFriendReferralSelect = false; router.push('/job/referral_tpbank_new')"
     />
+    <MusicVoteModal :show="showMusicVote" :job="mergedJobs[MUSIC_VOTE_JOB_ID]" :myReports="myReports" @close="showMusicVote = false" />
+    <PosterDesignModal :show="showPosterDesign" :job="mergedJobs[POSTER_DESIGN_JOB_ID]" :myReports="myReports" @close="showPosterDesign = false" />
+    <StoryChoiceModal :show="showStoryChoice" :job="mergedJobs[STORY_CHOICE_JOB_ID]" :myReports="myReports" @close="showStoryChoice = false" />
+    <ThreadsCommentModal :show="showThreadsComment" :job="mergedJobs[THREADS_COMMENT_JOB_ID]" :myReports="myReports" @close="showThreadsComment = false" />
+    <ThreadsSeedingModal :show="showThreadsSeeding" :job="mergedJobs[THREADS_SEEDING_JOB_ID]" :myReports="myReports" @close="showThreadsSeeding = false" />
 
     <!-- BOTTOM SHEET BACKDROP -->
     <Transition name="fade-backdrop">
@@ -1190,10 +1309,13 @@ watch(activePopup, (val) => {
       </div>
     </Transition>
 
-    <!-- BOTTOM SHEET PANEL -->
+    <!-- BOTTOM SHEET PANEL — nằm trên thanh điều hướng (cộng thêm safe-area iPhone nếu có); chế độ giới thiệu người mới cao tối đa ~80dvh -->
     <Transition name="sheet-up">
       <div v-if="activePopup"
-           class="fixed bottom-[90px] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden max-h-[min(88vh,calc(100vh_-_102px))] supports-[height:100dvh]:max-h-[min(88vh,calc(100dvh_-_102px))] flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.5)] bg-[#17110f] border border-white/10 select-none">
+           class="fixed bottom-[calc(90px_+_env(safe-area-inset-bottom))] left-3 right-3 z-[3950] lg:hidden rounded-[28px] overflow-hidden flex flex-col shadow-[0_-8px_40px_rgba(0,0,0,0.5)] bg-[#17110f] border border-white/10 select-none"
+           :class="isJobIntro
+             ? 'max-h-[min(80vh,calc(100vh_-_102px_-_env(safe-area-inset-bottom)))] supports-[height:100dvh]:max-h-[min(80dvh,calc(100dvh_-_102px_-_env(safe-area-inset-bottom)))]'
+             : 'max-h-[min(88vh,calc(100vh_-_102px_-_env(safe-area-inset-bottom)))] supports-[height:100dvh]:max-h-[min(88vh,calc(100dvh_-_102px_-_env(safe-area-inset-bottom)))]'">
 
         <!-- Handle bar -->
         <div class="flex justify-center pt-3 pb-1">
@@ -1221,8 +1343,13 @@ watch(activePopup, (val) => {
         <!-- CÔNG VIỆC popup — 2-step category flow (đã đơn giản hoá: list 1 cột, ít màu/glow) -->
         <div v-if="activePopup === 'cong-viec'" class="flex flex-col flex-1 min-h-0">
           <!-- Sticky header — dynamic based on step -->
-          <div class="sticky top-0 bg-[#171010] px-4 py-3 flex items-center justify-between border-b border-white/10 shrink-0">
-            <div class="flex items-center gap-2.5">
+          <div class="sticky top-0 bg-[#171010] px-4 py-3 flex items-center justify-between gap-3 border-b border-white/10 shrink-0">
+            <!-- Chế độ giới thiệu cho tài khoản mới -->
+            <div v-if="isJobIntro" class="min-w-0">
+              <h3 class="text-white text-[14px] font-black tracking-tight leading-snug text-balance">🎉 <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-amber-400">KHÁM PHÁ CÔNG VIỆC DỄ LÀM</span></h3>
+              <p class="mt-0.5 text-slate-400 text-[11px] font-medium leading-snug text-balance">Chọn công việc phù hợp để bắt đầu nhận xu thưởng!</p>
+            </div>
+            <div v-else class="flex items-center gap-2.5">
               <!-- Back button (screen 2 only) -->
               <button v-if="jobCategory !== ''" @click="jobCategory = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -1233,7 +1360,7 @@ watch(activePopup, (val) => {
                 <template v-else>Công việc VIP - không phí, không vốn</template>
               </h3>
             </div>
-            <button @click="activePopup = ''" class="w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
+            <button @click="activePopup = ''" class="shrink-0 w-7 h-7 rounded-xl bg-white/10 flex items-center justify-center text-slate-400 active:scale-90 transition-transform">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
@@ -1263,66 +1390,67 @@ watch(activePopup, (val) => {
           </div>
 
           <!-- SCREEN 2a: Basic jobs — bố cục kiểu Máy Task (giữ nguyên tông tối Rạp Job): card quảng bá Công việc VIP ở đầu;
-               nhóm "Không giới hạn" = card ngang full-width; nhóm "Giới hạn" = lưới card nhỏ 3 cột (2 cột khi màn < 360px) -->
-          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-2 pt-2 pb-3 flex flex-col gap-2">
+               nhóm "Không giới hạn" = card ngang full-width; nhóm "Giới hạn" = lưới card nhỏ 3 cột (2 cột khi màn < 360px).
+               Khoảng cách/padding đã thu gọn (gap 6px) để màn ~390×844 thấy hết banner VIP + 3 job không giới hạn + lưới job giới hạn. -->
+          <div v-else-if="jobCategory === 'basic'" class="overflow-y-auto overscroll-y-contain flex-1 px-2 pt-1.5 pb-2 flex flex-col gap-1.5">
 
-            <!-- Card Công việc VIP (theo ảnh mẫu, tông vàng VIP của Rạp Job) — bấm chuyển sang danh sách VIP như nút 👑 ở màn chọn loại công việc -->
-            <button @click="jobCategory = 'vip'"
-              class="group relative w-full shrink-0 overflow-hidden rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/30 via-amber-700/15 to-amber-900/5 p-3 text-left shadow-[0_0_18px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-transform">
+            <!-- Card Công việc VIP (tông vàng VIP của Rạp Job) — 1 hàng gọn: 👑 + tên/badge thưởng + nút nhỏ "Khám phá"; bấm cả card
+                 chuyển sang danh sách VIP như nút 👑 ở màn chọn loại công việc. Màn < 360px thu nhỏ icon/khoảng cách/nút để badge không bị nút đè.
+                 Ẩn ở chế độ giới thiệu người mới để ưu tiên job dễ làm (VIP vẫn vào được qua nút Khám phá tất cả công việc). -->
+            <button v-if="!isJobIntro" @click="jobCategory = 'vip'"
+              class="group relative w-full shrink-0 overflow-hidden rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/30 via-amber-700/15 to-amber-900/5 px-2.5 min-[360px]:px-3 py-3 text-left shadow-[0_0_18px_rgba(245,158,11,0.15)] active:scale-[0.98] transition-transform">
 
               <!-- Vương miện mờ trang trí góc phải -->
-              <svg class="pointer-events-none absolute -right-3 -bottom-5 w-24 h-24 text-amber-300 opacity-[0.12] rotate-12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.5 10h-15L3 8zM5 21h14"/></svg>
+              <svg class="pointer-events-none absolute -right-2 -bottom-4 w-20 h-20 text-amber-300 opacity-[0.12] rotate-12" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.5 10h-15L3 8zM5 21h14"/></svg>
 
-              <div class="relative flex items-start gap-2.5">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-lg shrink-0">👑</div>
+              <div class="relative flex items-center gap-2 min-[360px]:gap-2.5">
+                <div class="w-9 h-9 min-[360px]:w-10 min-[360px]:h-10 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-center text-lg shrink-0">👑</div>
                 <div class="flex-1 min-w-0">
-                  <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <p class="text-white text-[14px] font-black uppercase tracking-tight leading-tight">Công việc VIP</p>
-                    <span class="px-2 py-0.5 rounded-full bg-amber-400 text-[#1a1208] text-[9px] font-black whitespace-nowrap">Thưởng đến 100.000 XU</span>
-                  </div>
-                  <p class="mt-1 text-amber-100/75 text-[11px] font-medium leading-snug">Khám phá những nhiệm vụ hấp dẫn với phần thưởng giá trị!</p>
+                  <p class="text-white text-[14px] font-black uppercase tracking-tight leading-tight">Công việc VIP</p>
+                  <span class="mt-1 block w-fit px-1.5 min-[360px]:px-2 py-0.5 rounded-full bg-amber-400 text-[#1a1208] text-[8.5px] min-[360px]:text-[9px] font-black whitespace-nowrap">Thưởng đến 100.000 XU</span>
                 </div>
+                <span class="shrink-0 flex items-center gap-1 px-2 min-[360px]:px-2.5 py-1.5 rounded-lg bg-amber-500 group-active:bg-amber-400 text-[#090e17] text-[10px] min-[360px]:text-[11px] font-black whitespace-nowrap transition-colors">
+                  Khám phá
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </span>
               </div>
-
-              <span class="relative mt-3 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-amber-500 group-active:bg-amber-400 text-[#090e17] text-[12px] font-black transition-colors">
-                Khám phá công việc VIP
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </span>
             </button>
 
-            <!-- Tiêu đề nhóm: chấm màu + chữ nhỏ -->
-            <div class="flex items-center gap-1.5 px-0.5 pt-1.5">
+            <!-- Tiêu đề nhóm: chấm màu + chữ nhỏ (ẩn khi Admin ẩn hết các job không giới hạn) -->
+            <div v-if="basicUnlimitedIds.length" class="flex items-center gap-1.5 px-0.5 pt-0.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)] shrink-0"></span>
               <p class="text-emerald-400 text-[9.5px] font-black uppercase tracking-widest">Không giới hạn — làm nhiều lần</p>
             </div>
             <template v-for="id in basicUnlimitedIds" :key="id">
               <button @click="handleReceiveJob(id as string)"
-                class="w-full shrink-0 flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors text-left relative overflow-hidden"
+                class="w-full shrink-0 flex items-center gap-2.5 px-3 py-2 rounded-xl border transition-colors text-left relative overflow-hidden"
                 :class="[
                   mergedJobs[id as string]?.paused ? 'opacity-50' : '',
                   id === 'daily_threads'
-                    ? 'border-teal-400/60 bg-gradient-to-r from-teal-500/20 to-emerald-500/10 active:from-teal-500/25 active:to-emerald-500/15 featured-job-row'
-                    : 'border-white/10 bg-white/[0.03] active:bg-white/[0.07]'
+                    ? 'pt-3 border-teal-400/60 bg-gradient-to-r from-teal-500/20 to-emerald-500/10 active:from-teal-500/25 active:to-emerald-500/15 featured-job-row'
+                    : (id === THREADS_COMMENT_JOB_ID || id === THREADS_SEEDING_JOB_ID)
+                      ? 'border-red-500/45 bg-gradient-to-r from-red-500/15 to-amber-500/[0.06] active:from-red-500/20 active:to-amber-500/10'
+                      : 'border-white/10 bg-white/[0.03] active:bg-white/[0.07]'
                 ]">
 
-                <!-- Ribbon nổi bật -->
-                <span v-if="id === 'daily_threads'" class="absolute top-0 right-0 bg-gradient-to-r from-teal-400 to-emerald-400 text-teal-950 text-[7px] font-black uppercase px-2 py-0.5 rounded-bl-lg tracking-wide">🔥 Nổi bật</span>
+                <!-- Ribbon nổi bật (card này có pt-3 để ribbon không đè số xu) -->
+                <span v-if="id === 'daily_threads'" class="absolute top-0 right-0 bg-gradient-to-r from-teal-400 to-emerald-400 text-teal-950 text-[7px] font-black uppercase leading-none px-2 py-0.5 rounded-bl-lg tracking-wide">🔥 Nổi bật</span>
 
                 <!-- Trái: icon + tên công việc + nhãn -->
                 <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
-                     :class="id === 'daily_threads' ? 'bg-teal-500/25 border border-teal-400/50' : 'bg-white/5 border border-white/10'">
+                     :class="id === 'daily_threads' ? 'bg-teal-500/25 border border-teal-400/50' : (id === THREADS_COMMENT_JOB_ID || id === THREADS_SEEDING_JOB_ID) ? 'bg-red-500/20 border border-red-400/40' : 'bg-white/5 border border-white/10'">
                   {{ jobIconMap[id as string] || '🎯' }}
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-[12px] font-semibold leading-snug line-clamp-2" :class="id === 'daily_threads' ? 'text-teal-50' : 'text-white'">{{ mergedJobs[id as string]?.title }}</p>
-                  <span class="inline-block mt-1 text-[7.5px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-white/10" :class="mergedJobs[id as string]?.paused ? 'text-slate-400' : getBadgeTextClass(mergedJobs[id as string]?.badge || 'CƠ BẢN')">
+                  <p class="text-[12px] font-semibold leading-tight line-clamp-3" :class="id === 'daily_threads' ? 'text-teal-50' : 'text-white'">{{ mergedJobs[id as string]?.title }}</p>
+                  <span class="block w-fit mt-1 text-[7.5px] font-bold uppercase leading-none px-1.5 py-[3px] rounded-md bg-white/10" :class="mergedJobs[id as string]?.paused ? 'text-slate-400' : getBadgeTextClass(mergedJobs[id as string]?.badge || 'CƠ BẢN')">
                     {{ mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'CƠ BẢN') }}
                   </span>
                 </div>
 
-                <!-- Phải: số xu + mũi tên điều hướng (rewardText dài do Admin đặt → xuống tối đa 3 dòng cân đối, không đè tên job) -->
+                <!-- Phải: số xu + mũi tên điều hướng (rewardText dài do Admin đặt → xuống tối đa 4 dòng cân đối, không đè tên job) -->
                 <div class="flex items-center gap-0.5 shrink-0 max-w-[40%]">
-                  <span class="min-w-0 text-right text-[11px] font-black leading-tight line-clamp-3 text-balance" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : (id === 'daily_threads' ? 'text-teal-300' : 'text-yellow-400')">
+                  <span class="min-w-0 text-right text-[11px] font-black leading-tight line-clamp-4 text-balance" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : (id === 'daily_threads' ? 'text-teal-300' : 'text-yellow-400')">
                     {{ jobRewardText(id as string) }}
                   </span>
                   <svg v-if="!mergedJobs[id as string]?.paused" class="w-4 h-4 shrink-0" :class="id === 'daily_threads' ? 'text-teal-300' : 'text-slate-400'" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
@@ -1330,14 +1458,15 @@ watch(activePopup, (val) => {
               </button>
             </template>
 
-            <div class="flex items-center gap-1.5 px-0.5 pt-1.5">
+            <div class="flex items-center gap-1.5 px-0.5 pt-0.5">
               <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)] shrink-0"></span>
               <p class="text-slate-400 text-[9.5px] font-black uppercase tracking-widest">Giới hạn — chỉ làm 1 lần</p>
             </div>
-            <div class="grid grid-cols-2 min-[360px]:grid-cols-3 gap-2">
+            <!-- auto-rows-fr: mọi hàng cao bằng nhau (theo card cao nhất); thêm job mới trong code thì lưới tự thêm hàng, vùng danh sách cuộn dọc -->
+            <div class="grid grid-cols-2 min-[360px]:grid-cols-3 auto-rows-fr gap-1.5">
               <template v-for="id in basicLimitedIds" :key="id">
                 <button @click="handleReceiveJob(id as string)"
-                  class="min-w-0 flex flex-col px-1.5 min-[375px]:px-2 py-1.5 rounded-xl border border-white/10 bg-white/[0.03] active:bg-white/[0.07] transition-colors text-left"
+                  class="min-w-0 flex flex-col px-1.5 py-1.5 rounded-xl border border-white/10 bg-white/[0.03] active:bg-white/[0.07] transition-colors text-left"
                   :class="mergedJobs[id as string]?.paused ? 'opacity-50' : ''">
 
                   <!-- Trên: icon nhỏ (nhãn bên phải) + tên công việc tối đa 2 dòng -->
@@ -1347,10 +1476,10 @@ watch(activePopup, (val) => {
                       {{ mergedJobs[id as string]?.paused ? 'TẠM DỪNG' : (mergedJobs[id as string]?.badge || 'CƠ BẢN') }}
                     </span>
                   </div>
-                  <p class="mt-1 text-white text-[10px] font-semibold leading-[1.3] line-clamp-2 wrap-break-word">{{ mergedJobs[id as string]?.title }}</p>
+                  <p class="mt-0.5 text-white text-[10px] font-semibold leading-[1.25] line-clamp-2 wrap-break-word">{{ mergedJobs[id as string]?.title }}</p>
 
                   <!-- Dưới: số xu thưởng (mt-auto để các card cùng hàng thẳng đáy) -->
-                  <p class="mt-auto pt-1 text-[11px] font-bold leading-tight truncate" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : 'text-yellow-400'">
+                  <p class="mt-auto pt-0.5 text-[11px] font-bold leading-[1.2] truncate" :class="mergedJobs[id as string]?.paused ? 'text-slate-500' : 'text-yellow-400'">
                     {{ jobRewardText(id as string) }}
                   </p>
                 </button>
@@ -1437,6 +1566,15 @@ watch(activePopup, (val) => {
             </template>
 
             <div class="h-1"></div>
+          </div>
+
+          <!-- Chế độ giới thiệu: nút cố định dưới đáy (ngoài vùng cuộn) → mở popup Công việc đầy đủ (màn chọn Dễ làm / VIP) -->
+          <div v-if="isJobIntro && jobCategory === 'basic'" class="shrink-0 px-3 pt-2.5 pb-3 bg-[#171010] border-t border-white/10">
+            <button @click="isJobIntro = false; jobCategory = ''"
+              class="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl bg-red-600 active:bg-red-500 text-white text-[12px] font-black uppercase tracking-wide shadow-[0_4px_14px_rgba(220,38,38,0.35)] transition-colors">
+              KHÁM PHÁ TẤT CẢ CÔNG VIỆC
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
           </div>
         </div>
 
@@ -1596,31 +1734,34 @@ watch(activePopup, (val) => {
         <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="activePopup === 'nop-bai' ? 'text-emerald-400' : 'text-[#8B93A7]'">GỬI BC</span>
       </button>
 
-      <!-- ⑤ HỖ TRỢ — vị trí 5 — active: fuchsia (tím/hồng) -->
-      <button @click="showSupportPanel = true" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1">
+      <!-- ⑤ HỖ TRỢ — vị trí 5 — mở thẳng Messenger Fanpage (không còn bảng Hỗ trợ / chấm đỏ thông báo trên mobile) -->
+      <button @click="openFanpageMessenger" class="relative flex-1 min-h-[48px] flex flex-col items-center justify-center gap-1">
         <span class="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-6 rounded-full transition duration-200" :class="showSupportPanel ? 'bg-fuchsia-400 shadow-[0_0_6px_rgba(232,121,249,0.7)] opacity-100' : 'opacity-0'"></span>
         <span class="relative flex items-center justify-center w-9 h-9 rounded-xl transition duration-200" :class="showSupportPanel ? 'bg-fuchsia-500/15 shadow-[0_0_10px_rgba(232,121,249,0.35)]' : ''">
           <svg style="width:24px;height:24px" class="transition duration-200" :class="showSupportPanel ? 'text-fuchsia-400' : 'text-[#9CA3AF]'" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
-          <span v-if="supportBadge" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0a0507] animate-pulse pointer-events-none"></span>
         </span>
         <span class="text-[10px] font-bold tracking-wide uppercase transition duration-200" :class="showSupportPanel ? 'text-fuchsia-400' : 'text-[#8B93A7]'">HỖ TRỢ</span>
       </button>
 
     </nav>
 
-    <!-- Khách chưa đăng nhập (mobile): thay thanh điều hướng 5 nút bằng 1 nút đăng ký nổi bật -->
+    <!-- Khách chưa đăng nhập (mobile): thay thanh điều hướng 5 nút bằng 1 nút đăng ký nổi bật nhất trang -->
     <div v-else-if="!isAuthRoute"
-         class="fixed bottom-0 left-0 w-full lg:hidden z-[4000] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#0a0714]/90 backdrop-blur-md border-t border-red-900/30 shadow-[0_-6px_24px_rgba(0,0,0,0.35)]">
+         class="fixed bottom-0 left-0 w-full lg:hidden z-[4000] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-[#0a0714]/90 backdrop-blur-md border-t border-amber-400/20 shadow-[0_-6px_24px_rgba(0,0,0,0.35)]">
       <button @click="router.push('/register')"
-              class="w-full h-12 rounded-xl bg-gradient-to-r from-yellow-300 to-amber-400 text-[#3a0a00] text-[14px] font-black uppercase tracking-wide shadow-[0_4px_16px_rgba(251,191,36,0.35)] active:scale-[0.98] transition-transform">
+              class="w-full max-w-[520px] mx-auto h-[52px] flex items-center justify-center gap-1.5 rounded-2xl bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-400 text-[#3a0a00] text-[14px] min-[360px]:text-[15px] font-black uppercase tracking-wide ring-1 ring-yellow-200/70 shadow-[0_0_24px_rgba(251,191,36,0.45)] active:scale-[0.98] transition-transform">
         Đăng ký tài khoản miễn phí
+        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
     </div>
 
+    <!-- Ticker "vừa rút thành công": khách chưa đăng nhập trên mobile/tablet không thấy (ẩn ở mọi trang, kể cả dữ liệu mô phỏng);
+         người đã đăng nhập và desktop giữ nguyên -->
     <Transition name="slide-up">
       <div v-if="randomNotice && (!isAuthRoute || isLoggedIn) && !shouldHideWithdrawTicker"
            :style="windowWidth >= 1024 ? { left: isMenuOpen ? '320px' : '20px' } : {}"
-           class="fixed bottom-[90px] left-3 right-3 lg:bottom-10 lg:left-auto lg:right-auto z-[3500] flex items-center gap-3 bg-[#150f0d]/95 backdrop-blur-xl border border-red-700/40 px-4 py-2.5 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.35)] lg:min-w-[320px] transition-all duration-300">
+           class="fixed bottom-[90px] left-3 right-3 lg:bottom-10 lg:left-auto lg:right-auto z-[3500] items-center gap-3 bg-[#150f0d]/95 backdrop-blur-xl border border-red-700/40 px-4 py-2.5 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.35)] lg:min-w-[320px] transition-all duration-300"
+           :class="isLoggedIn ? 'flex' : 'hidden lg:flex'">
         <div :class="[
           'w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-md shrink-0',
           randomNotice.type === 'withdraw'

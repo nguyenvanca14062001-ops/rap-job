@@ -60,7 +60,7 @@ const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
 const closeImage = () => { selectedImage.value = null }
 // Ảnh mẫu lấy lại từ hướng dẫn job APP ABBANK hiện có: bước nhập mã giới thiệu, bước đăng ký thành công, bước hoàn tất giao dịch 30k
-const sampleImages = ['images/anh-abbank1.jpg', 'images/anh-abbank2.jpg', 'images/anh-abbank4.jpg']
+const sampleImages = ['images/abbank-1.jpg', 'images/abbank-2.jpg', 'images/anh-abbank4.jpg']
 
 // --- Copy helper (toast) ---
 const copyText = (text: string, toastTitle: string) => {

@@ -2,6 +2,10 @@
 import { ref, computed } from 'vue';
 import { jobsData } from '@/data/jobs';
 import { VIP_JOB_IDS } from '@/utils/vipJobs';
+import { STORY_CHOICE_JOB_ID } from '@/utils/storyChoice';
+import { THREADS_COMMENT_JOB_ID } from '@/utils/threadsComment';
+import { THREADS_SEEDING_JOB_ID } from '@/utils/threadsSeeding';
+import { JOB_SHORT_DESCS } from '@/utils/jobShortDesc';
 import Logo from '@/components/Logo.vue';
 
 const props = defineProps<{
@@ -54,8 +58,15 @@ const getJobIcon = (id: string) => {
     'review-cinema':  { t: '⭐', c: 'text-white' },
     'checkin-cinema': { t: '📸', c: 'text-white' },
     'survey-cinema':  { t: '📋', c: 'text-white' },
+    'view-tiktok':    { t: '🎵', c: 'text-white' },
+    'view-youtube':   { t: '▶️', c: 'text-white' },
+    'music-vote':     { t: '🎧', c: 'text-white' },
+    'poster-design':  { t: '🎨', c: 'text-white' },
+    [STORY_CHOICE_JOB_ID]: { t: jobsData[STORY_CHOICE_JOB_ID].icon, c: 'text-white' },
     'post-threads': { t: '🧵', c: 'text-white' },
     'daily_threads': { t: '🧵', c: 'text-white' },
+    [THREADS_COMMENT_JOB_ID]: { t: jobsData[THREADS_COMMENT_JOB_ID].icon, c: 'text-white' },
+    [THREADS_SEEDING_JOB_ID]: { t: jobsData[THREADS_SEEDING_JOB_ID].icon, c: 'text-white' },
     'join-zalo': { t: 'ZALO', c: 'text-white' },
     'app-chung-khoan': { t: '📈', c: 'text-white' },
     'app-chung-khoan-2': { t: '📈', c: 'text-white' },
@@ -112,35 +123,8 @@ const highlights = [
   'RÚT TIỀN 24/7 MINH BẠCH',
 ]
 
-const getShortDesc = (id: string) => {
-  const desc: Record<string, string> = {
-    'follow-cgv':     'Follow fanpage + like & share trailer mới',
-    'review-cinema':  'Đánh giá 5 sao rạp phim trên Google Maps',
-    'checkin-cinema': 'Check-in tại rạp, đăng Facebook/Instagram',
-    'survey-cinema':  'Trả lời 5 câu hỏi, xu vào ví ngay lập tức',
-    'post-threads': 'Đăng bài tuyển CTV lên Threads nhận thưởng',
-    'daily_threads': 'Đăng bài mỗi ngày, nhập link nhận xu',
-    'join-zalo': 'Vào nhóm cộng đồng nhận thông báo',
-    'app-chung-khoan': 'Đăng ký tài khoản Kafi X',
-    'app-chung-khoan-2': 'Đăng ký tài khoản DNSE',
-    'app-chung-khoan-3': 'Đăng ký tài khoản KIS',
-    'vpbank': 'Mở tài khoản số đẹp VPBank',
-    'app-chung-khoan-4': 'Đăng ký tài khoản chứng khoán',
-    'msb-bank': 'Nhận quà tặng khi mở thẻ MSB',
-    'abbank': 'Mở tài khoản ABBANK',
-    'tpbank': 'Mở tài khoản TPBANK',
-    'tpbank-new': 'Mở tài khoản TPBANK',
-    'lpbank-plus': 'Đăng ký APP LPBANK PLUS nhận thưởng',
-    'vietcombank': 'Đăng ký VIETCOMBANK nhận thưởng',
-    'mbv-bank': 'Đăng ký MBV BANK nhận thưởng',
-    'shopee-pay': 'Đăng ký Shopee Pay nhận thưởng',
-    'referral-hub': 'Mời bạn bè đăng ký app nhận thưởng tăng dần',
-    'momo': 'Đăng ký ví MoMo nhận thưởng',
-    'referral_momo': 'Mời bạn bè đăng ký APP VÍ MOMO',
-    'referral-friends': 'Chọn app muốn giới thiệu để nhận thưởng',
-  };
-  return desc[id] || 'Làm nhiệm vụ ngay';
-}
+// Bảng mô tả dùng chung với popup giới thiệu job ở trang chủ khách mobile (App.vue) — xem utils/jobShortDesc.ts
+const getShortDesc = (id: string) => JOB_SHORT_DESCS[id] || 'Làm nhiệm vụ ngay';
 
 function getAgeBadgeClass(age: number): string {
   if (age <= 15) return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'

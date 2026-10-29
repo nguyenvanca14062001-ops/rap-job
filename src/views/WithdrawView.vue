@@ -19,6 +19,8 @@ const props = defineProps<{
   vipCompletedCount?: number
   withdraw150kUsed?: boolean
 }>()
+// CTA "Khám phá công việc VIP" — App.vue mở danh sách Công việc VIP (bottom sheet mobile / khu VIP trang chủ desktop)
+const emit = defineEmits<{ (e: 'openVipJobs'): void }>()
 
 const amount = ref<number | null>(null)
 const isLoading = ref(false)
@@ -49,8 +51,22 @@ const WITHDRAW_150K_USED_MESSAGE = 'Mốc 150.000 xu chỉ được rút 1 lần
 
 const requiredJobs = computed(() => 3)
 const tasksUnlocked = computed(() => vipCompletedCount.value >= requiredJobs.value)
-// Chỉ đổi text hiển thị (tên gọi "công việc hoa hồng cao - dễ làm" thay cho "VIP") — không đổi field/logic vipCompletedCount/requiredJobs.
-const taskErrorMessage = computed(() => `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} công việc hoa hồng cao - dễ làm để rút tiền. Hiện tại bạn đã hoàn thành: <span style="color:#fbbf24;font-weight:900">${vipCompletedCount.value}/${requiredJobs.value} công việc hoa hồng cao - dễ làm</span>.`)
+// Chỉ đổi text hiển thị (gọi đúng tên "Công việc VIP" như tab Công việc VIP) — không đổi field/logic vipCompletedCount/requiredJobs.
+const vipRequirementHtml = (completed: number) => `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} Công việc VIP để rút tiền. Hiện tại bạn đã hoàn thành: <span style="color:#fbbf24;font-weight:900">${completed}/${requiredJobs.value} Công việc VIP</span>.`
+
+// Popup chưa đủ điều kiện rút tiền, kèm nút CTA mở thẳng danh sách Công việc VIP
+const showVipRequirementPopup = (completed: number) => {
+  Swal.fire({
+    title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
+    html: vipRequirementHtml(completed),
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: '<span style="color:#1a1208;font-weight:900">Khám phá công việc VIP</span>',
+    confirmButtonColor: '#f59e0b',
+    cancelButtonText: 'Để sau',
+    customClass: { popup: 'rounded-[30px]' }
+  }).then(({ isConfirmed }) => { if (isConfirmed) emit('openVipJobs') })
+}
 
 const formatNumber = (num: number) => {
   return Math.floor(num).toLocaleString('vi-VN')
@@ -141,13 +157,7 @@ const removeQr = () => {
 
 const triggerWithdraw = () => {
   if (!tasksUnlocked.value) {
-    Swal.fire({
-      title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
-      html: taskErrorMessage.value,
-      icon: 'warning',
-      confirmButtonColor: '#eab308',
-      customClass: { popup: 'rounded-[30px]' }
-    })
+    showVipRequirementPopup(vipCompletedCount.value)
     return
   }
 
@@ -250,13 +260,7 @@ const handleConfirmWithdraw = async () => {
   const liveVipCompletedCount = Number(liveUserData.vipCompletedCount) || 0
   if (liveVipCompletedCount < requiredJobs.value) {
     showConfirmModal.value = false
-    Swal.fire({
-      title: 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!',
-      html: `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} công việc hoa hồng cao - dễ làm để rút tiền. Hiện tại bạn đã hoàn thành: <span style="color:#fbbf24;font-weight:900">${liveVipCompletedCount}/${requiredJobs.value} công việc hoa hồng cao - dễ làm</span>.`,
-      icon: 'warning',
-      confirmButtonColor: '#eab308',
-      customClass: { popup: 'rounded-[30px]' }
-    })
+    showVipRequirementPopup(liveVipCompletedCount)
     return
   }
 
@@ -375,7 +379,7 @@ const handleConfirmWithdraw = async () => {
         errorText = 'Rules chưa cho phép mốc 150.000 hoặc amount gửi lên chưa đúng kiểu number.'
       } else if (liveVipCompletedCount < requiredJobs.value) {
         errorTitle = 'CHƯA ĐỦ ĐIỀU KIỆN RÚT TIỀN!'
-        errorText = `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} công việc hoa hồng cao - dễ làm để rút tiền.`
+        errorText = `Bạn cần hoàn thành tối thiểu ${requiredJobs.value} Công việc VIP để rút tiền.`
       } else if (!withdrawOptions.includes(withdrawAmount)) {
         errorTitle = 'MỐC RÚT KHÔNG HỢP LỆ!'
         errorText = 'Mốc rút không hợp lệ.'

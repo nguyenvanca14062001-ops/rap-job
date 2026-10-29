@@ -38,12 +38,13 @@ const jobId = route.params.id as string
 const staticJob = jobsData[jobId] || jobsData['app-chung-khoan']
 
 // --- Giao diện rút gọn cho các job CƠ BẢN trên mobile (không đụng tới các job VIP ngân hàng
-// hay các job dùng popup riêng — chỉ áp dụng đúng 5 job cơ bản dùng chung layout "steps" này) ---
-const BASIC_TIER_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'post-threads', 'join-zalo']
+// hay các job dùng popup riêng — chỉ áp dụng đúng 7 job cơ bản dùng chung layout "steps" này) ---
+const BASIC_TIER_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'post-threads', 'join-zalo', 'view-tiktok', 'view-youtube']
 const isBasicTierJob = BASIC_TIER_IDS.includes(jobId)
 
 const BASIC_JOB_ICON: Record<string, string> = {
   'follow-cgv': '🎬', 'review-cinema': '⭐', 'checkin-cinema': '📸', 'post-threads': '🧵', 'join-zalo': '💬',
+  'view-tiktok': '🎵', 'view-youtube': '▶️',
 }
 const basicJobIcon = BASIC_JOB_ICON[jobId] || '🎯'
 
@@ -55,6 +56,8 @@ const PROOF_CHECKLIST: Record<string, string[]> = {
   'checkin-cinema': ['Ảnh bài đăng công khai có tag + hashtag rạp phim'],
   'post-threads': ['Ảnh bài đăng Threads đã đăng', 'Ảnh bình luận có ghim mã QR'],
   'join-zalo': ['Ảnh màn hình đã tham gia nhóm Zalo'],
+  'view-tiktok': ['Ảnh chụp màn hình đã Like, Follow kênh và có bình luận của bạn'],
+  'view-youtube': ['Ảnh chụp màn hình đã đăng ký kênh, đã Like và đủ thời lượng xem'],
 }
 const proofChecklist = PROOF_CHECKLIST[jobId] || []
 const requiredImageCount = proofChecklist.length || 1

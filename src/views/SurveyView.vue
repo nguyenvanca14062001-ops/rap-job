@@ -7,7 +7,7 @@ import { serverTimestamp, collection, addDoc, query, where, getDocs } from 'fire
 const router = useRouter()
 
 const SURVEY_ID = 'survey-cinema'
-const REWARD = 15000
+const REWARD = 10000
 
 const questions = [
   {

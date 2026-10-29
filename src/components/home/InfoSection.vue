@@ -26,7 +26,7 @@ const jobTypes = [
   {
     tag: 'CƠ BẢN', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30',
     glow: 'rgba(52,211,153,0.15)',
-    icon: '⚡', title: 'Công Việc Cơ Bản', reward: '10.000 – 30.000 XU / việc',
+    icon: '⚡', title: 'Công Việc Cơ Bản', reward: '10.000 – 20.000 XU / việc',
     items: ['Follow fanpage thương hiệu', 'Đánh giá Google Map', 'Vào nhóm Zalo / Telegram', 'Check-in địa điểm'],
   },
   {

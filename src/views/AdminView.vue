@@ -14,12 +14,17 @@ import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/util
 import { SHOPEE_PAY_REFERRAL_JOB_ID, SHOPEE_PAY_REFERRAL_REWARD } from '@/utils/referralShopeePay'
 import { TPBANK_REFERRAL_JOB_ID, TPBANK_REFERRAL_REWARD } from '@/utils/referralTpbank'
 import { TPBANK_NEW_REFERRAL_JOB_ID, TPBANK_NEW_REFERRAL_REWARD } from '@/utils/referralTpbankNew'
+import { THREADS_COMMENT_JOB_ID, THREADS_COMMENT_REJECT_REASONS, threadsProfileUrl } from '@/utils/threadsComment'
+import { THREADS_SEEDING_JOB_ID, THREADS_SEEDING_REJECT_REASONS, parseThreadsPostUrl } from '@/utils/threadsSeeding'
 import DailyThreadReportsTab from '@/components/admin/DailyThreadReportsTab.vue'
 import DailyThreadsGuideConfigTab from '@/components/admin/DailyThreadsGuideConfigTab.vue'
 import StorageCleanupTab from '@/components/admin/StorageCleanupTab.vue'
 import PostThreadsJobConfigTab from '@/components/admin/PostThreadsJobConfigTab.vue'
+import ThreadsCountReportsTab from '@/components/admin/ThreadsCountReportsTab.vue'
 
 const dailyThreadReportsCount = ref(0)
+// Số đơn chờ của tab DUYỆT THREADS – SEEDING (BÌNH LUẬN DẠO + ĐĂNG BÀI THREADS – SEEDING) — tab tự báo lên qua listener riêng
+const threadsCountPendingCount = ref(0)
 
 const reports = ref<any[]>([])
 const withdrawals = ref<any[]>([])
@@ -201,8 +206,17 @@ const selectedAppJobs = ref<string[]>([])
 
 watch(activeTab, () => { selectedOtherJobs.value = []; selectedAppJobs.value = [] })
 
+// Job thưởng theo SỐ LƯỢNG (BÌNH LUẬN DẠO: số bình luận, ĐĂNG BÀI THREADS – SEEDING: số lượt trả lời) — Admin nhập số hợp lệ
+// khi duyệt lẻ; đơn dùng chung field commentCount / verifiedCommentCount / rewardPerComment
+const COUNT_REWARD_JOB_IDS = [THREADS_COMMENT_JOB_ID, THREADS_SEEDING_JOB_ID]
+const isCountRewardJob = (jobId: any) => COUNT_REWARD_JOB_IDS.includes(jobId)
+const countUnit = (jobId: any) => jobId === THREADS_SEEDING_JOB_ID ? 'lượt trả lời' : 'bình luận'
+
+// Đơn chờ duyệt chọn được để duyệt hàng loạt — trừ đơn thưởng theo số lượng: phải duyệt lẻ bằng nút 💰 Cộng xu để nhập số
+// hợp lệ (duyệt hàng loạt chỉ cộng đúng mức thưởng của 1 bình luận / 1 lượt trả lời)
+const bulkSelectableOtherReports = computed(() => filteredOtherReports.value.filter(r => r.status === 'pending' && !isCountRewardJob(r.jobId)))
 const isAllOtherJobsSelected = computed(() => {
-  const pending = filteredOtherReports.value.filter(r => r.status === 'pending')
+  const pending = bulkSelectableOtherReports.value
   return pending.length > 0 && selectedOtherJobs.value.length === pending.length
 })
 const isAllAppJobsSelected = computed(() => {
@@ -212,7 +226,7 @@ const isAllAppJobsSelected = computed(() => {
 
 const toggleAllOtherJobs = (e: Event) => {
   const checked = (e.target as HTMLInputElement).checked
-  selectedOtherJobs.value = checked ? filteredOtherReports.value.filter(r => r.status === 'pending').map(r => r.id) : []
+  selectedOtherJobs.value = checked ? bulkSelectableOtherReports.value.map(r => r.id) : []
 }
 const toggleAllAppJobs = (e: Event) => {
   const checked = (e.target as HTMLInputElement).checked
@@ -246,6 +260,8 @@ const bulkApproveOtherJobs = async () => {
       for (const id of selectedOtherJobs.value) {
         const rp = reports.value.find(r => r.id === id)
         if (!rp || rp.status !== 'pending') continue
+        // Đơn thưởng theo số lượng không duyệt hàng loạt (xem bulkSelectableOtherReports) — chặn thêm lần nữa ở đây
+        if (isCountRewardJob(rp.jobId)) continue
         // Lấy từ cấu hình job đáng tin cậy — không dùng rp.reward (client-submitted).
         const reward = getTrustedReward(rp.jobId)
 
@@ -916,8 +932,47 @@ const checkReportStatus = (status: string) => {
 }
 
 const filteredAppReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r)))
-const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r)))
+// Đơn BÌNH LUẬN DẠO / ĐĂNG BÀI THREADS – SEEDING chỉ hiện và duyệt ở tab DUYỆT THREADS – SEEDING (ThreadsCountReportsTab)
+const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r) && !isCountRewardJob(r.jobId)))
 const filteredWithdrawals = computed(() => withdrawals.value.filter(w => (siteFilter.value === 'all' || w.site === siteFilter.value) && (searchQuery.value.trim() ? true : (statusFilter.value === 'all' || w.status === statusFilter.value))))
+
+// Ảnh bằng chứng trùng giữa các đơn thưởng theo số lượng đang tải (BÌNH LUẬN DẠO + SEEDING, mọi user, so SHA-256 file gốc lưu
+// lúc gửi) — chỉ cảnh báo, không tự từ chối. Popup duyệt tra thêm trên Firestore để bắt cả đơn cũ đã duyệt.
+const countJobHashOwners = computed(() => {
+  const owners: Record<string, string[]> = {}
+  for (const r of reports.value) {
+    if (!isCountRewardJob(r.jobId) || !Array.isArray(r.proofImageHashes)) continue
+    for (const h of r.proofImageHashes) {
+      if (!h) continue
+      const list = owners[h] ?? (owners[h] = [])
+      list.push(r.id)
+    }
+  }
+  return owners
+})
+const countDuplicateProofReports = (rp: any) => {
+  const others = new Set<string>()
+  for (const h of rp.proofImageHashes || []) {
+    for (const id of countJobHashOwners.value[h] || []) if (id !== rp.id) others.add(id)
+  }
+  return others.size
+}
+
+// Đơn ĐĂNG BÀI THREADS – SEEDING khác của CÙNG bài viết (threadsPostCode) trong các đơn đang tải — chỉ cảnh báo. Popup duyệt
+// (promptThreadsSeedingApproval) tra đủ trên Firestore và hiện số lượt đã tính thưởng của bài đó.
+const seedingPostOwners = computed(() => {
+  const owners: Record<string, string[]> = {}
+  for (const r of reports.value) {
+    if (r.jobId !== THREADS_SEEDING_JOB_ID || !r.threadsPostCode) continue
+    const list = owners[r.threadsPostCode] ?? (owners[r.threadsPostCode] = [])
+    list.push(r.id)
+  }
+  return owners
+})
+const countSamePostReports = (rp: any) =>
+  rp.threadsPostCode ? (seedingPostOwners.value[rp.threadsPostCode] || []).filter(id => id !== rp.id).length : 0
+// Chỉ mở link đúng dạng bài viết Threads — field do user ghi, không render thẳng làm href (tránh link javascript:)
+const seedingPostUrl = (rp: any) => parseThreadsPostUrl(rp.threadsPostUrl)?.url || ''
 
 const getXuAmount = (wd: any) => { let x = wd.amountXu || wd.amount || wd.xu || 0; if (typeof x === 'string') x = Number(x.replace(/\D/g, '')); return Number(x) || 0 }
 const getVndAmount = (wd: any) => { let v = wd.realMoney || wd.money || 0; if (typeof v === 'string') v = Number(v.replace(/\D/g, '')); let fv = Number(v) || 0; let fx = getXuAmount(wd); if (fv === 0 && fx > 0) fv = fx / 10; else if (fv === fx && fx > 0) fv = fx / 10; return fv }
@@ -1013,6 +1068,219 @@ const getTrustedReward = (jobId: string): number => {
   return Number(String(source ?? '0').replace(/\D/g, '')) || 0
 }
 
+// Mức thưởng / 1 bình luận – 1 lượt trả lời cho tab DUYỆT THREADS – SEEDING — cùng nguồn đáng tin cậy với approveReport()
+const threadsCountRates = computed(() => ({
+  [THREADS_COMMENT_JOB_ID]: getTrustedReward(THREADS_COMMENT_JOB_ID),
+  [THREADS_SEEDING_JOB_ID]: getTrustedReward(THREADS_SEEDING_JOB_ID),
+}))
+
+// Tab DUYỆT THREADS – SEEDING vừa cộng xu 1 đơn (transaction chạy trong tab) — cập nhật ví đang hiển thị + thống kê hôm nay như
+// approveReport(). Chỉ sửa user đã có trong usersMap để không tạo hồ sơ thiếu field (sẽ chặn việc tải hồ sơ đầy đủ sau này).
+const onThreadsCountApproved = ({ report, uid, amount }: { report: any; uid: string; amount: number }) => {
+  const user = usersMap.value[uid]
+  if (user) usersMap.value = { ...usersMap.value, [uid]: { ...user, balance: (Number(user.balance) || 0) + amount } }
+  updateLocalStatsOnApprove(report)
+}
+
+// ============================================================================
+// DUYỆT ĐƠN BÌNH LUẬN DẠO – THREADS (thưởng theo số lượng) — Admin tự nhập SỐ BÌNH LUẬN HỢP LỆ đã kiểm tra: ô nhập để
+// trống, không điền sẵn số user khai báo, không được vượt số khai báo. Xu cộng = số hợp lệ × mức thưởng/bình luận lấy từ
+// cấu hình job (getTrustedReward), không bao giờ từ report.reward / report.rewardPerComment (field user tự ghi lúc gửi).
+// Việc cộng xu vẫn đi qua transaction của approveReport() — đơn không còn 'pending' thì chặn, không cộng trùng.
+// ============================================================================
+const escapeHtml = (value: any) => String(value ?? '').replace(/[&<>"']/g, ch => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' } as Record<string, string>
+)[ch] || ch)
+
+const promptThreadsCommentApproval = async (report: any, user: any, targetUid: string): Promise<{ verifiedCount: number; rate: number } | null> => {
+  const rate = getTrustedReward(THREADS_COMMENT_JOB_ID)
+  if (rate <= 0) {
+    Swal.fire('LỖI!', 'Job BÌNH LUẬN DẠO chưa có mức thưởng / bình luận trong cấu hình (jobs.ts hoặc CẤU HÌNH JOB VIP).', 'error')
+    return null
+  }
+  const declared = Math.floor(Number(report.commentCount)) || 0
+
+  // Các đơn cùng job của user + đơn bất kỳ (mọi user, mọi trạng thái) có ảnh trùng SHA-256 — giúp Admin không duyệt lại
+  // bình luận đã cộng xu ở đơn trước. Lỗi truy vấn chỉ làm thiếu phần cảnh báo, không chặn việc duyệt.
+  Swal.fire({ title: 'ĐANG KIỂM TRA ĐƠN CŨ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
+  const safeGetDocs = (q: any) => getDocs(q).catch((e: any) => { console.error('[Admin] Lỗi kiểm tra đơn BÌNH LUẬN DẠO:', e); return null })
+  const hashes = (Array.isArray(report.proofImageHashes) ? report.proofImageHashes : []).filter(Boolean).slice(0, 10)
+  const [historySnap, duplicateSnap] = await Promise.all([
+    safeGetDocs(query(collection(db, 'reports'), where('uid', '==', report.uid), where('jobId', '==', THREADS_COMMENT_JOB_ID))),
+    hashes.length ? safeGetDocs(query(collection(db, 'reports'), where('proofImageHashes', 'array-contains-any', hashes), limit(20))) : Promise.resolve(null)
+  ])
+  const history: any[] = (historySnap?.docs || []).filter(d => d.id !== report.id).map(d => d.data())
+  const duplicateIds = (duplicateSnap?.docs || []).map(d => d.id).filter(id => id !== report.id)
+
+  const approved = history.filter(r => r.status === 'approved' || r.status === 'collected')
+  const approvedComments = approved.reduce((sum, r) => sum + (Number(r.verifiedCommentCount) || 0), 0)
+  const lastApprovedAt = approved.map(r => r.approvedAt).filter(Boolean)
+    .sort((a, b) => (b?.toMillis?.() ?? 0) - (a?.toMillis?.() ?? 0))[0]
+  const historyText = history.length
+    ? `${approved.length} đã duyệt (${approvedComments.toLocaleString()} bình luận${lastApprovedAt ? `, gần nhất ${formatDate(lastApprovedAt)}` : ''}) · ${history.filter(r => r.status === 'pending').length} đang chờ · ${history.filter(r => r.status === 'rejected').length} bị từ chối`
+    : 'Chưa có — đây là đơn đầu tiên'
+  const duplicateHtml = duplicateIds.length
+    ? `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-weight:700">⚠️ Có ảnh trùng với ${duplicateIds.length} đơn khác (mã: ${duplicateIds.slice(0, 3).map(id => escapeHtml(id.slice(0, 8)) + '…').join(', ')}) — kiểm tra kỹ trước khi duyệt.</div>`
+    : ''
+  const nick = String(report.threadsNick || '')
+  const nickHtml = nick
+    ? `<a href="${escapeHtml(threadsProfileUrl(nick))}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:700">@${escapeHtml(nick)} ↗</a>`
+    : '—'
+  // Đơn từ 29/10/2026 gửi link bài đã bình luận (đơn cũ hơn chỉ có nick)
+  const postUrl = seedingPostUrl(report)
+  const postLinkHtml = postUrl
+    ? `<a href="${escapeHtml(postUrl)}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:700;word-break:break-all">${escapeHtml(postUrl.replace(/^https:\/\/www\./, ''))} ↗</a>`
+    : '—'
+
+  const { value: countInput, isConfirmed } = await Swal.fire({
+    title: '💬 DUYỆT BÌNH LUẬN DẠO',
+    html: `
+      <div style="text-align:left;font-size:12.5px;line-height:1.8">
+        <b>Tên user:</b> ${escapeHtml(user.fullName || user.username || report.fullName || '—')}<br/>
+        <b>UID:</b> ${escapeHtml(targetUid || '—')}<br/>
+        <b>Link bài đã bình luận:</b> ${postLinkHtml}<br/>
+        ${nick ? `<b>Nick Threads:</b> ${nickHtml}<br/>` : ''}
+        <b>User khai báo:</b> ${declared ? `${declared.toLocaleString()} bình luận` : '— (đơn thiếu số khai báo)'}<br/>
+        <b>Mức thưởng:</b> ${rate.toLocaleString()} xu / bình luận hợp lệ<br/>
+        <b>Đơn trước cùng job:</b> ${escapeHtml(historyText)}
+        ${duplicateHtml}
+        <div id="tc-approve-preview" style="margin-top:8px;font-weight:800;color:#059669"></div>
+      </div>`,
+    input: 'number',
+    inputLabel: 'Số bình luận HỢP LỆ đã kiểm tra',
+    inputPlaceholder: declared ? `Từ 1 đến ${declared}` : 'VD: 18',
+    inputAttributes: { min: '1', step: '1', ...(declared ? { max: String(declared) } : {}) },
+    showCancelButton: true,
+    confirmButtonText: 'Xác nhận cộng xu ✅',
+    confirmButtonColor: '#10b981',
+    cancelButtonText: 'Huỷ',
+    didOpen: () => {
+      // Xem trước số xu sẽ cộng ngay khi gõ số bình luận hợp lệ
+      const input = Swal.getInput()
+      const preview = Swal.getHtmlContainer()?.querySelector<HTMLElement>('#tc-approve-preview')
+      if (!input || !preview) return
+      const update = () => {
+        const n = Number(input.value)
+        preview.textContent = input.value !== '' && Number.isInteger(n) && n >= 1
+          ? `${n.toLocaleString()} × ${rate.toLocaleString()} = +${(n * rate).toLocaleString()} XU`
+          : 'Nhập số bình luận hợp lệ để xem số xu sẽ cộng.'
+      }
+      input.addEventListener('input', update)
+      update()
+    },
+    inputValidator: (value) => {
+      const n = Number(value)
+      if (value === '' || !Number.isInteger(n) || n < 1) return 'Nhập số nguyên từ 1 trở lên. Không có bình luận hợp lệ thì bấm Huỷ rồi dùng nút HỦY để từ chối đơn.'
+      if (declared && n > declared) return `Không được lớn hơn số user khai báo (${declared} bình luận).`
+      return undefined
+    }
+  })
+  if (!isConfirmed) return null
+  return { verifiedCount: Number(countInput), rate }
+}
+
+// ============================================================================
+// DUYỆT ĐƠN ĐĂNG BÀI THREADS – SEEDING (thưởng theo số lượt trả lời) — giống BÌNH LUẬN DẠO: Admin tự nhập SỐ LƯỢT TRẢ LỜI HỢP LỆ
+// (ô trống, không vượt số khai báo), xu = số hợp lệ × mức thưởng / lượt từ cấu hình job (getTrustedReward). Popup tra mọi đơn của
+// CÙNG bài viết (threadsPostCode, mọi user) để Admin chỉ tính các lượt trả lời chưa từng được cộng xu ở đơn trước.
+// Việc cộng xu vẫn đi qua transaction của approveReport() — đơn không còn 'pending' thì chặn, không cộng trùng.
+// ============================================================================
+const promptThreadsSeedingApproval = async (report: any, user: any, targetUid: string): Promise<{ verifiedCount: number; rate: number } | null> => {
+  const rate = getTrustedReward(THREADS_SEEDING_JOB_ID)
+  if (rate <= 0) {
+    Swal.fire('LỖI!', 'Job ĐĂNG BÀI THREADS – SEEDING chưa có mức thưởng / lượt trả lời trong cấu hình (jobs.ts hoặc CẤU HÌNH JOB VIP).', 'error')
+    return null
+  }
+  const declared = Math.floor(Number(report.commentCount)) || 0
+  const postCode = String(report.threadsPostCode || '')
+
+  // Đơn cùng bài viết (mọi user, mọi trạng thái) + đơn bất kỳ có ảnh trùng SHA-256. Lỗi truy vấn chỉ làm thiếu phần cảnh báo,
+  // không chặn việc duyệt.
+  Swal.fire({ title: 'ĐANG KIỂM TRA ĐƠN CŨ...', allowOutsideClick: false, didOpen: () => Swal.showLoading() })
+  const safeGetDocs = (q: any) => getDocs(q).catch((e: any) => { console.error('[Admin] Lỗi kiểm tra đơn ĐĂNG BÀI THREADS – SEEDING:', e); return null })
+  const hashes = (Array.isArray(report.proofImageHashes) ? report.proofImageHashes : []).filter(Boolean).slice(0, 10)
+  const [postSnap, duplicateSnap] = await Promise.all([
+    postCode ? safeGetDocs(query(collection(db, 'reports'), where('threadsPostCode', '==', postCode))) : Promise.resolve(null),
+    hashes.length ? safeGetDocs(query(collection(db, 'reports'), where('proofImageHashes', 'array-contains-any', hashes), limit(20))) : Promise.resolve(null)
+  ])
+  const samePost: any[] = (postSnap?.docs || []).filter(d => d.id !== report.id).map(d => d.data()).filter((r: any) => r.jobId === THREADS_SEEDING_JOB_ID)
+  const duplicateIds = (duplicateSnap?.docs || []).map(d => d.id).filter(id => id !== report.id)
+
+  const approved = samePost.filter(r => r.status === 'approved' || r.status === 'collected')
+  const approvedReplies = approved.reduce((sum, r) => sum + (Number(r.verifiedCommentCount) || 0), 0)
+  const lastApprovedAt = approved.map(r => r.approvedAt).filter(Boolean)
+    .sort((a, b) => (b?.toMillis?.() ?? 0) - (a?.toMillis?.() ?? 0))[0]
+  const otherUserCount = new Set(samePost.map(r => r.uid).filter(uid => uid && uid !== report.uid)).size
+  const postHistoryHtml = !postCode
+    ? '— (đơn thiếu mã bài viết)'
+    : !postSnap
+      ? '<span style="color:#dc2626;font-weight:700">Không tra được đơn cũ của bài này — kiểm tra thủ công.</span>'
+      : samePost.length
+        ? `<span style="color:${approved.length ? '#dc2626' : 'inherit'};font-weight:800">Đã tính ${approvedReplies.toLocaleString()} lượt trả lời</span> ở ${approved.length} đơn đã duyệt${lastApprovedAt ? ` (gần nhất ${escapeHtml(formatDate(lastApprovedAt))})` : ''} · ${samePost.filter(r => r.status === 'pending').length} đơn khác đang chờ · ${samePost.filter(r => r.status === 'rejected').length} bị từ chối`
+        : 'Chưa có — đây là đơn đầu tiên của bài này'
+  const otherUserHtml = otherUserCount
+    ? `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-weight:700">⚠️ Bài này còn được gửi từ ${otherUserCount} tài khoản khác — kiểm tra kỹ ai là chủ bài viết.</div>`
+    : ''
+  const duplicateHtml = duplicateIds.length
+    ? `<div style="margin-top:6px;padding:6px 8px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-weight:700">⚠️ Có ảnh trùng với ${duplicateIds.length} đơn khác (mã: ${duplicateIds.slice(0, 3).map(id => escapeHtml(id.slice(0, 8)) + '…').join(', ')}) — kiểm tra kỹ trước khi duyệt.</div>`
+    : ''
+  const postUrl = seedingPostUrl(report)
+  const postLinkHtml = postUrl
+    ? `<a href="${escapeHtml(postUrl)}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:700;word-break:break-all">${escapeHtml(postUrl.replace(/^https:\/\/www\./, ''))} ↗</a>`
+    : '— (link không hợp lệ)'
+  const nick = String(report.threadsNick || '')
+  const nickHtml = nick
+    ? `<a href="${escapeHtml(threadsProfileUrl(nick))}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:700">@${escapeHtml(nick)} ↗</a>`
+    : '—'
+
+  const { value: countInput, isConfirmed } = await Swal.fire({
+    title: '📣 DUYỆT ĐĂNG BÀI THREADS – SEEDING',
+    html: `
+      <div style="text-align:left;font-size:12.5px;line-height:1.8">
+        <b>Tên user:</b> ${escapeHtml(user.fullName || user.username || report.fullName || '—')}<br/>
+        <b>UID:</b> ${escapeHtml(targetUid || '—')}<br/>
+        <b>Nick Threads:</b> ${nickHtml}<br/>
+        <b>Link bài Threads:</b> ${postLinkHtml}<br/>
+        <b>User khai báo:</b> ${declared ? `${declared.toLocaleString()} lượt trả lời` : '— (đơn thiếu số khai báo)'}<br/>
+        <b>Mức thưởng:</b> ${rate.toLocaleString()} xu / lượt trả lời hợp lệ<br/>
+        <b>Bài này trước đó:</b> ${postHistoryHtml}
+        ${otherUserHtml}
+        ${duplicateHtml}
+        <div id="ts-approve-preview" style="margin-top:8px;font-weight:800;color:#059669"></div>
+      </div>`,
+    input: 'number',
+    inputLabel: 'Số lượt trả lời HỢP LỆ, chưa từng được tính thưởng',
+    inputPlaceholder: declared ? `Từ 1 đến ${declared}` : 'VD: 10',
+    inputAttributes: { min: '1', step: '1', ...(declared ? { max: String(declared) } : {}) },
+    showCancelButton: true,
+    confirmButtonText: 'Xác nhận cộng xu ✅',
+    confirmButtonColor: '#10b981',
+    cancelButtonText: 'Huỷ',
+    didOpen: () => {
+      // Xem trước số xu sẽ cộng ngay khi gõ số lượt trả lời hợp lệ
+      const input = Swal.getInput()
+      const preview = Swal.getHtmlContainer()?.querySelector<HTMLElement>('#ts-approve-preview')
+      if (!input || !preview) return
+      const update = () => {
+        const n = Number(input.value)
+        preview.textContent = input.value !== '' && Number.isInteger(n) && n >= 1
+          ? `${n.toLocaleString()} × ${rate.toLocaleString()} = +${(n * rate).toLocaleString()} XU`
+          : 'Nhập số lượt trả lời hợp lệ để xem số xu sẽ cộng.'
+      }
+      input.addEventListener('input', update)
+      update()
+    },
+    inputValidator: (value) => {
+      const n = Number(value)
+      if (value === '' || !Number.isInteger(n) || n < 1) return 'Nhập số nguyên từ 1 trở lên. Không có lượt trả lời hợp lệ thì bấm Huỷ rồi dùng nút HỦY để từ chối đơn.'
+      if (declared && n > declared) return `Không được lớn hơn số user khai báo (${declared} lượt trả lời).`
+      return undefined
+    }
+  })
+  if (!isConfirmed) return null
+  return { verifiedCount: Number(countInput), rate }
+}
+
 // ============================================================================
 // CỘNG XU CHO ĐƠN reports (job thường / VIP / referral ABBANK) — bấm 1 nút duy nhất.
 // Dùng Firestore transaction: đọc lại report + user ngay trước khi ghi, chặn cộng trùng
@@ -1024,31 +1292,43 @@ const approveReport = async (report: any) => {
   const isReferral = report.jobId === ABBANK_REFERRAL_JOB_ID
   const user = usersMap.value[targetUid] || {}
 
-  // Số đề xuất LUÔN lấy từ cấu hình job đáng tin cậy — không dùng report.reward (client-submitted)
-  // để tránh user tự sửa reward lúc gửi đơn. Admin vẫn có thể sửa số trước khi xác nhận nếu cần.
-  const suggestedReward = getTrustedReward(report.jobId)
+  let amount = 0
+  // Đơn thưởng theo số lượng (BÌNH LUẬN DẠO / ĐĂNG BÀI THREADS – SEEDING): Admin nhập số hợp lệ thay cho số xu
+  // (xem promptThreadsCommentApproval / promptThreadsSeedingApproval)
+  let countApproval: { verifiedCount: number; rate: number } | null = null
+  if (isCountRewardJob(report.jobId)) {
+    countApproval = report.jobId === THREADS_SEEDING_JOB_ID
+      ? await promptThreadsSeedingApproval(report, user, targetUid)
+      : await promptThreadsCommentApproval(report, user, targetUid)
+    if (!countApproval) return
+    amount = countApproval.verifiedCount * countApproval.rate
+  } else {
+    // Số đề xuất LUÔN lấy từ cấu hình job đáng tin cậy — không dùng report.reward (client-submitted)
+    // để tránh user tự sửa reward lúc gửi đơn. Admin vẫn có thể sửa số trước khi xác nhận nếu cần.
+    const suggestedReward = getTrustedReward(report.jobId)
 
-  const { value: rewardInput, isConfirmed } = await Swal.fire({
-    title: '💰 CỘNG XU ĐƠN NÀY',
-    html: `
-      <div style="text-align:left;font-size:12.5px;line-height:1.8">
-        <b>Tên user:</b> ${user.fullName || user.username || report.bankAccountHolderName || report.fullName || '—'}<br/>
-        <b>SĐT:</b> ${report.bankRegisteredPhone || report.phoneRef || user.phoneRef || user.phone || '—'}<br/>
-        <b>UID:</b> ${targetUid || '—'}<br/>
-        <b>Tên job:</b> ${report.jobName || '—'}<br/>
-        <b>Mã đơn:</b> ${report.id}<br/>
-        <b>Trạng thái hiện tại:</b> ${report.status}
-      </div>`,
-    input: 'number',
-    inputValue: suggestedReward,
-    inputLabel: `Số xu cộng (đề xuất ${suggestedReward.toLocaleString()} xu — lấy từ cấu hình job)`,
-    showCancelButton: true,
-    confirmButtonText: 'Xác nhận cộng xu ✅',
-    confirmButtonColor: '#10b981',
-    cancelButtonText: 'Huỷ'
-  })
-  if (!isConfirmed) return
-  const amount = Math.max(0, Math.round(Number(rewardInput) || 0))
+    const { value: rewardInput, isConfirmed } = await Swal.fire({
+      title: '💰 CỘNG XU ĐƠN NÀY',
+      html: `
+        <div style="text-align:left;font-size:12.5px;line-height:1.8">
+          <b>Tên user:</b> ${user.fullName || user.username || report.bankAccountHolderName || report.fullName || '—'}<br/>
+          <b>SĐT:</b> ${report.bankRegisteredPhone || report.phoneRef || user.phoneRef || user.phone || '—'}<br/>
+          <b>UID:</b> ${targetUid || '—'}<br/>
+          <b>Tên job:</b> ${report.jobName || '—'}<br/>
+          <b>Mã đơn:</b> ${report.id}<br/>
+          <b>Trạng thái hiện tại:</b> ${report.status}
+        </div>`,
+      input: 'number',
+      inputValue: suggestedReward,
+      inputLabel: `Số xu cộng (đề xuất ${suggestedReward.toLocaleString()} xu — lấy từ cấu hình job)`,
+      showCancelButton: true,
+      confirmButtonText: 'Xác nhận cộng xu ✅',
+      confirmButtonColor: '#10b981',
+      cancelButtonText: 'Huỷ'
+    })
+    if (!isConfirmed) return
+    amount = Math.max(0, Math.round(Number(rewardInput) || 0))
+  }
 
   try {
     let newSuccessNumber = 0
@@ -1058,6 +1338,11 @@ const approveReport = async (report: any) => {
       const reportSnap = await tx.get(reportRef)
       if (!reportSnap.exists()) throw new Error('Đơn không tồn tại.')
       if (reportSnap.data().status !== 'pending') throw new Error('Đơn này đã được xử lý trước đó.')
+      // Đơn thưởng theo số lượng: đối chiếu lại số hợp lệ với số khai báo trên bản mới nhất từ server
+      if (countApproval) {
+        const declared = Math.floor(Number(reportSnap.data().commentCount)) || 0
+        if (declared > 0 && countApproval.verifiedCount > declared) throw new Error(`Số ${countUnit(report.jobId)} hợp lệ vượt số user khai báo (${declared}).`)
+      }
 
       const userRef = doc(db, "users", targetUid)
       const userSnap = await tx.get(userRef)
@@ -1074,6 +1359,10 @@ const approveReport = async (report: any) => {
         reward: amount,
         approvedAt: serverTimestamp(),
         approvedBy: auth.currentUser?.email || auth.currentUser?.uid || null
+      }
+      if (countApproval) {
+        reportUpdates.verifiedCommentCount = countApproval.verifiedCount
+        reportUpdates.rewardPerComment = countApproval.rate
       }
 
       // Tái khẳng định các field phân loại VIP cho đơn giới thiệu MOMO/ABBANK/LPBANK PLUS —
@@ -1146,7 +1435,7 @@ const approveReport = async (report: any) => {
         ...(isReferral ? { abbankReferralPaidCount: newSuccessNumber } : {})
       }
     }
-    Swal.fire('ĐÃ CỘNG XU!', `+${amount.toLocaleString()} XU${isReferral ? ` — Lần giới thiệu #${newSuccessNumber}` : ''}`, 'success')
+    Swal.fire('ĐÃ CỘNG XU!', `+${amount.toLocaleString()} XU${isReferral ? ` — Lần giới thiệu #${newSuccessNumber}` : ''}${countApproval ? ` — ${countApproval.verifiedCount} ${countUnit(report.jobId)} hợp lệ` : ''}`, 'success')
     updateLocalStatsOnApprove(report)
   } catch (e: any) {
     Swal.fire('LỖI!', e.message || String(e), 'error')
@@ -1305,6 +1594,16 @@ const handleAdminLogout = async () => {
           <p class="text-[var(--admin-muted)] text-xs normal-case not-italic font-bold mb-4">Vui lòng nhập lý do từ chối để khách hàng biết.</p>
           <div class="flex flex-wrap gap-2 mb-4 justify-center" v-if="selectedReportForReject?.jobId === ABBANK_REFERRAL_JOB_ID">
             <button v-for="r in referralRejectReasons" :key="r"
+                    class="px-3 py-1.5 bg-[var(--admin-card-soft)] hover:bg-[var(--admin-danger)] text-[var(--admin-muted)] hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
+                    @click="rejectReason = r">{{ r }}</button>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-4 justify-center" v-else-if="selectedReportForReject?.jobId === THREADS_COMMENT_JOB_ID">
+            <button v-for="r in THREADS_COMMENT_REJECT_REASONS" :key="r"
+                    class="px-3 py-1.5 bg-[var(--admin-card-soft)] hover:bg-[var(--admin-danger)] text-[var(--admin-muted)] hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
+                    @click="rejectReason = r">{{ r }}</button>
+          </div>
+          <div class="flex flex-wrap gap-2 mb-4 justify-center" v-else-if="selectedReportForReject?.jobId === THREADS_SEEDING_JOB_ID">
+            <button v-for="r in THREADS_SEEDING_REJECT_REASONS" :key="r"
                     class="px-3 py-1.5 bg-[var(--admin-card-soft)] hover:bg-[var(--admin-danger)] text-[var(--admin-muted)] hover:text-white rounded-lg text-[10px] font-sans not-italic normal-case transition-colors"
                     @click="rejectReason = r">{{ r }}</button>
           </div>
@@ -1485,6 +1784,9 @@ const handleAdminLogout = async () => {
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'daily_threads' ? 'bg-teal-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'daily_threads'">
         🧵 THREAD HẰNG NGÀY ({{ dailyThreadReportsCount }})
       </button>
+      <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'threads_count' ? 'bg-violet-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'threads_count'">
+        📝 DUYỆT THREADS – SEEDING ({{ threadsCountPendingCount }})
+      </button>
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'vip_jobs' ? 'bg-[var(--admin-warning)] text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'vip_jobs'">
         ⚙️ CẤU HÌNH JOB VIP ({{ vipJobs.length }})
       </button>
@@ -1504,7 +1806,7 @@ const handleAdminLogout = async () => {
 
     <!-- BẢNG CHÍNH -->
     <div class="admin-theme bg-[var(--admin-card)] border border-[var(--admin-border)] rounded-[30px] overflow-hidden shadow-sm">
-      <div class="p-20 text-center text-[var(--admin-primary)] animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean' && activeTab !== 'post_threads_config'">ĐANG TẢI...</div>
+      <div class="p-20 text-center text-[var(--admin-primary)] animate-pulse tracking-widest" v-if="isLoading && activeTab !== 'vip_jobs' && activeTab !== 'app_config' && activeTab !== 'support_config' && activeTab !== 'daily_threads' && activeTab !== 'storage_clean' && activeTab !== 'post_threads_config' && activeTab !== 'threads_count'">ĐANG TẢI...</div>
 
       <!-- APP JOBS & OTHER JOBS -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'app_jobs' || activeTab === 'other_jobs'">
@@ -1537,7 +1839,7 @@ const handleAdminLogout = async () => {
           <tbody class="divide-y divide-[var(--admin-border)]">
             <tr v-for="rp in (activeTab === 'app_jobs' ? filteredAppReports : filteredOtherReports)" :key="rp.id" :class="['hover:bg-slate-50 group', selectedOtherJobs.includes(rp.id) ? 'bg-blue-50' : '', selectedAppJobs.includes(rp.id) ? 'bg-red-50' : '']">
               <td class="p-6 text-center">
-                <input class="w-5 h-5 cursor-pointer accent-blue-600 rounded" v-if="rp.status === 'pending' && activeTab === 'other_jobs'" type="checkbox" :value="rp.id" v-model="selectedOtherJobs" />
+                <input class="w-5 h-5 cursor-pointer accent-blue-600 rounded" v-if="rp.status === 'pending' && activeTab === 'other_jobs' && !isCountRewardJob(rp.jobId)" type="checkbox" :value="rp.id" v-model="selectedOtherJobs" />
                 <input class="w-5 h-5 cursor-pointer accent-red-600 rounded" v-if="rp.status === 'pending' && activeTab === 'app_jobs'" type="checkbox" :value="rp.id" v-model="selectedAppJobs" />
               </td>
               <td class="p-6">
@@ -1606,6 +1908,20 @@ const handleAdminLogout = async () => {
                     <span class="text-[var(--admin-muted)] text-[10px]" v-if="rp.referralSuccessNumber">(Lần #{{ rp.referralSuccessNumber }})</span>
                   </div>
                 </template>
+                <!-- Job thưởng theo số lượng (BÌNH LUẬN DẠO: số bình luận, SEEDING: số lượt trả lời) — Admin nhập số hợp lệ khi duyệt lẻ
+                     (không chọn duyệt hàng loạt được) -->
+                <template v-else-if="isCountRewardJob(rp.jobId)">
+                  <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-1 mb-1.5 space-y-0.5 font-sans not-italic normal-case max-w-[220px]">
+                    <div class="text-[10px] text-[var(--admin-warning)]">Khai báo: <span class="text-[var(--admin-text)] font-bold">{{ rp.commentCount ?? '—' }} {{ countUnit(rp.jobId) }}</span></div>
+                    <div class="text-[10px] text-[var(--admin-warning)]" v-if="rp.verifiedCommentCount != null">Hợp lệ: <span class="text-[var(--admin-text)] font-bold">{{ rp.verifiedCommentCount }}/{{ rp.commentCount ?? '?' }} × {{ (Number(rp.rewardPerComment) || 0).toLocaleString() }} xu</span></div>
+                    <div class="text-[10px] text-[var(--admin-warning)]" v-else>Mức: <span class="text-[var(--admin-text)] font-bold">{{ getTrustedReward(rp.jobId).toLocaleString() }} xu / {{ countUnit(rp.jobId) }} hợp lệ</span></div>
+                  </div>
+                  <template v-if="rp.status === 'pending'">
+                    <div class="text-[var(--admin-success)] text-sm font-black">Tối đa: {{ ((Number(rp.commentCount) || 0) * getTrustedReward(rp.jobId)).toLocaleString() }} XU</div>
+                    <div class="text-[var(--admin-muted)] text-[9px] font-sans not-italic normal-case">Duyệt lẻ: bấm 💰 Cộng xu rồi nhập số {{ countUnit(rp.jobId) }} hợp lệ</div>
+                  </template>
+                  <div class="text-[var(--admin-success)] text-sm font-black" v-else-if="rp.status === 'approved' || rp.status === 'collected'">+{{ (Number(rp.actualReward ?? rp.reward) || 0).toLocaleString() }} XU</div>
+                </template>
                 <template v-else>
                   <!-- Đơn đang chờ duyệt: hiện số xu ĐÚNG cấu hình job HIỆN TẠI (getTrustedReward), không dùng
                        rp.reward (snapshot lúc user gửi đơn) — tránh hiện số cũ khi Admin vừa tăng/giảm thưởng job
@@ -1626,8 +1942,30 @@ const handleAdminLogout = async () => {
                         <img class="w-full h-full object-cover" :src="img.url" />
                       </div>
                     </div>
-                    <div class="text-slate-400 text-[9px]" v-if="!getReportImages(rp).length && !rp.taskLink">KHÔNG CÓ ẢNH</div>
+                    <!-- Job NGHE NHẠC – CHỌN BÀI HAY HƠN: không có ảnh, bằng chứng là lựa chọn A/B user gửi kèm đơn -->
+                    <div v-if="rp.musicChoice" class="bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5 text-center font-sans not-italic normal-case">
+                      <div class="text-[var(--admin-primary)] text-[11px] font-black">🎧 CHỌN ĐOẠN {{ rp.musicChoice }}</div>
+                      <div class="text-[var(--admin-muted)] text-[9px]" v-if="rp.musicListenSeconds">Đã nghe A {{ rp.musicListenSeconds.A ?? 0 }}s · B {{ rp.musicListenSeconds.B ?? 0 }}s (đo trên trình duyệt)</div>
+                    </div>
+                    <!-- Job ĐỌC TRUYỆN – CHỌN CÁCH XỬ LÝ: không có ảnh, bằng chứng là truyện đã đọc + phương án A/B/C user chọn -->
+                    <div v-if="rp.storyChoice" class="bg-violet-50 border border-violet-200 rounded-lg px-3 py-1.5 text-center font-sans not-italic normal-case max-w-[220px]">
+                      <div class="text-violet-600 text-[11px] font-black">📖 PHƯƠNG ÁN {{ rp.storyChoice }}<template v-if="rp.storyChoiceLabel">: {{ rp.storyChoiceLabel }}</template></div>
+                      <div class="text-[var(--admin-muted)] text-[9px]" v-if="rp.storyTitle || rp.storyId">Truyện: {{ rp.storyTitle || rp.storyId }}</div>
+                    </div>
+                    <div class="text-slate-400 text-[9px]" v-if="!getReportImages(rp).length && !rp.taskLink && !rp.musicChoice && !rp.storyChoice">KHÔNG CÓ ẢNH</div>
                   </div>
+                  <!-- Job THIẾT KẾ POSTER / BANNER: chủ đề nghệ sĩ user đã chọn — đối chiếu với ảnh thiết kế ở trên -->
+                  <div v-if="rp.posterArtistName || rp.posterArtist" class="bg-rose-50 border border-rose-200 text-rose-600 rounded-lg px-3 py-1 text-[10px] font-black text-center font-sans not-italic normal-case">
+                    🎨 Chủ đề: {{ rp.posterArtistName || rp.posterArtist }}
+                  </div>
+                  <!-- Job BÌNH LUẬN DẠO / ĐĂNG BÀI THREADS – SEEDING: nick Threads (mở trang để kiểm tra bình luận / bài đăng) -->
+                  <a v-if="isCountRewardJob(rp.jobId) && rp.threadsNick" :href="threadsProfileUrl(rp.threadsNick)" target="_blank" rel="noopener" class="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-3 py-1 text-[10px] font-black text-center font-sans not-italic normal-case break-all">💬 @{{ rp.threadsNick }} ↗</a>
+                  <!-- Nút mở bài viết (chỉ link đúng dạng bài Threads): SEEDING = bài của user, BÌNH LUẬN DẠO = bài user đã bình luận.
+                       Cảnh báo bài đã gửi ở đơn khác: chỉ SEEDING (tab DUYỆT THREADS – SEEDING đối chiếu đủ cả 2 job) -->
+                  <a v-if="isCountRewardJob(rp.jobId) && seedingPostUrl(rp)" :href="seedingPostUrl(rp)" target="_blank" rel="noopener" class="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-3 py-1 text-[10px] font-black text-center font-sans not-italic normal-case">🧵 MỞ BÀI THREADS ↗</a>
+                  <span v-if="rp.jobId === THREADS_SEEDING_JOB_ID && countSamePostReports(rp)" class="inline-flex bg-amber-50 border border-amber-300 text-[var(--admin-warning)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ BÀI ĐÃ GỬI Ở {{ countSamePostReports(rp) }} ĐƠN KHÁC</span>
+                  <!-- Cả 2 job thưởng theo số lượng: cảnh báo ảnh trùng đơn khác -->
+                  <span v-if="isCountRewardJob(rp.jobId) && countDuplicateProofReports(rp)" class="inline-flex bg-red-100 border border-red-300 text-[var(--admin-danger)] text-[8px] font-black px-2 py-1 rounded-full w-full justify-center">⚠️ ẢNH TRÙNG {{ countDuplicateProofReports(rp) }} ĐƠN KHÁC</span>
                   <!-- EXIF BADGE -->
                   <template v-if="rp.exif && Array.isArray(rp.exif) && rp.exif.length">
                     <div class="w-full space-y-1">
@@ -1970,6 +2308,11 @@ const handleAdminLogout = async () => {
 
         </div>
       </div>
+
+      <!-- DUYỆT THREADS – SEEDING — luôn mount (v-show) để số đơn chờ trên nút tab luôn đúng và số hợp lệ đang nhập không mất khi đổi tab -->
+      <ThreadsCountReportsTab v-show="activeTab === 'threads_count'" :active="activeTab === 'threads_count'"
+                              :users-map="usersMap" :site-filter="siteFilter" :rates="threadsCountRates" :rates-ready="!isVipJobsLoading"
+                              @pending-count-change="threadsCountPendingCount = $event" @approved="onThreadsCountApproved" />
 
     </div>
 

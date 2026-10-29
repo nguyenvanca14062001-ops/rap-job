@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatVnDayMonth, type IncomeStats, type PeriodIncome } from '@/utils/incomeStats'
 
 const props = withDefaults(defineProps<{
   username: string
@@ -8,6 +9,7 @@ const props = withDefaults(defineProps<{
   isDataLoading: boolean
   userBalance: number
   isBalanceVisible?: boolean
+  income: IncomeStats
 }>(), { isBalanceVisible: true })
 
 const emit = defineEmits(['routerPush'])
@@ -17,6 +19,36 @@ const totalSubmitted = computed(() => props.myReports.length)
 const totalApproved = computed(() =>
   props.myReports.filter((r: any) => r.status === 'approved' || r.status === 'collected').length
 )
+
+// Số dài (VD 1.250.000+) tự co cỡ chữ cho vừa card ở màn hẹp, tối đa vẫn 22px như thiết kế: bề rộng card (100cqi)
+// trừ chỗ cho chữ "xu", chia cho bề rộng ước lượng của chuỗi số (chữ số 0.68em, dấu chấm 0.34em, dấu + 0.72em —
+// làm tròn lên so với font hệ thống đậm 900). Trình duyệt không hỗ trợ cqi bỏ qua style này, giữ text-[22px].
+const fitFontSize = (value: string) => {
+  const em = [...value].reduce((sum, ch) => sum + (ch === '.' ? 0.34 : ch === '+' ? 0.72 : 0.68), 0)
+  return `min(22px, calc((100cqi - 22px) / ${em.toFixed(2)}))`
+}
+
+// Card Hôm nay / Tuần này — value null = đang tải (skeleton). Kỳ có đơn đã cộng xu nhưng không lưu số xu
+// (duyệt hàng loạt) → hiện phần đã biết kèm "+" và báo số đơn, không coi phần thiếu là 0.
+type IncomeCard = { value: string | null; caption: string; hasUnit: boolean; fontSize?: string }
+const describeIncome = (p: PeriodIncome, periodLabel: string): IncomeCard => {
+  const xu = (value: string, caption: string): IncomeCard => ({ value, caption, hasUnit: true, fontSize: fitFontSize(value) })
+  if (props.income.status === 'loading') return { value: null, caption: 'Đang tải...', hasUnit: false }
+  if (props.income.status === 'error') return { value: '—', caption: 'Không tải được', hasUnit: false }
+  if (p.unknownCount > 0) {
+    const caption = `${p.unknownCount} đơn chưa rõ số xu`
+    return p.amount > 0 ? xu(`${p.amount.toLocaleString('vi-VN')}+`, caption) : { value: '—', caption, hasUnit: false }
+  }
+  return xu(p.amount.toLocaleString('vi-VN'), periodLabel)
+}
+
+const todayIncome = computed(() =>
+  describeIncome(props.income.today, `Ngày ${formatVnDayMonth(props.income.periods.dayStart)}`)
+)
+const weekIncome = computed(() => {
+  const { weekStart, weekEnd } = props.income.periods
+  return describeIncome(props.income.week, `${formatVnDayMonth(weekStart)} – ${formatVnDayMonth(weekEnd - 1)}`)
+})
 </script>
 
 <template>
@@ -84,29 +116,31 @@ const totalApproved = computed(() =>
       </template>
     </div>
 
-    <!-- 3. Hôm nay / Tuần này — hệ thống CHƯA có lịch sử cộng xu đủ chính xác (xu job Thread hằng ngày nằm ở
-         daily_thread_reports, Admin cộng tay không lưu vết, duyệt hàng loạt không ghi số xu thực cộng vào đơn)
-         → hiện trạng thái chưa có dữ liệu, không lấy số dư hiện tại hay số ước tính thay vào. -->
+    <!-- 3. Hôm nay / Tuần này — tổng xu Admin ĐÃ CỘNG vào ví trong ngày / tuần (Thứ Hai → Chủ nhật, giờ VN), theo
+         thời điểm cộng xu của đơn reports (approvedAt) + Thread hằng ngày (paidAt). Không trừ tiền đã rút.
+         Nguồn realtime: composables/useIncomeStats.ts, quy tắc tính: utils/incomeStats.ts. -->
     <div v-if="isLoggedIn" class="grid grid-cols-2 gap-3">
-      <div class="rounded-[14px] border border-slate-700/40 bg-[#150f0d] p-3">
+      <div class="@container rounded-[14px] border border-slate-700/40 bg-[#150f0d] p-3">
         <div class="flex items-center gap-1.5">
           <span class="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
           </span>
           <span class="text-slate-400 text-[11px] font-semibold">Hôm nay</span>
         </div>
-        <p class="mt-2.5 text-slate-500 text-[22px] font-black leading-none">—</p>
-        <p class="mt-1 text-slate-600 text-[10px] font-medium">Chưa có dữ liệu</p>
+        <span v-if="todayIncome.value === null" class="mt-2.5 block h-[22px] w-20 rounded bg-white/10 animate-pulse"></span>
+        <p v-else :class="['mt-2.5 text-[22px] font-black leading-[22px] tabular-nums', todayIncome.hasUnit ? 'text-white' : 'text-slate-500']" :style="{ fontSize: todayIncome.fontSize }">{{ todayIncome.value }}<span v-if="todayIncome.hasUnit" class="ml-1 text-slate-400 text-[12px] font-bold leading-none">xu</span></p>
+        <p class="mt-1 text-slate-600 text-[10px] font-medium">{{ todayIncome.caption }}</p>
       </div>
-      <div class="rounded-[14px] border border-slate-700/40 bg-[#150f0d] p-3">
+      <div class="@container rounded-[14px] border border-slate-700/40 bg-[#150f0d] p-3">
         <div class="flex items-center gap-1.5">
           <span class="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           </span>
           <span class="text-slate-400 text-[11px] font-semibold">Tuần này</span>
         </div>
-        <p class="mt-2.5 text-slate-500 text-[22px] font-black leading-none">—</p>
-        <p class="mt-1 text-slate-600 text-[10px] font-medium">Chưa có dữ liệu</p>
+        <span v-if="weekIncome.value === null" class="mt-2.5 block h-[22px] w-20 rounded bg-white/10 animate-pulse"></span>
+        <p v-else :class="['mt-2.5 text-[22px] font-black leading-[22px] tabular-nums', weekIncome.hasUnit ? 'text-white' : 'text-slate-500']" :style="{ fontSize: weekIncome.fontSize }">{{ weekIncome.value }}<span v-if="weekIncome.hasUnit" class="ml-1 text-slate-400 text-[12px] font-bold leading-none">xu</span></p>
+        <p class="mt-1 text-slate-600 text-[10px] font-medium">{{ weekIncome.caption }}</p>
       </div>
     </div>
 

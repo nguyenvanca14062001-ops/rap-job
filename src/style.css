@@ -118,3 +118,17 @@ body.lite-effects [class*="backdrop-blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* ════════════════════════════════════════════════════════════════
+   SWEETALERT2 — đưa hộp thoại / toast Swal lên trên các popup của app
+   Mặc định .swal2-container chỉ có z-index 1060, thấp hơn mọi popup (bottom sheet
+   z-[3950], popup job z-[5200], modal xác nhận rút tiền z-[6000]…, RewardPopup
+   z-[9999]) nên Swal bật lên từ trong popup bị chính popup che mất — VD cảnh báo
+   "ĐANG CHỜ DUYỆT" ở popup nghe nhạc / poster, toast "ĐÃ SAO CHÉP!".
+   10000: trên mọi popup chức năng, vẫn dưới popup thông báo Admin của App.vue
+   (z-[99997+]) và màn chặn trình duyệt in-app (z-[999999]).
+   !important vì SweetAlert2 tự chèn CSS của nó vào <head> lúc chạy (sau file này).
+   ════════════════════════════════════════════════════════════════ */
+.swal2-container {
+  z-index: 10000 !important;
+}
