@@ -19,11 +19,12 @@ const MOMO_CONFIG = {
 const THREADS_COMMENT_CONFIG = {
   // Số xu cho 1 bình luận hợp lệ. Xu thực nhận = số bình luận Admin xác minh hợp lệ × mức này.
   rewardPerComment: 500,
-  // Ảnh minh họa trong popup hướng dẫn (bấm để phóng to) — chép ảnh thật vào public/images/ đúng tên này.
-  // Chưa có file thì popup hiện "Ảnh hướng dẫn đang được cập nhật" thay vì ảnh lỗi.
+  // Ảnh minh họa ở bước 2 popup HƯỚNG DẪN (bấm để phóng to) — chép ảnh thật vào public/images/ đúng tên này.
+  // Chưa có file thì bước 2 không hiện ảnh (không hiện ảnh lỗi).
   guideImage: "images/cmt-threads.jpg",
-  // Nội dung ở khung "NỘI DUNG CẦN BÌNH LUẬN" + nút SAO CHÉP (popup chính và bước 2 popup HƯỚNG DẪN) — mỗi phần tử là 1 dòng,
-  // "" là dòng trống. Để mảng rỗng [] → hiện "Nội dung đang được cập nhật" và khóa nút sao chép.
+  // Nội dung cần bình luận + nút SAO CHÉP ở bước 2 popup HƯỚNG DẪN — mỗi phần tử là 1 dòng, "" là dòng trống.
+  // Để mảng rỗng [] → hiện "Nội dung đang được cập nhật" và khóa nút sao chép.
+  // Khung chỉ hiện 1 dòng đầu cho gọn, nút SAO CHÉP vẫn chép đủ toàn bộ nội dung.
   commentContent: [
     "Bạn nhắn Zalo 0366.045.803 (Quỳnh) để nhận job nhá 💬",
     "",
@@ -232,15 +233,16 @@ export const jobsData: Record<string, any> = {
     // Ví dụ quy đổi duy nhất hiện dưới khung thưởng (xu = số bình luận × reward)
     exampleCommentCount: 20,
     // Các bước rút gọn trong popup HƯỚNG DẪN (nút cạnh GỬI BẰNG CHỨNG) — highlight = đoạn tô đậm trong content,
-    // showCommentContent = khung nội dung cần bình luận (commentContent ở THREADS_COMMENT_CONFIG) + nút SAO CHÉP
+    // showCommentContent = khung nội dung cần bình luận (commentContent ở THREADS_COMMENT_CONFIG) + nút SAO CHÉP,
+    // showGuideImage = ảnh minh họa (guideImage ở THREADS_COMMENT_CONFIG) dưới nút SAO CHÉP, chạm để phóng to
     steps: [
-      { id: 1, title: "MỞ THREADS, TÌM BÀI VỀ CÔNG VIỆC", content: "Mở Threads, tìm các bài viết về công việc, job online, nhận tiền, kiếm tiền online, việc làm thêm tại nhà..." },
-      { id: 2, title: "TRẢ LỜI BÌNH LUẬN", content: "Rep bình luận của người khác trong bài theo câu bình luận dưới đây:", showCommentContent: true },
+      { id: 1, title: "MỞ THREADS, TÌM BÀI VỀ CÔNG VIỆC", content: "Tìm các bài đăng về công việc online, trực page, job online, kiếm tiền online, làm việc tại nhà, gõ văn bản, CTV online..." },
+      { id: 2, title: "TRẢ LỜI BÌNH LUẬN", content: "Rep bình luận của người khác trong bài theo câu bình luận dưới đây:", showCommentContent: true, showGuideImage: true },
       { id: 3, title: "GỬI LINK BÀI VIẾT, NHẬN THƯỞNG", content: "Gửi link bài viết mà bạn vừa bình luận dạo vào phần bằng chứng để nhận thưởng." }
     ],
     // 2 lưu ý nổi bật trong khung LƯU Ý + nhắc nhở ngắn bên dưới
     notes: [
-      { text: "Chỉ ưu tiên những bài đăng về công việc, job, nhận tiền, kiếm tiền online... được đăng trong ngày hôm nay.", highlight: "được đăng trong ngày hôm nay" },
+      { text: "Chỉ ưu tiên những bài đăng về công việc online, trực page, job online, kiếm tiền online, làm việc tại nhà, gõ văn bản, CTV online... được đăng trong ngày hôm nay.", highlight: "được đăng trong ngày hôm nay" },
       { text: "Ưu tiên các bài viết có lượt xem cao, đang có tương tác và có ít nhất 5–10 người bình luận trở lên.", highlight: "ít nhất 5–10 người bình luận trở lên" }
     ],
     noteReminder: "Bình luận phải liên quan đến nội dung bài viết, không spam hoặc đăng nội dung gây hiểu nhầm."

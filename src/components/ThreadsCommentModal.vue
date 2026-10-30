@@ -11,8 +11,8 @@ import { THREADS_COMMENT_JOB_ID, hashImageFile } from '@/utils/threadsComment'
 import { parseThreadsPostUrl } from '@/utils/threadsSeeding'
 import { openFanpageMessenger } from '@/utils/fanpage'
 
-// Popup job "BÌNH LUẬN DẠO – THREADS": khung thưởng, 1 ví dụ quy đổi, ảnh minh họa, nội dung mẫu (nút sao chép), 2 lưu ý
-// và các đơn đã gửi. Chân popup có nút HƯỚNG DẪN (popup con: các bước rút gọn) cạnh nút GỬI BẰNG CHỨNG (popup con: số bình
+// Popup job "BÌNH LUẬN DẠO – THREADS": khung thưởng, 1 ví dụ quy đổi, 2 lưu ý và các đơn đã gửi. Chân popup có nút HƯỚNG DẪN
+// (popup con: các bước rút gọn — bước 2 có nội dung mẫu + nút sao chép và ảnh minh họa) cạnh nút GỬI BẰNG CHỨNG (popup con: số bình
 // luận khai báo + link bài viết đã bình luận + 1–5 ảnh, nén compressImage, Storage proofs/{uid}/{reportId}/ giống SubmitReportView).
 // Làm nhiều lần và KHÔNG cộng xu ở đây — Admin nhập số bình luận hợp lệ khi duyệt (AdminView.approveReport),
 // xu = số hợp lệ × mức thưởng/bình luận.
@@ -45,8 +45,8 @@ const splitHighlight = (text: string, highlight?: string) => {
   ].filter(part => part.text)
 }
 
-// --- Ảnh minh họa: chỉ hiện khi tải được thật. File chưa có (Vite / Cloudflare Pages trả về trang HTML thay vì 404,
-// trình duyệt báo lỗi ảnh) → hiện "Ảnh hướng dẫn đang được cập nhật", không hiện biểu tượng ảnh lỗi ---
+// --- Ảnh minh họa (bước showGuideImage của popup HƯỚNG DẪN): chỉ hiện khi tải được thật. File chưa có (Vite / Cloudflare Pages
+// trả về trang HTML thay vì 404, trình duyệt báo lỗi ảnh) → bỏ ảnh, không hiện biểu tượng ảnh lỗi ---
 const guideImageSrc = computed(() => {
   const path = String(jobConfig.value?.guideImage || '').trim()
   if (!path) return ''
@@ -56,7 +56,7 @@ const guideImageState = ref<'loading' | 'loaded' | 'missing'>('loading')
 watch([() => props.show, guideImageSrc], () => { guideImageState.value = guideImageSrc.value ? 'loading' : 'missing' }, { immediate: true })
 const zoomImage = ref<string | null>(null)
 
-// --- Nội dung cần bình luận (biến commentContent trong jobs.ts) — khung ở popup chính + bước showCommentContent của popup HƯỚNG DẪN ---
+// --- Nội dung cần bình luận (biến commentContent trong jobs.ts) — bước showCommentContent của popup HƯỚNG DẪN ---
 const commentContent = computed(() => String(jobConfig.value?.commentContent ?? '').trim())
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
@@ -390,55 +390,7 @@ const messageFanpage = () => {
             <p class="mt-0.5 text-white text-[15px] font-black">{{ exampleCount }} bình luận = <span class="text-yellow-400">{{ fmtXu(exampleCount * ratePerComment) }} xu</span></p>
           </div>
 
-          <!-- Lưu ý bắt buộc — ngay dưới ví dụ quy đổi -->
-          <div class="mt-3 rounded-2xl border-2 border-amber-400/60 bg-amber-500/15 px-3.5 py-2.5">
-            <p class="text-yellow-300 text-[13px] font-black uppercase tracking-wide leading-snug text-balance">⚠️ Bắt buộc sao chép nội dung cần bình luận</p>
-            <p class="mt-1 text-amber-50 text-[12.5px] font-medium leading-snug">
-              Bấm nút <strong class="text-white font-black whitespace-nowrap">📖 HƯỚNG DẪN</strong> và xem <strong class="text-white font-black whitespace-nowrap">📸 HÌNH ẢNH MINH HỌA</strong> để biết chi tiết.
-            </p>
-          </div>
-
-          <!-- Hình ảnh minh họa — ngay dưới lưu ý bắt buộc -->
-          <section class="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3.5">
-            <p class="text-white text-[13px] font-black uppercase tracking-wide">📸 Hình ảnh minh họa</p>
-            <div class="mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/40">
-              <button v-if="guideImageSrc && guideImageState !== 'missing'" v-show="guideImageState === 'loaded'" type="button"
-                      @click="zoomImage = guideImageSrc" aria-label="Phóng to ảnh minh họa" class="relative block w-full cursor-zoom-in">
-                <img :src="guideImageSrc" alt="Ảnh minh họa cách trả lời bình luận trên Threads"
-                     class="block w-full aspect-[8/5] object-cover object-top"
-                     @load="guideImageState = 'loaded'" @error="guideImageState = 'missing'" />
-                <span class="absolute bottom-2 right-2 rounded-lg bg-black/75 px-2 py-1 text-white text-[10.5px] font-bold">🔍 Chạm để phóng to</span>
-              </button>
-              <div v-if="guideImageState !== 'loaded'" class="min-h-[132px] flex flex-col items-center justify-center gap-2 px-4 py-6 text-center">
-                <span v-if="guideImageState === 'loading'" class="w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
-                <template v-else>
-                  <span class="text-[26px] leading-none">🖼️</span>
-                  <p class="text-slate-300 text-[13px] font-bold">Ảnh hướng dẫn đang được cập nhật</p>
-                </template>
-              </div>
-            </div>
-            <p class="mt-2 text-slate-400 text-[11.5px] font-medium leading-snug">
-              Ảnh mẫu: bài đăng Threads, khu vực bình luận, vị trí nút Trả lời và một ví dụ trả lời bình luận phù hợp.
-            </p>
-          </section>
-
-          <!-- Nội dung cần bình luận — ngay dưới ảnh minh họa -->
-          <section class="mt-3 rounded-2xl border border-red-500/30 bg-red-950/20 p-3.5">
-            <p class="text-white text-[13px] font-black uppercase tracking-wide">📋 Nội dung cần bình luận</p>
-            <div class="mt-2 min-h-[64px] rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 flex items-center">
-              <p v-if="commentContent" class="w-full text-slate-100 text-[13px] font-medium leading-relaxed whitespace-pre-line break-words select-text">{{ commentContent }}</p>
-              <p v-else class="w-full text-center text-slate-500 text-[13px] font-semibold italic">Nội dung đang được cập nhật</p>
-            </div>
-            <button @click="copyContent" :disabled="!commentContent"
-                    class="mt-2.5 w-full h-11 rounded-xl text-[13px] font-black uppercase tracking-wide transition-colors"
-                    :class="!commentContent
-                      ? 'bg-slate-700/70 text-slate-400 cursor-not-allowed'
-                      : copied ? 'bg-emerald-600 text-white' : 'bg-red-600 active:bg-red-500 text-white shadow-[0_4px_14px_rgba(220,38,38,0.35)]'">
-              {{ copied ? '✓ Đã sao chép' : 'Sao chép nội dung' }}
-            </button>
-          </section>
-
-          <!-- 2 lưu ý nổi bật -->
+          <!-- 2 lưu ý nổi bật — ngay dưới ví dụ quy đổi (nội dung mẫu + nút sao chép và ảnh minh họa chỉ còn ở bước 2 popup HƯỚNG DẪN) -->
           <section class="mt-3 rounded-2xl border-2 border-amber-400/50 bg-amber-500/10 p-3.5">
             <p class="text-amber-300 text-[13px] font-black uppercase tracking-wide">⚠️ Lưu ý</p>
             <div class="mt-2 space-y-2">
@@ -516,10 +468,11 @@ const messageFanpage = () => {
                   <p v-if="s.content" class="mt-0.5 text-slate-300 text-[12.5px] font-medium leading-relaxed break-words">
                     <template v-for="(part, i) in splitHighlight(s.content, s.highlight)" :key="i"><strong v-if="part.hl" class="text-yellow-300 font-black">{{ part.text }}</strong><template v-else>{{ part.text }}</template></template>
                   </p>
-                  <!-- Nội dung cần bình luận + nút sao chép (dùng chung copyContent với khung ở popup chính) -->
+                  <!-- Nội dung cần bình luận + nút sao chép (copyContent) — chỉ hiện 1 dòng đầu cho gọn (line-clamp-1),
+                       nút sao chép vẫn chép đủ commentContent -->
                   <template v-if="s.showCommentContent">
                     <div class="mt-2 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5">
-                      <p v-if="commentContent" class="text-slate-100 text-[12.5px] font-medium leading-relaxed whitespace-pre-line break-words select-text">{{ commentContent }}</p>
+                      <p v-if="commentContent" class="text-slate-100 text-[12.5px] font-medium leading-relaxed whitespace-pre-line break-words line-clamp-1 select-text">{{ commentContent }}</p>
                       <p v-else class="text-center text-slate-500 text-[12.5px] font-semibold italic">Nội dung đang được cập nhật</p>
                     </div>
                     <button @click="copyContent" :disabled="!commentContent"
@@ -530,6 +483,17 @@ const messageFanpage = () => {
                       {{ copied ? '✓ Đã sao chép' : 'Sao chép nội dung' }}
                     </button>
                   </template>
+                  <!-- Ảnh minh họa (guideImage, thu gọn 8:5 từ trên xuống, chạm để phóng to) — giữ sẵn chỗ trong lúc tải để popup không
+                       bị nhảy, ảnh lỗi / chưa có file thì bỏ hẳn (không hiện biểu tượng ảnh lỗi) -->
+                  <button v-if="s.showGuideImage && guideImageSrc && guideImageState !== 'missing'" type="button" @click="zoomImage = guideImageSrc"
+                          aria-label="Phóng to ảnh minh họa" class="relative mt-2.5 block w-full overflow-hidden rounded-xl border border-white/10 bg-black/40 cursor-zoom-in">
+                    <img :src="guideImageSrc" alt="Ảnh minh họa cách trả lời bình luận trên Threads"
+                         class="block w-full aspect-[8/5] object-cover object-top transition-opacity"
+                         :class="guideImageState === 'loaded' ? 'opacity-100' : 'opacity-0'"
+                         @load="guideImageState = 'loaded'" @error="guideImageState = 'missing'" />
+                    <span v-if="guideImageState === 'loading'" class="absolute inset-0 m-auto w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></span>
+                    <span v-else class="absolute bottom-2 right-2 rounded-lg bg-black/75 px-2 py-1 text-white text-[10.5px] font-bold">🔍 Chạm để phóng to</span>
+                  </button>
                   <a v-if="s.downloadLink" :href="s.downloadLink" target="_blank" rel="noopener"
                      class="mt-1.5 inline-flex items-center px-3 py-1.5 rounded-lg bg-red-600 active:bg-red-500 text-white text-[11px] font-black uppercase">
                     {{ s.buttonText || 'Mở link' }}
