@@ -8,7 +8,7 @@ import { normalizePhone } from '@/utils/phone'
 import { normalizeUsername } from '@/utils/username'
 import { getReportImages } from '@/utils/reportImages'
 import { THREADS_COMMENT_JOB_ID, THREADS_COMMENT_REJECT_REASONS, threadsProfileUrl, extractThreadsNick } from '@/utils/threadsComment'
-import { THREADS_SEEDING_JOB_ID, THREADS_SEEDING_REJECT_REASONS, parseThreadsPostUrl } from '@/utils/threadsSeeding'
+import { THREADS_SEEDING_JOB_ID, THREADS_SEEDING_REJECT_REASONS, parseThreadsPostUrl, reportThreadsLinkKey, isThreadsShareKey } from '@/utils/threadsSeeding'
 
 // ============================================================================
 // TAB "DUYỆT THREADS – SEEDING" — chỉ quản lý 2 job thưởng theo SỐ LƯỢNG trong collection `reports`:
@@ -119,10 +119,11 @@ const safeHttpsUrl = (url: any) => /^https:\/\//i.test(String(url || '')) ? Stri
 // Nick Threads về 1 dạng để so sánh / tìm: chữ thường, bỏ @ và khoảng trắng (nhận cả link trang cá nhân) — cùng quy tắc lúc user gửi
 const normalizeNick = (value: any) => extractThreadsNick(value).replace(/\s+/g, '')
 const nickKey = (r: any) => normalizeNick(r?.threadsNick)
-// Mã bài viết Threads (giữ nguyên hoa / thường) — giống nhau dù link threads.com hay threads.net, có @nick hay dạng ngắn /t/, kèm
-// ?xmt=… hay dấu / cuối. Ưu tiên threadsPostCode lưu lúc gửi, đơn thiếu thì tách lại từ link. SEEDING: bài của chính user;
-// BÌNH LUẬN DẠO: bài user đã bình luận (đơn gửi trước 29/10/2026 chỉ có nick, không có link).
-const postKey = (r: any) => String(r?.threadsPostCode || parseThreadsPostUrl(r?.threadsPostUrl)?.code || '')
+// Khóa so trùng link: mã bài viết Threads (giữ nguyên hoa / thường) — giống nhau dù link threads.com hay threads.net, có @nick hay
+// dạng ngắn /t/, kèm ?xmt=… hay dấu / cuối. Link /share/ chưa phân giải được bài gốc → khóa là link chia sẻ đã chuẩn hóa (chỉ trùng
+// với đơn cùng đúng link đó). Ưu tiên threadsPostCode lưu lúc gửi, đơn thiếu thì tách lại từ link (utils/threadsSeeding.ts).
+// SEEDING: bài của chính user; BÌNH LUẬN DẠO: bài user đã bình luận (đơn gửi trước 29/10/2026 chỉ có nick, không có link).
+const postKey = (r: any) => reportThreadsLinkKey(r)
 // Xu đã cộng cho đơn đã duyệt (actualReward; đơn cũ thiếu thì reward)
 const creditedXuOf = (r: any) => statusGroup(r?.status) === 'approved' ? Number(r?.actualReward ?? r?.reward) || 0 : 0
 const shortId = (id: any) => {
@@ -531,14 +532,15 @@ const runOnce = (key: string, task: () => Promise<void>) => {
   return run
 }
 
-// Mọi đơn (mọi user, mọi trạng thái) của 1 bài viết
+// Mọi đơn (mọi user, mọi trạng thái) của 1 bài viết — khóa là link /share/ thì các đơn lưu cùng đúng link chia sẻ đó
 const ensurePostLookup = (code: string, maxAgeMs = CHECK_TTL_MS): Promise<void> => {
   if (!code || isFresh(postLookups.value[code], maxAgeMs)) return Promise.resolve()
   return runOnce(`post:${code}`, async () => {
     const prev = postLookups.value[code]
     postLookups.value[code] = { docs: prev?.docs ?? [], at: prev?.at ?? 0, partial: prev?.partial ?? false, state: 'loading' }
     try {
-      const snap = await getDocs(query(collection(db, 'reports'), where('threadsPostCode', '==', code), limit(POST_LOOKUP_LIMIT)))
+      const field = isThreadsShareKey(code) ? 'threadsPostUrl' : 'threadsPostCode'
+      const snap = await getDocs(query(collection(db, 'reports'), where(field, '==', code), limit(POST_LOOKUP_LIMIT)))
       postLookups.value[code] = { state: 'done', docs: snap.docs.map(toReport), at: Date.now(), partial: snap.size >= POST_LOOKUP_LIMIT }
     } catch (e) {
       console.error('[Duyệt Threads – Seeding] Lỗi tra đơn cùng bài Threads:', e)
@@ -666,6 +668,8 @@ const mergeReports = (...lists: (any[] | undefined)[]) => {
 type DupTab = 'link' | 'nick' | 'image'
 type DupInfo = {
   code: string
+  // Link /share/ chưa phân giải được bài gốc: chỉ so được với đơn cùng link chia sẻ → luôn cần Admin kiểm tra thủ công
+  shareLink: boolean
   nick: string
   linkReports: any[]
   nickReports: any[]
@@ -691,6 +695,7 @@ type DupInfo = {
 const computeDupInfo = (r: any): DupInfo => {
   const meta = jobMeta(r.jobId)
   const code = postKey(r)
+  const shareLink = isThreadsShareKey(code)
   const nick = nickKey(r)
   const check = checks.value[r.id]
   const postLookup = code ? postLookups.value[code] : undefined
@@ -725,13 +730,14 @@ const computeDupInfo = (r: any): DupInfo => {
 
   const errors: string[] = []
   if (r.jobId === THREADS_SEEDING_JOB_ID && !code) errors.push('Đơn thiếu link / mã bài viết — không đối chiếu được trùng link.')
+  if (shareLink) errors.push('Link chia sẻ /share/ chưa xác định được bài gốc — chỉ so được với đơn cùng link chia sẻ này. Mở link, đối chiếu thủ công.')
   if (postLookup?.state === 'error') errors.push('Không tra được các đơn cùng bài Threads — kiểm tra thủ công.')
   if (nickLookup?.state === 'error') errors.push('Không tra được các đơn cùng nick Threads — kiểm tra thủ công.')
   if (check?.state === 'error') errors.push('Không tra được ảnh trùng — kiểm tra thủ công.')
 
   const ids = (list: any[]) => list.map(x => x.id).sort().join(',')
   return {
-    code, nick, linkReports, nickReports, nickOther, nickOtherAccounts, nickPartial: !!nickLookup?.partial,
+    code, shareLink, nick, linkReports, nickReports, nickOther, nickOtherAccounts, nickPartial: !!nickLookup?.partial,
     imageDups, approvedSamePost, approvedUnits, approvedXu, crossAccount, proofReasons, errors,
     loading: check?.state === 'loading' || postLookup?.state === 'loading' || nickLookup?.state === 'loading',
     checked: !!check && check.state !== 'loading',
@@ -1318,7 +1324,7 @@ const dupTabs = computed(() => {
   const info = detailDup.value
   const tabs: { key: DupTab; label: string; count: number }[] = []
   if (!r || !info) return tabs
-  if (r.jobId === THREADS_SEEDING_JOB_ID || info.code) tabs.push({ key: 'link', label: 'CÙNG LINK BÀI', count: info.linkReports.length })
+  if (r.jobId === THREADS_SEEDING_JOB_ID || info.code) tabs.push({ key: 'link', label: info.shareLink ? 'CÙNG LINK CHIA SẺ' : 'CÙNG LINK BÀI', count: info.linkReports.length })
   tabs.push({ key: 'nick', label: 'CÙNG NICK', count: info.nickReports.length })
   tabs.push({ key: 'image', label: 'ẢNH TRÙNG FILE', count: info.imageDups.length })
   return tabs
@@ -1332,7 +1338,11 @@ const dupEmptyText = computed(() => {
   const info = detailDup.value
   if (!info) return ''
   const suffix = info.checked ? '' : ' (chưa tra trên hệ thống — bấm KIỂM TRA TRÙNG)'
-  if (dupTab.value === 'link') return `Chưa thấy đơn khác cùng bài viết${suffix}.`
+  if (dupTab.value === 'link') {
+    return info.shareLink
+      ? `Chưa thấy đơn khác cùng link chia sẻ này${suffix} — link chia sẻ khác hoặc link bài đầy đủ vẫn có thể là cùng bài, cần đối chiếu thủ công.`
+      : `Chưa thấy đơn khác cùng bài viết${suffix}.`
+  }
   if (dupTab.value === 'nick') return info.nick ? `Chưa thấy đơn khác cùng nick${suffix}.` : 'Đơn không có nick Threads (gửi trước khi có ô nick).'
   return `Chưa thấy ảnh trùng file${suffix}.`
 })
@@ -1686,6 +1696,7 @@ onUnmounted(() => {
                   <a v-if="postUrlOf(detailReport)" :href="postUrlOf(detailReport)" target="_blank" rel="noopener noreferrer" class="text-violet-700 hover:underline">{{ postUrlOf(detailReport) }} ↗</a>
                   <span v-else class="text-[var(--admin-danger)]">Link không hợp lệ: {{ detailReport.threadsPostUrl || '—' }}</span>
                   <span v-if="detailReport.threadsPostCode" class="text-[var(--admin-muted)]"> · mã bài {{ detailReport.threadsPostCode }}</span>
+                  <span v-else-if="detailDup?.shareLink" class="text-[var(--admin-warning)]"> · link chia sẻ — chưa xác định được mã bài viết</span>
                 </dd>
               </div>
               <div v-if="detailReport.threadsNick" class="sm:col-span-2">
@@ -1717,13 +1728,13 @@ onUnmounted(() => {
                 <button type="button" @click="ensureCheck(detailReport, true)" :disabled="detailDup.loading" class="text-[10px] text-violet-700 underline decoration-dotted disabled:opacity-40">{{ detailDup.checked ? 'KIỂM TRA LẠI' : 'KIỂM TRA TRÙNG' }}</button>
               </div>
               <p v-if="detailDup.loading" class="text-[12px] text-[var(--admin-muted)] font-sans not-italic normal-case font-semibold">
-                ⏳ Đang tra {{ [postKey(detailReport) && 'đơn cùng bài Threads', nickKey(detailReport) && 'đơn cùng nick', 'ảnh trùng file'].filter(Boolean).join(', ') }}…
+                ⏳ Đang tra {{ [postKey(detailReport) && (detailDup.shareLink ? 'đơn cùng link chia sẻ' : 'đơn cùng bài Threads'), nickKey(detailReport) && 'đơn cùng nick', 'ảnh trùng file'].filter(Boolean).join(', ') }}…
               </p>
 
               <button v-if="detailDup.linkReports.length" type="button" @click="dupTab = 'link'"
                       class="w-full text-left text-[12px] px-3 py-2 rounded-xl border bg-red-50 border-red-300 text-[var(--admin-danger)] hover:bg-red-100">
                 ⚠️ TRÙNG LINK THREADS — ĐÃ CÓ {{ detailDup.linkReports.length }} ĐƠN
-                <span class="block mt-0.5 font-sans not-italic normal-case font-semibold text-[11px]">Cùng mã bài viết {{ detailDup.code }} (đã bỏ khác biệt định dạng link) · {{ accountSplitText(detailDup.linkReports, detailReport.uid) }}</span>
+                <span class="block mt-0.5 font-sans not-italic normal-case font-semibold text-[11px]">{{ detailDup.shareLink ? `Cùng link chia sẻ ${detailDup.code}` : `Cùng mã bài viết ${detailDup.code} (đã bỏ khác biệt định dạng link)` }} · {{ accountSplitText(detailDup.linkReports, detailReport.uid) }}</span>
               </button>
               <button v-if="detailDup.nickOther" type="button" @click="dupTab = 'nick'"
                       :class="['w-full text-left text-[12px] px-3 py-2 rounded-xl border', detailDup.nickOtherAccounts ? 'bg-orange-100 border-orange-400 text-orange-800 hover:bg-orange-200' : 'bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100']">

@@ -8,7 +8,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage
 import { compressImage, MAX_UPLOAD_BYTES, perfMark, perfLog } from '@/utils/imageCompress'
 import { jobsData } from '@/data/jobs'
 import { hashImageFile, extractThreadsNick, isValidThreadsNick } from '@/utils/threadsComment'
-import { THREADS_SEEDING_JOB_ID, parseThreadsPostUrl } from '@/utils/threadsSeeding'
+import { THREADS_SEEDING_JOB_ID, parseThreadsPostUrl, threadsLinkKey, reportThreadsLinkKey } from '@/utils/threadsSeeding'
 import { openFanpageMessenger } from '@/utils/fanpage'
 
 // Popup job "ĐĂNG BÀI THREADS – SEEDING": tên job, badge KHÔNG GIỚI HẠN, khung thưởng / lượt trả lời, ví dụ quy đổi, ảnh minh
@@ -159,11 +159,11 @@ const postUrlError = computed(() =>
 const normalizePostUrlInput = () => {
   if (parsedPost.value) postUrlInput.value = parsedPost.value.url
 }
-// Đơn trước của CÙNG bài viết (trong 50 đơn gần nhất) — chỉ nhắc khai báo lượt trả lời mới, không chặn gửi: job không giới hạn,
-// bài còn đơn chờ duyệt vẫn gửi tiếp được
+// Đơn trước của CÙNG bài viết (trong 50 đơn gần nhất; link /share/ thì cùng đúng link chia sẻ đó) — chỉ nhắc khai báo lượt trả lời
+// mới, không chặn gửi: job không giới hạn, bài còn đơn chờ duyệt vẫn gửi tiếp được
 const samePostReports = computed(() => {
-  const code = parsedPost.value?.code
-  return code ? mySeedingReports.value.filter(r => r.threadsPostCode === code) : []
+  const key = threadsLinkKey(parsedPost.value)
+  return key ? mySeedingReports.value.filter(r => reportThreadsLinkKey(r) === key) : []
 })
 const samePostVerified = computed(() =>
   samePostReports.value.filter(isApproved).reduce((sum, r) => sum + (Number(r.verifiedCommentCount) || 0), 0)
@@ -361,6 +361,7 @@ const submitProof = async () => {
       commentCount: count,
       threadsNick: nick,
       threadsPostUrl: post.url,
+      // Link /share/: '' — mã chia sẻ không phải mã bài viết, tab Admin đánh dấu đơn cần kiểm tra thủ công
       threadsPostCode: post.code,
       proofImages: uploaded,
       proofImageHashes: hashes,

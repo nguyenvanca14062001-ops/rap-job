@@ -137,8 +137,9 @@ const onCommentCountInput = (event: Event) => {
   commentCountInput.value = clean
 }
 const commentCount = computed(() => Number(commentCountInput.value) || 0)
-// Link bài viết đã bình luận dạo — cùng cách kiểm tra với ĐĂNG BÀI THREADS – SEEDING (utils/threadsSeeding.ts): mã bài viết
-// giống nhau dù link threads.com / threads.net, có @nick hay dạng ngắn /t/, kèm ?xmt=… → Admin gom được đơn cùng 1 bài
+// Link bài viết đã bình luận dạo — cùng hàm kiểm tra với ĐĂNG BÀI THREADS – SEEDING (utils/threadsSeeding.ts): mã bài viết
+// giống nhau dù link threads.com / threads.net, có @nick hay dạng ngắn /t/, kèm ?xmt=… → Admin gom được đơn cùng 1 bài. Link
+// /share/ (Sao chép liên kết trên iPhone) vẫn nhận nhưng chưa biết mã bài → Admin kiểm tra thủ công
 const parsedPost = computed(() => parseThreadsPostUrl(postUrlInput.value))
 const postUrlError = computed(() =>
   postUrlInput.value.trim() && !parsedPost.value
@@ -316,7 +317,8 @@ const submitProof = async () => {
       reward: count * rate,
       rewardPerComment: rate,
       commentCount: count,
-      // Cùng tên field với ĐĂNG BÀI THREADS – SEEDING → tab Admin cảnh báo được các đơn cùng 1 bài viết
+      // Cùng tên field với ĐĂNG BÀI THREADS – SEEDING → tab Admin cảnh báo được các đơn cùng 1 bài viết. Link /share/: mã bài ''
+      // (mã chia sẻ không phải mã bài viết), tab Admin đánh dấu đơn cần kiểm tra thủ công
       threadsPostUrl: post.url,
       threadsPostCode: post.code,
       proofImages: uploaded,
