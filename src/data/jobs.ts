@@ -44,11 +44,12 @@ const THREADS_SEEDING_CONFIG = {
   // Số xu cho 1 lượt trả lời hợp lệ (trả lời bình luận của người khác trong bài của mình).
   // Xu thực nhận = số lượt trả lời Admin xác minh hợp lệ × mức này.
   rewardPerReply: 1000,
-  // Ảnh minh họa trong popup công việc (bấm để phóng to) — chép ảnh thật vào public/images/ đúng tên này.
-  // Chưa có file thì popup hiện "Ảnh minh họa đang được cập nhật" thay vì ảnh lỗi.
+  // Ảnh minh họa ở bước 2 popup XEM HƯỚNG DẪN (bấm để phóng to) — chép ảnh thật vào public/images/ đúng tên này.
+  // Chưa có file thì bước 2 không hiện ảnh (không hiện ảnh lỗi).
   guideImage: "images/cmt-threads.jpg",
   // Nội dung trả lời mẫu + nút SAO CHÉP ở bước 2 popup XEM HƯỚNG DẪN — mỗi phần tử là 1 dòng, "" là dòng trống.
   // Để mảng rỗng [] → hiện "Nội dung đang được cập nhật" và khóa nút sao chép.
+  // Khung chỉ hiện 1 dòng đầu cho gọn, nút SAO CHÉP vẫn chép đủ toàn bộ nội dung.
   replyContent: [
     "Bạn nhắn Zalo 0366.045.803 (Quỳnh) để nhận job nhá 💬",
     "",
@@ -265,8 +266,15 @@ export const jobsData: Record<string, any> = {
     // Ví dụ quy đổi nổi bật dưới khung thưởng + các mốc nhỏ bên dưới (xu = số lượt trả lời × reward)
     exampleReplyCount: 10,
     exampleReplyCounts: [5, 20, 50, 100],
+    // Khung QUY ĐỊNH ở popup công việc (ngay dưới ví dụ quy đổi) — highlight = đoạn tô đậm trong text. Chỉ là chữ: form nộp bằng
+    // chứng không tự kiểm tra được lượt xem / số người bình luận trên Threads, Admin kiểm tra khi duyệt.
+    notes: [
+      { text: "Chọn nút \"XEM HƯỚNG DẪN\" và đăng bài theo hướng dẫn.", highlight: "XEM HƯỚNG DẪN" },
+      { text: "Yêu cầu bài đăng đủ 300 lượt xem trở lên và có 5 người bình luận trở lên mới được gửi bằng chứng.", highlight: "300 lượt xem trở lên và có 5 người bình luận trở lên" }
+    ],
     // 3 bước ngắn gọn trong popup XEM HƯỚNG DẪN — chips = các chủ đề bài viết, showReplyContent = khung nội dung trả lời mẫu
-    // (replyContent ở THREADS_SEEDING_CONFIG) + nút SAO CHÉP. Popup cũng hiểu items = gạch đầu dòng (ordered → đánh số),
+    // (replyContent ở THREADS_SEEDING_CONFIG) + nút SAO CHÉP, showGuideImage = ảnh minh họa (guideImage ở THREADS_SEEDING_CONFIG)
+    // dưới nút SAO CHÉP, chạm để phóng to. Popup cũng hiểu items = gạch đầu dòng (ordered → đánh số),
     // note = cảnh báo nhỏ, showExample = ví dụ quy đổi, nếu cần thêm lại.
     steps: [
       {
@@ -279,12 +287,13 @@ export const jobsData: Record<string, any> = {
         id: 2,
         title: "TRẢ LỜI BÌNH LUẬN",
         content: "Sau khi đăng bài, có người bình luận thì bạn trả lời bình luận bằng nội dung này nhé:",
-        showReplyContent: true
+        showReplyContent: true,
+        showGuideImage: true
       },
       {
         id: 3,
         title: "GỬI BẰNG CHỨNG",
-        content: "Bấm \"Nộp bằng chứng\", dán link bài Threads và tải ảnh chụp các lượt trả lời bình luận lên."
+        content: "Bấm \"Nộp bằng chứng\" và dán link bài Threads."
       }
     ],
     // Quy định tính thưởng — hiện cuối popup XEM HƯỚNG DẪN

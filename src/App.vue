@@ -84,13 +84,22 @@ function applyPostThreadsConfig(result: Record<string, any>): Record<string, any
   return result
 }
 
+// Job đã gỡ khỏi web: bỏ khỏi kết quả merge nên không còn ở popup "Công việc dễ làm", trang chủ khách và lưới desktop —
+// user không mở/nộp đơn mới được. Vẫn giữ trong jobs.ts vì Admin lấy mức thưởng ở đó để duyệt nốt đơn cũ (tab DUYỆT
+// THREADS – SEEDING). Muốn mở lại job thì xoá id khỏi danh sách này.
+const REMOVED_JOB_IDS = [THREADS_COMMENT_JOB_ID]
+function dropRemovedJobs(result: Record<string, any>): Record<string, any> {
+  for (const id of REMOVED_JOB_IDS) delete result[id]
+  return result
+}
+
 // Merge vip_jobs Firestore lên static jobs.ts
 // - Trước snapshot đầu tiên: {} → không flash job list
 // - Sau snapshot: vip_jobs rỗng → dùng nguyên jobsData
 // - Nếu có: override field-level, lọc hidden, gắn cờ paused/soldout
 const mergedJobs = computed((): Record<string, any> => {
   if (!vipJobsReady.value) return {}
-  if (vipJobs.value.length === 0) return applyPostThreadsConfig({ ...jobsData })
+  if (vipJobs.value.length === 0) return dropRemovedJobs(applyPostThreadsConfig({ ...jobsData }))
   const result: Record<string, any> = {}
   for (const [id, staticJob] of Object.entries(jobsData)) {
     const override = vipJobs.value.find(v => v.id === id)
@@ -117,6 +126,7 @@ const mergedJobs = computed((): Record<string, any> => {
     if (allChildrenHidden) delete result['referral-friends']
   }
   applyPostThreadsConfig(result)
+  dropRemovedJobs(result)
   return result
 })
 
