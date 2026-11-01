@@ -725,6 +725,22 @@ const handleCopy = (text: string) => {
             </button>
           </div>
 
+          <!-- LPBANK PLUS: 2 cảnh báo giống popup hướng dẫn, ngay dưới hàng mã giới thiệu — không nhờ người khác đăng ký, chỉ nhận đơn chính chủ -->
+          <div v-if="isLpbankPlus" class="space-y-2.5">
+            <div class="bg-gradient-to-r from-red-950/90 to-rose-950/70 border-2 border-red-500/70 rounded-2xl px-4 md:px-5 py-3 md:py-3.5 flex items-center gap-3 shadow-[0_0_24px_rgba(239,68,68,0.3)]">
+              <span class="text-xl md:text-2xl shrink-0 leading-none animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.7)]">🚫</span>
+              <p class="text-white text-[13px] md:text-sm font-black uppercase leading-snug drop-shadow-md">
+                <span class="text-red-400">Không&nbsp;được</span> nhờ người&nbsp;khác&nbsp;đăng&nbsp;ký
+              </p>
+            </div>
+            <div class="bg-gradient-to-r from-red-950/90 to-rose-950/70 border-2 border-red-500/70 rounded-2xl px-4 md:px-5 py-3 md:py-3.5 flex items-center gap-3 shadow-[0_0_24px_rgba(239,68,68,0.3)]">
+              <span class="text-xl md:text-2xl shrink-0 leading-none animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.7)]">⚠️</span>
+              <p class="text-white text-[13px] md:text-sm font-black uppercase leading-snug drop-shadow-md">
+                Chỉ&nbsp;nhận đơn <span class="text-yellow-400">chính&nbsp;chủ</span>
+              </p>
+            </div>
+          </div>
+
           <!-- Ảnh bằng chứng cần gửi — 1 hàng, chú thích dưới từng ảnh, chạm để phóng to -->
           <section v-if="currentJob.proofSampleImages?.length" class="bg-[#111726]/60 border border-slate-800/60 rounded-2xl p-4">
             <h3 class="text-white text-[12px] font-black uppercase tracking-widest mb-3">{{ currentJob.proofSampleImages.length }} ảnh bằng chứng cần gửi</h3>
@@ -1158,6 +1174,22 @@ const handleCopy = (text: string) => {
                     <li class="flex items-start gap-2"><span class="text-yellow-400 shrink-0">•</span><span><span class="text-red-400 font-black uppercase">Không được</span> nhờ người khác đăng ký.</span></li>
                     <li class="flex items-start gap-2"><span class="text-yellow-400 shrink-0">•</span><span>Chỉ nhận đơn <span class="text-yellow-400 font-black uppercase">chính chủ</span>.</span></li>
                   </ul>
+                </div>
+              </div>
+              <!-- LPBANK PLUS: thay khung "Mẹo kiếm tiền" bằng 2 cảnh báo tách riêng — không nhờ người khác đăng ký, chỉ nhận đơn chính chủ
+                   (trang chính cũng hiện đúng 2 cảnh báo này, dưới hàng mã giới thiệu) -->
+              <div v-else-if="isLpbankPlus" class="space-y-2.5">
+                <div class="bg-gradient-to-r from-red-950/90 to-rose-950/70 border-2 border-red-500/70 rounded-2xl px-4 md:px-5 py-3 md:py-3.5 flex items-center gap-3 shadow-[0_0_24px_rgba(239,68,68,0.3)]">
+                  <span class="text-xl md:text-2xl shrink-0 leading-none animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.7)]">🚫</span>
+                  <p class="text-white text-[13px] md:text-sm font-black uppercase leading-snug drop-shadow-md">
+                    <span class="text-red-400">Không&nbsp;được</span> nhờ người&nbsp;khác&nbsp;đăng&nbsp;ký
+                  </p>
+                </div>
+                <div class="bg-gradient-to-r from-red-950/90 to-rose-950/70 border-2 border-red-500/70 rounded-2xl px-4 md:px-5 py-3 md:py-3.5 flex items-center gap-3 shadow-[0_0_24px_rgba(239,68,68,0.3)]">
+                  <span class="text-xl md:text-2xl shrink-0 leading-none animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.7)]">⚠️</span>
+                  <p class="text-white text-[13px] md:text-sm font-black uppercase leading-snug drop-shadow-md">
+                    Chỉ&nbsp;nhận đơn <span class="text-yellow-400">chính&nbsp;chủ</span>
+                  </p>
                 </div>
               </div>
               <div v-else class="bg-gradient-to-r from-yellow-500/10 to-orange-500/5 border border-yellow-500/30 rounded-2xl p-4 md:p-5 flex items-start gap-3 md:gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)] relative overflow-hidden">
