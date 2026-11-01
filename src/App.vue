@@ -87,7 +87,7 @@ function applyPostThreadsConfig(result: Record<string, any>): Record<string, any
 // Job đã gỡ khỏi web: bỏ khỏi kết quả merge nên không còn ở popup "Công việc dễ làm", trang chủ khách và lưới desktop —
 // user không mở/nộp đơn mới được. Vẫn giữ trong jobs.ts vì Admin lấy mức thưởng ở đó để duyệt nốt đơn cũ (tab DUYỆT
 // THREADS – SEEDING). Muốn mở lại job thì xoá id khỏi danh sách này.
-const REMOVED_JOB_IDS = [THREADS_COMMENT_JOB_ID]
+const REMOVED_JOB_IDS = [THREADS_COMMENT_JOB_ID, THREADS_SEEDING_JOB_ID]
 function dropRemovedJobs(result: Record<string, any>): Record<string, any> {
   for (const id of REMOVED_JOB_IDS) delete result[id]
   return result
