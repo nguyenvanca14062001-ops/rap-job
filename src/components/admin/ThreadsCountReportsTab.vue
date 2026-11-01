@@ -395,7 +395,8 @@ const allDocs = computed(() => [...docById.value.values()])
 
 const jobFilter = ref<string>('all')
 const statusFilter = ref<StatusKey>('pending')
-const siteOk = (r: any) => props.siteFilter === 'all' || r.site === props.siteFilter
+// LỌC SITE của AdminView — 'none' = đơn chưa gắn field site
+const siteOk = (r: any) => props.siteFilter === 'all' || (props.siteFilter === 'none' ? !r.site : r.site === props.siteFilter)
 const inJob = (r: any) => jobFilter.value === 'all' || r.jobId === jobFilter.value
 const inStatus = (r: any) => statusGroup(r.status) === statusFilter.value
 

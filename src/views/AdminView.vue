@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth, db } from '@/firebase'
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword } from "firebase/auth"
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDoc, setDoc, increment, limit, where, getDocs, addDoc, serverTimestamp, Timestamp, getCountFromServer, runTransaction } from "firebase/firestore"
+import type { Query } from "firebase/firestore"
 import Swal from 'sweetalert2'
 import { jobsData } from '@/data/jobs'
 import { getReportImages } from '@/utils/reportImages'
 import { normalizePhone } from '@/utils/phone'
+import { normalizeUsername } from '@/utils/username'
+import { useAdminReportSources } from '@/composables/useAdminReportSources'
+import type { ReportMode, ReportTab } from '@/composables/useAdminReportSources'
 import { ABBANK_REFERRAL_JOB_ID, ABBANK_REFERRAL_REWARD } from '@/utils/referralAbbank'
 import { MOMO_REFERRAL_JOB_ID, MOMO_REFERRAL_REWARD } from '@/utils/referralMomo'
 import { LPBANK_PLUS_REFERRAL_JOB_ID, LPBANK_PLUS_REFERRAL_REWARD } from '@/utils/referralLpbankPlus'
@@ -65,6 +69,9 @@ const loginAdmin = async () => {
 const activeTab = ref('app_jobs')
 const siteFilter = ref('all')
 const statusFilter = ref('pending')
+// LỌC SITE: 'all' = mọi site kể cả chưa gắn; 'none' = đơn / yêu cầu không có field site (vd đơn VIP ngân hàng — form gửi
+// đơn không ghi site)
+const siteMatches = (item: any) => siteFilter.value === 'all' || (siteFilter.value === 'none' ? !item?.site : item?.site === siteFilter.value)
 
 const selectedImage = ref<string | null>(null)
 const openImage = (img: string) => { selectedImage.value = img }
@@ -89,9 +96,10 @@ const loadDashboardStats = async () => {
     statsTodayTotal.value = 0
     statsTodayAppTotal.value = 0
     const qBase = query(collection(db, "reports"), where("createdAt", ">=", Timestamp.fromDate(startOfDay)), where("status", "in", ["approved", "collected"]))
+    // Đếm đơn VIP trên TOÀN BỘ đơn hôm nay (trước đây chỉ trong 100 đơn đầu → thẻ APP NGÂN HÀNG HÔM NAY thiếu khi > 100 đơn)
     const [countSnap, detailSnap] = await Promise.all([
       getCountFromServer(qBase),
-      getDocs(query(qBase, orderBy("createdAt", "desc"), limit(100)))
+      getDocs(qBase)
     ])
     statsTodayTotal.value = countSnap.data().count
     detailSnap.forEach(doc => {
@@ -132,70 +140,178 @@ const deleteNote = async (id: string) => {
 }
 
 // ============================================================================
-// 3. TÌM KIẾM
+// 3. TÌM KIẾM — tra thẳng Firestore, không chỉ trong các đơn đang tải: UID / mã đơn đầy đủ, tên đăng nhập (usernames/{tên chuẩn
+// hóa}), username / họ tên khớp 1 phần trong hồ sơ đã tải, SĐT mọi dạng (0… / 84… / +84…) trên đơn (phoneRef, SĐT đăng ký ngân
+// hàng, SĐT hồ sơ web, SĐT bạn bè được giới thiệu) và trên hồ sơ users. Kết quả realtime, mọi trạng thái, mỗi truy vấn tối đa
+// SEARCH_LIMIT đơn (chạm giới hạn thì báo).
 // ============================================================================
 const searchQuery = ref('')
+const SEARCH_LIMIT = 200
+const searchInfo = ref<{ by: string[]; limitHit: boolean; error: string }>({ by: [], limitHit: false, error: '' })
+let searchUnsubs: (() => void)[] = []
+let searchToken = 0
+// Listener rút tiền của kết quả tìm — chỉ mở lại khi danh sách uid đổi (trước đây mỗi lần đơn tìm được cập nhật lại mở thêm
+// 1 listener mà không hủy listener cũ → tích lũy listener, dữ liệu tìm kiếm cũ ghi đè tab RÚT TIỀN)
+let unsubSearchWithdrawals: (() => void) | null = null
+let searchWithdrawalsKey: string | null = null
 
-const handleSearch = () => {
+const stopSearchListeners = () => {
+  searchToken++
+  searchUnsubs.forEach(unsub => unsub())
+  searchUnsubs = []
+  if (unsubSearchWithdrawals) { unsubSearchWithdrawals(); unsubSearchWithdrawals = null }
+  searchWithdrawalsKey = null
+}
+
+const isPhoneLike = (text: string) => /^[\d\s.+()-]+$/.test(text)
+// SĐT về 1 dạng: chỉ chữ số, 84xxxxxxxxx → 0xxxxxxxxx, 9 số thiếu 0 đầu → thêm 0 (giống tab DUYỆT THREADS – SEEDING)
+const canonicalPhone = (value: any) => {
+  const digits = normalizePhone(value)
+  if (digits.startsWith('84') && digits.length >= 11) return '0' + digits.slice(2)
+  if (digits.length === 9 && !digits.startsWith('0')) return '0' + digits
+  return digits
+}
+const phoneVariants = (text: string) => {
+  const national = canonicalPhone(text).replace(/^0/, '')
+  return [...new Set([text, normalizePhone(text), '0' + national, '84' + national, '+84' + national])].filter(Boolean)
+}
+
+// Hồ sơ users của các đơn đang hiển thị — mỗi uid chỉ tải 1 lần (danh sách đơn cập nhật liên tục)
+const requestedUserUids = new Set<string>()
+const fetchMissingUsers = async (list: any[]) => {
+  const missing = [...new Set(list.flatMap((r: any) => [r.uid, r.repairedUserUid]))]
+    .filter((uid: any) => uid && !usersMap.value[uid] && !requestedUserUids.has(uid)) as string[]
+  if (!missing.length) return
+  missing.forEach(uid => requestedUserUids.add(uid))
+  const results = await Promise.all(missing.map(uid => getDoc(doc(db, "users", uid)).catch(() => { requestedUserUids.delete(uid); return null })))
+  const updated = { ...usersMap.value }
+  results.forEach(d => { if (d?.exists()) updated[d.id] = d.data() })
+  usersMap.value = updated
+}
+
+const handleSearch = async () => {
   const text = searchQuery.value.trim()
   if (!text) { loadData(statusFilter.value); return }
   isLoading.value = true
-  if (unsubReports) unsubReports()
-  if (unsubWithdrawals) unsubWithdrawals()
-  if (unsubFriendSearch) { unsubFriendSearch(); unsubFriendSearch = null }
-  let matchedUids: string[] = []
+  reportSources.stop()
+  if (unsubWithdrawals) { unsubWithdrawals(); unsubWithdrawals = null }
+  stopSearchListeners()
+  const token = searchToken
+  const by: string[] = []
+  const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()
+  const reportsCol = collection(db, "reports")
+
+  // 1) UID ứng viên: hồ sơ đã tải khớp 1 phần + UID gõ thẳng + tên đăng nhập + SĐT trên hồ sơ users
+  const uids = new Set<string>()
   const lowerText = text.toLowerCase()
   for (const uid in usersMap.value) {
     const user = usersMap.value[uid]
     const uname = user.username ? String(user.username).toLowerCase() : ''
     const fname = user.fullName ? String(user.fullName).toLowerCase() : ''
-    if (uname.includes(lowerText) || fname.includes(lowerText)) matchedUids.push(uid)
+    if (uname.includes(lowerText) || fname.includes(lowerText)) uids.add(uid)
   }
-  const limitedUids = matchedUids.slice(0, 10)
-  let qReports = limitedUids.length > 0
-    ? query(collection(db, "reports"), where("uid", "in", limitedUids), limit(200))
-    : query(collection(db, "reports"), where("phoneRef", "==", text), limit(200))
-  unsubReports = onSnapshot(qReports, async (snapshot) => {
-    let data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
-    const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()
-    data.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
-    reports.value = data
-    let uidsToSearch = limitedUids.length === 0 && data.length > 0 ? [data[0].uid] : limitedUids
-    if (uidsToSearch.length > 0) {
-      unsubWithdrawals = onSnapshot(query(collection(db, "withdrawals"), where("uid", "in", uidsToSearch.slice(0, 10))), (snapWith) => {
-        let wData = snapWith.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
-        wData.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
-        withdrawals.value = wData
-      })
-    } else { withdrawals.value = [] }
-    isLoading.value = false
-    const missingUids = [...new Set(data.flatMap((r: any) => [r.uid, r.repairedUserUid]).filter((uid: string) => uid && !usersMap.value[uid]))]
-    if (missingUids.length > 0) {
-      const results = await Promise.all(missingUids.map((uid: string) => getDoc(doc(db, "users", uid))))
-      const updated = { ...usersMap.value }
-      results.forEach(d => { if (d.exists()) updated[d.id] = d.data() })
-      usersMap.value = updated
-    }
-  }, (error) => { alert("LỖI TÌM KIẾM: " + error.message); isLoading.value = false })
+  if (uids.size) by.push('username / họ tên')
+  const looksLikeId = /^[A-Za-z0-9]{20,40}$/.test(text)
+  if (looksLikeId) { uids.add(text); by.push('UID / mã đơn') }
+  const digits = normalizePhone(text)
+  const phones = isPhoneLike(text) && digits.length >= 6 ? phoneVariants(text) : []
+  const userKey = normalizeUsername(text)
+  const lookups: Promise<void>[] = []
+  if (!isPhoneLike(text) && userKey.length >= 3 && userKey.length <= 60 && !userKey.includes('/')) {
+    lookups.push(getDoc(doc(db, 'usernames', userKey)).then(snap => {
+      const uid = snap.exists() ? String(snap.data()?.uid || '') : ''
+      if (uid) { uids.add(uid); by.push('tên đăng nhập') }
+    }).catch(e => console.warn('[Admin] Không tra được tên đăng nhập:', e)))
+  }
+  if (phones.length) {
+    by.push('SĐT')
+    lookups.push(Promise.all([
+      getDocs(query(collection(db, 'users'), where('phone', 'in', phones), limit(5))),
+      getDocs(query(collection(db, 'users'), where('phoneRef', 'in', phones), limit(5))),
+    ]).then(snaps => {
+      const found: Record<string, any> = {}
+      snaps.forEach(s => s.docs.forEach(d => { found[d.id] = d.data(); uids.add(d.id) }))
+      if (Object.keys(found).length) usersMap.value = { ...usersMap.value, ...found }
+    }).catch(e => console.warn('[Admin] Không tra được hồ sơ theo SĐT:', e)))
+  }
+  searchInfo.value = { by, limitHit: false, error: '' }
+  await Promise.all(lookups)
+  if (token !== searchToken) return
+  const uidList = [...uids].slice(0, 30)
 
-  // Tìm thêm đơn giới thiệu bạn bè LPBank theo SĐT bạn bè được giới thiệu
-  const normalizedPhone = normalizePhone(text)
-  if (normalizedPhone.length >= 6) {
-    unsubFriendSearch = onSnapshot(
-      query(collection(db, "reports"), where("friendPhoneNormalized", "==", normalizedPhone), limit(50)),
-      (snap) => {
-        const extra = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
-        if (!extra.length) return
-        const existingIds = new Set(reports.value.map(r => r.id))
-        const toAdd = extra.filter(r => !existingIds.has(r.id))
-        if (!toAdd.length) return
-        const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : new Date(t || 0).getTime()
-        const merged = [...reports.value, ...toAdd]
-        merged.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
-        reports.value = merged
-      }
-    )
+  // 2) Listener realtime cho từng kiểu tra — gộp theo mã đơn
+  const resultSets: Record<string, any[]> = {}
+  const limitHits = new Set<string>()
+  let waiting = 0
+  const syncSearchWithdrawals = (data: any[]) => {
+    const list = uidList.length ? uidList : (data[0]?.uid ? [data[0].uid] : [])
+    const key = list.join(',')
+    if (key === searchWithdrawalsKey) return
+    searchWithdrawalsKey = key
+    if (unsubSearchWithdrawals) { unsubSearchWithdrawals(); unsubSearchWithdrawals = null }
+    if (!list.length) { withdrawals.value = []; return }
+    unsubSearchWithdrawals = onSnapshot(query(collection(db, "withdrawals"), where("uid", "in", list)), (snapWith) => {
+      if (token !== searchToken) return
+      const wData = snapWith.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
+      wData.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
+      withdrawals.value = wData
+    }, (e) => {
+      console.error('[Admin] Lỗi tìm rút tiền:', e)
+      searchInfo.value = { ...searchInfo.value, error: `${e.code}: ${e.message}` }
+    })
   }
+  const merge = () => {
+    if (token !== searchToken) return
+    const map = new Map<string, any>()
+    Object.values(resultSets).forEach(list => list.forEach(r => map.set(r.id, r)))
+    const data = [...map.values()].sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
+    reports.value = data
+    searchInfo.value = { ...searchInfo.value, limitHit: limitHits.size > 0 }
+    if (waiting <= 0) isLoading.value = false
+    syncSearchWithdrawals(data)
+    fetchMissingUsers(data)
+  }
+  const watchSearch = (key: string, subscribe: (onList: (list: any[], full: boolean) => void, onErr: (e: any) => void) => () => void) => {
+    waiting++
+    let first = true
+    const settle = () => { if (first) { first = false; waiting-- } }
+    searchUnsubs.push(subscribe((list, full) => {
+      if (token !== searchToken) return
+      resultSets[key] = list
+      if (full) limitHits.add(key); else limitHits.delete(key)
+      settle()
+      merge()
+    }, (e) => {
+      if (token !== searchToken) return
+      console.error(`[Admin] Lỗi tìm kiếm (${key}):`, e)
+      searchInfo.value = { ...searchInfo.value, error: `${e.code}: ${e.message}` }
+      settle()
+      merge()
+    }))
+  }
+  const watchQuery = (key: string, q: Query, max: number) =>
+    watchSearch(key, (onList, onErr) => onSnapshot(q, snap => onList(snap.docs.map(d => ({ id: d.id, ...d.data() })), snap.size >= max), onErr))
+
+  if (uidList.length) {
+    watchQuery('uid', query(reportsCol, where("uid", "in", uidList), limit(SEARCH_LIMIT)), SEARCH_LIMIT)
+    // Đơn Admin đã gắn sang hồ sơ ví này (GẮN HỒ SƠ VÍ THỦ CÔNG)
+    watchQuery('repairedUid', query(reportsCol, where("repairedUserUid", "in", uidList), limit(SEARCH_LIMIT)), SEARCH_LIMIT)
+  }
+  if (looksLikeId) {
+    watchSearch('docId', (onList, onErr) => onSnapshot(doc(reportsCol, text), snap => onList(snap.exists() ? [{ id: snap.id, ...snap.data() }] : [], false), onErr))
+  }
+  if (phones.length) {
+    watchQuery('phoneRef', query(reportsCol, where("phoneRef", "in", phones), limit(SEARCH_LIMIT)), SEARCH_LIMIT)
+    watchQuery('bankPhone', query(reportsCol, where("bankRegisteredPhone", "in", phones), limit(SEARCH_LIMIT)), SEARCH_LIMIT)
+    watchQuery('webPhone', query(reportsCol, where("userPhoneRef", "in", phones), limit(SEARCH_LIMIT)), SEARCH_LIMIT)
+    // Đơn giới thiệu bạn bè theo SĐT bạn bè được giới thiệu
+    const friendPhones = [...new Set([digits, canonicalPhone(text), '84' + canonicalPhone(text).replace(/^0/, '')])].filter(Boolean)
+    watchQuery('friendPhone', query(reportsCol, where("friendPhoneNormalized", "in", friendPhones), limit(50)), 50)
+  } else if (!uidList.length && !looksLikeId) {
+    // Giữ cách tìm cũ khi không khớp user nào: SĐT đúng nguyên chuỗi trên đơn
+    watchQuery('phoneRefExact', query(reportsCol, where("phoneRef", "==", text), limit(SEARCH_LIMIT)), SEARCH_LIMIT)
+  }
+  if (!waiting) { reports.value = []; withdrawals.value = []; isLoading.value = false }
 }
 
 // ============================================================================
@@ -288,44 +404,36 @@ const bulkApproveOtherJobs = async () => {
 // ============================================================================
 // 5. KÉO DỮ LIỆU FIREBASE
 // ============================================================================
-let unsubReports: any = null
 let unsubWithdrawals: any = null
 let unsubAdminNotes: any = null
-let unsubFriendSearch: any = null
+// Tab RÚT TIỀN: lỗi listener + đã chạm giới hạn số yêu cầu tải (có thể còn yêu cầu khác chưa hiện)
+const withdrawalsError = ref('')
+const withdrawalsLimit = ref(150)
+const withdrawalsLimitHit = ref(false)
 
 const loadData = (newStatus: string) => {
   if (searchQuery.value.trim() !== '') return
   isLoading.value = true
-  if (unsubReports) { if (import.meta.env.DEV) console.log('[Firestore] STOP reports/withdrawals/admin_notes listeners'); unsubReports() }
+  stopSearchListeners()
   if (unsubWithdrawals) unsubWithdrawals()
   if (unsubAdminNotes) unsubAdminNotes()
-  if (unsubFriendSearch) { unsubFriendSearch(); unsubFriendSearch = null }
-  if (import.meta.env.DEV) console.log(`[Firestore] START admin listeners — reports limit(${newStatus === 'all' ? 200 : 300}), withdrawals limit(${newStatus === 'all' ? 100 : 150}), status: ${newStatus}`)
+  if (import.meta.env.DEV) console.log(`[Firestore] START admin listeners — reports theo nhóm jobId (useAdminReportSources), withdrawals limit(${newStatus === 'all' ? 100 : 150}), status: ${newStatus}`)
   const getTime = (t: any) => t?.toDate ? t.toDate().getTime() : (t ? new Date(t).getTime() : Date.now() + 15000)
-  let qReports = newStatus === 'all'
-    ? query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(200))
-    : newStatus === 'approved'
-      ? query(collection(db, "reports"), where("status", "in", ["approved", "collected"]), limit(300))
-      : query(collection(db, "reports"), where("status", "==", newStatus), limit(300))
-  unsubReports = onSnapshot(qReports, async (snap) => {
-    let data = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]
-    data.sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
-    reports.value = data; isLoading.value = false
-    const missingUids = [...new Set(data.flatMap((r: any) => [r.uid, r.repairedUserUid]).filter((uid: string) => uid && !usersMap.value[uid]))]
-    if (missingUids.length > 0) {
-      const results = await Promise.all(missingUids.map((uid: string) => getDoc(doc(db, "users", uid))))
-      const updated = { ...usersMap.value }
-      results.forEach(d => { if (d.exists()) updated[d.id] = d.data() })
-      usersMap.value = updated
-    }
-  }, (e) => { console.error(e); isLoading.value = false })
+  // Đơn 2 tab APP NGÂN HÀNG / JOB KHÁC: listener riêng theo nhóm jobId + trạng thái, đối chiếu số đếm trên server
+  reportSources.start(newStatus as ReportMode)
+  const withdrawLimit = newStatus === 'all' ? 100 : 150
+  withdrawalsLimit.value = withdrawLimit
+  withdrawalsLimitHit.value = false
+  withdrawalsError.value = ''
   let qWith = newStatus === 'all'
-    ? query(collection(db, "withdrawals"), orderBy("createdAt", "desc"), limit(100))
-    : query(collection(db, "withdrawals"), where("status", "==", newStatus), limit(150))
+    ? query(collection(db, "withdrawals"), orderBy("createdAt", "desc"), limit(withdrawLimit))
+    : query(collection(db, "withdrawals"), where("status", "==", newStatus), limit(withdrawLimit))
   unsubWithdrawals = onSnapshot(qWith, async (snap) => {
     let data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
     data.sort((a: any, b: any) => getTime(b.createdAt) - getTime(a.createdAt))
     withdrawals.value = data
+    withdrawalsLimitHit.value = snap.size >= withdrawLimit
+    withdrawalsError.value = ''
     const missingUids = [...new Set(data.map((w: any) => w.uid).filter((uid: string) => uid && !usersMap.value[uid]))]
     if (missingUids.length > 0) {
       const results = await Promise.all(missingUids.map((uid: string) => getDoc(doc(db, "users", uid))))
@@ -333,7 +441,7 @@ const loadData = (newStatus: string) => {
       results.forEach(d => { if (d.exists()) updated[d.id] = d.data() })
       usersMap.value = updated
     }
-  })
+  }, (e) => { console.error('LỖI TẢI RÚT TIỀN:', e); withdrawalsError.value = `${e.code}: ${e.message}` })
   unsubAdminNotes = onSnapshot(query(collection(db, "admin_notes"), limit(50)), (snap) => {
     let notes = snap.docs.map(d => ({ id: d.id, ...d.data() }))
     notes.sort((a: any, b: any) => getTime(b.createdAt) - getTime(a.createdAt))
@@ -368,7 +476,7 @@ watch(videoStatusFilter, () => { if (activeTab.value === 'videos') loadVideoRepo
 watch(activeTab, (tab) => { if (tab === 'videos') loadVideoReports() })
 
 const filteredVideoReports = computed(() =>
-  videoReports.value.filter(v => siteFilter.value === 'all' || v.site === siteFilter.value)
+  videoReports.value.filter(v => siteMatches(v))
 )
 
 const approveVideoReport = async (vr: any) => {
@@ -424,6 +532,53 @@ const BANK_ACCOUNT_JOB_IDS = ['vietcombank', 'mbv-bank', 'shopee-pay', 'lpbank-p
 // ABBANK ngoài user chỉ đọc doc này khi CHƯA có doc referral_abbank. Sửa ABBANK thì hãy sửa job có
 // ID đúng là "referral_abbank" (không phải "referral-hub") để chắc chắn cập nhật ra ngoài user.
 const LEGACY_VIP_JOB_IDS = ['referral-hub']
+
+// Job thường (tab JOB KHÁC): mọi jobId đang / đã từng ghi vào `reports` — jobs.ts + job cũ đã gỡ (seeding-vinfast, google-map,
+// zalo_kokomi). Đơn có jobId ngoài 3 danh sách (VIP / thường / Threads) hoặc thiếu jobId (đơn trước 20/05/2026) vẫn được tìm qua
+// bước quét bổ sung của useAdminReportSources — thêm job mới vào đây để khỏi phải quét.
+const OTHER_JOB_IDS = ['follow-cgv', 'review-cinema', 'checkin-cinema', 'survey-cinema', 'join-zalo', 'view-tiktok', 'view-youtube', 'music-vote', 'poster-design', 'story-choice', 'post-threads', 'daily_threads', 'seeding-vinfast', 'google-map', 'zalo_kokomi']
+
+// Nguồn đơn 2 tab APP NGÂN HÀNG / JOB KHÁC — reports.value là danh sách gộp nên duyệt / từ chối / duyệt hàng loạt giữ nguyên
+const reportSources = useAdminReportSources({
+  db,
+  appJobIds: VIP_JOB_IDS,
+  otherJobIds: OTHER_JOB_IDS,
+  hiddenJobIds: COUNT_REWARD_JOB_IDS,
+  isAppJob: (r: any) => isAppJob(r),
+  onDocs: (list, ready) => {
+    reports.value = list
+    if (ready) isLoading.value = false
+    fetchMissingUsers(list)
+  },
+})
+const reportSourceState = reportSources.state
+const REPORT_STATUS_LABELS: Record<string, string> = { pending: 'đang chờ duyệt', all: 'trong lịch sử (mọi trạng thái)', approved: 'đã duyệt', rejected: 'bị hủy' }
+const activeReportTab = computed<ReportTab | null>(() => activeTab.value === 'app_jobs' ? 'app' : activeTab.value === 'other_jobs' ? 'other' : null)
+const activeTabSource = computed(() => activeReportTab.value ? reportSourceState.value.tabs[activeReportTab.value] : null)
+const reportShownCount = (tab: ReportTab) => tab === 'app' ? filteredAppReports.value.length : filteredOtherReports.value.length
+// Số trên nút tab: tổng thật (đã tải + còn trên server) khi đang xem mọi site; ⚠ = chưa tải / chưa đối chiếu đủ, ! = lỗi tải
+const reportTabBadge = (tab: ReportTab) => {
+  const shown = reportShownCount(tab)
+  if (searchQuery.value.trim()) return String(shown)
+  const st = reportSourceState.value
+  const t = st.tabs[tab]
+  if (t.errors.length) return '!'
+  if (!st.active || !t.ready) return '…'
+  if (t.complete) return String(shown)
+  if (!t.checked) return `${shown} …`
+  const n = siteFilter.value === 'all' && t.total != null ? t.total : shown
+  const more = t.total == null || st.unknown == null || st.unknown > 0 || siteFilter.value !== 'all'
+  return `${n}${more ? '+' : ''} ⚠`
+}
+const reportEmptyText = computed(() => {
+  const t = activeTabSource.value
+  if (searchQuery.value.trim() || !t) return 'KHÔNG CÓ DỮ LIỆU.'
+  if (t.errors.length) return 'KHÔNG TẢI ĐƯỢC DỮ LIỆU — XEM LỖI PHÍA TRÊN, DANH SÁCH CÓ THỂ ĐANG THIẾU ĐƠN.'
+  if (!t.complete) return 'CHƯA THẤY ĐƠN NÀO TRONG PHẦN ĐÃ TẢI — XEM CẢNH BÁO PHÍA TRÊN.'
+  return 'KHÔNG CÓ DỮ LIỆU.'
+})
+const formatClock = (ms: number) => ms ? new Date(ms).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''
+const reportSourceLabel = (key: string) => key.replace(/^app/, 'VIP ').replace(/^other/, 'JOB THƯỜNG ').replace(/^extra/, 'JOBID LẠ ')
 
 const loadVipJobs = () => {
   if (unsubVipJobs) unsubVipJobs()
@@ -902,6 +1057,12 @@ onMounted(() => {
   })
 })
 
+// Rời trang Admin: dừng listener + bộ hẹn giờ đếm lại của 2 tab đơn và của ô tìm kiếm
+onUnmounted(() => {
+  reportSources.stop()
+  stopSearchListeners()
+})
+
 // Nhận diện đơn thuộc nhóm "APP NGÂN HÀNG / CHỨNG KHOÁN" (tab JOB VIP trong Admin).
 // Nhận cả report object đầy đủ lẫn { jobName, jobId } tối thiểu (để tương thích các nơi gọi cũ).
 // Thứ tự ưu tiên: field phân loại lưu thẳng trên report (không phụ thuộc 1 danh sách jobId duy nhất,
@@ -931,10 +1092,10 @@ const checkReportStatus = (status: string) => {
   return status === statusFilter.value
 }
 
-const filteredAppReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r)))
+const filteredAppReports = computed(() => reports.value.filter(r => siteMatches(r) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && isAppJob(r)))
 // Đơn BÌNH LUẬN DẠO / ĐĂNG BÀI THREADS – SEEDING chỉ hiện và duyệt ở tab DUYỆT THREADS – SEEDING (ThreadsCountReportsTab)
-const filteredOtherReports = computed(() => reports.value.filter(r => (siteFilter.value === 'all' || r.site === siteFilter.value) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r) && !isCountRewardJob(r.jobId)))
-const filteredWithdrawals = computed(() => withdrawals.value.filter(w => (siteFilter.value === 'all' || w.site === siteFilter.value) && (searchQuery.value.trim() ? true : (statusFilter.value === 'all' || w.status === statusFilter.value))))
+const filteredOtherReports = computed(() => reports.value.filter(r => siteMatches(r) && (searchQuery.value.trim() ? true : checkReportStatus(r.status)) && !isAppJob(r) && !isCountRewardJob(r.jobId)))
+const filteredWithdrawals = computed(() => withdrawals.value.filter(w => siteMatches(w) && (searchQuery.value.trim() ? true : (statusFilter.value === 'all' || w.status === statusFilter.value))))
 
 // Ảnh bằng chứng trùng giữa các đơn thưởng theo số lượng đang tải (BÌNH LUẬN DẠO + SEEDING, mọi user, so SHA-256 file gốc lưu
 // lúc gửi) — chỉ cảnh báo, không tự từ chối. Popup duyệt tra thêm trên Firestore để bắt cả đơn cũ đã duyệt.
@@ -1672,7 +1833,7 @@ const handleAdminLogout = async () => {
       <h1 class="text-3xl md:text-5xl text-[var(--admin-text)] tracking-tighter leading-none">HỆ THỐNG <span class="text-[var(--admin-primary)]">ADMIN</span></h1>
       <div class="flex flex-wrap items-center gap-3">
         <div class="flex items-center gap-1 bg-[var(--admin-card)] p-1.5 rounded-xl border border-[var(--admin-border)] shadow-sm">
-          <input class="bg-white text-[var(--admin-text)] text-[10px] py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none w-[170px] md:w-[200px] placeholder:text-slate-400 font-sans not-italic normal-case" v-model="searchQuery" @keyup.enter="handleSearch" type="text" placeholder="🔎 Tìm Username hoặc SĐT..." />
+          <input class="bg-white text-[var(--admin-text)] text-[10px] py-2 px-3 rounded-lg border border-[var(--admin-border)] outline-none w-[170px] md:w-[200px] placeholder:text-slate-400 font-sans not-italic normal-case" v-model="searchQuery" @keyup.enter="handleSearch" type="text" placeholder="🔎 Username, SĐT, UID, mã đơn..." />
           <button class="bg-[var(--admin-primary)] hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-[10px] font-black" @click="handleSearch">TÌM</button>
           <button class="bg-slate-200 hover:bg-slate-300 text-[var(--admin-text)] px-2 py-2 rounded-lg text-[10px] font-black" v-if="searchQuery" @click="searchQuery = ''; handleSearch()">✕</button>
         </div>
@@ -1692,6 +1853,7 @@ const handleAdminLogout = async () => {
             <option value="mmo">MMO PRO</option>
             <option value="freelance">FREELANCE</option>
             <option value="rapjob">RAP JOB</option>
+            <option value="none">CHƯA GẮN SITE</option>
           </select>
         </div>
         <button class="bg-slate-200 text-[var(--admin-text)] px-6 py-2.5 rounded-xl text-[10px] hover:bg-[var(--admin-danger)] hover:text-white transition-colors" @click="handleAdminLogout">THOÁT</button>
@@ -1773,13 +1935,13 @@ const handleAdminLogout = async () => {
     <!-- TABS -->
     <div class="flex gap-3 mb-6 flex-wrap">
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'app_jobs' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'app_jobs'">
-        APP NGÂN HÀNG ({{ filteredAppReports.length }})
+        APP NGÂN HÀNG ({{ reportTabBadge('app') }})
       </button>
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'other_jobs' ? 'bg-[var(--admin-primary)] text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'other_jobs'">
-        JOB KHÁC ({{ filteredOtherReports.length }})
+        JOB KHÁC ({{ reportTabBadge('other') }})
       </button>
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'withdrawals' ? 'bg-[var(--admin-success)] text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'withdrawals'">
-        RÚT TIỀN ({{ filteredWithdrawals.length }})
+        RÚT TIỀN ({{ withdrawalsError && !searchQuery.trim() ? '!' : `${filteredWithdrawals.length}${withdrawalsLimitHit && !searchQuery.trim() ? '+' : ''}` }})
       </button>
       <button :class="['px-5 py-3 rounded-xl tracking-widest transition-all text-xs', activeTab === 'daily_threads' ? 'bg-teal-600 text-white shadow-sm' : 'bg-[var(--admin-card)] text-[var(--admin-muted)] border border-[var(--admin-border)] hover:bg-[var(--admin-card-soft)]']" @click="activeTab = 'daily_threads'">
         🧵 THREAD HẰNG NGÀY ({{ dailyThreadReportsCount }})
@@ -1810,6 +1972,57 @@ const handleAdminLogout = async () => {
 
       <!-- APP JOBS & OTHER JOBS -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'app_jobs' || activeTab === 'other_jobs'">
+        <!-- TÌNH TRẠNG TẢI ĐƠN — kết quả tìm kiếm, hoặc nguồn riêng theo nhóm jobId (useAdminReportSources): lỗi tải, chưa tải đủ,
+             thiếu index, đơn ngoài nhóm jobId. Không bao giờ chỉ hiện "0 đơn" khi truy vấn lỗi / chưa đối chiếu được. -->
+        <div class="border-b border-[var(--admin-border)] px-6 py-3 space-y-2 font-sans not-italic normal-case text-[11px] font-bold" v-if="searchQuery.trim()">
+          <div class="bg-blue-50 border border-blue-200 text-[var(--admin-primary)] rounded-xl px-4 py-2">
+            🔎 Kết quả tìm “{{ searchQuery.trim() }}” — mọi trạng thái, tra trên hệ thống theo: {{ searchInfo.by.length ? searchInfo.by.join(', ') : 'SĐT đúng nguyên chuỗi' }}.
+            <span class="text-[var(--admin-warning)]" v-if="searchInfo.limitHit">⚠️ Có kiểu tra chạm giới hạn {{ SEARCH_LIMIT }} đơn — có thể còn đơn khác.</span>
+          </div>
+          <div class="bg-red-50 border border-red-200 text-[var(--admin-danger)] rounded-xl px-4 py-2" v-if="searchInfo.error">❌ Lỗi tìm kiếm — kết quả có thể thiếu: {{ searchInfo.error }}</div>
+        </div>
+        <div class="border-b border-[var(--admin-border)] px-6 py-3 space-y-2 font-sans not-italic normal-case text-[11px] font-bold" v-else-if="activeTabSource">
+          <div class="bg-red-50 border border-red-200 text-[var(--admin-danger)] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2" v-if="activeTabSource.errors.length">
+            <span>❌ KHÔNG TẢI ĐƯỢC ĐƠN {{ activeReportTab === 'app' ? 'APP NGÂN HÀNG' : 'JOB KHÁC' }} — danh sách bên dưới có thể đang THIẾU đơn. Lỗi: {{ activeTabSource.errors.join(' · ') }}</span>
+            <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shrink-0" @click="reportSources.retry()">THỬ LẠI</button>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 text-[var(--admin-warning)] rounded-xl px-4 py-2" v-if="activeTabSource.fromCache">⚠️ Mất kết nối tới server — danh sách đang là bản tạm chưa được xác nhận, có thể thiếu đơn mới.</div>
+          <div class="bg-amber-50 border border-amber-200 text-[var(--admin-warning)] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2" v-if="(activeTabSource.remaining ?? 0) > 0 || activeTabSource.canLoadMore">
+            <span>⚠️ Mới tải {{ activeTabSource.loaded.toLocaleString('vi-VN') }} / {{ activeTabSource.total != null ? activeTabSource.total.toLocaleString('vi-VN') : '?' }} đơn {{ REPORT_STATUS_LABELS[statusFilter] }} của tab này — các đơn còn lại chưa hiện bên dưới.</span>
+            <button class="bg-[var(--admin-warning)] hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shrink-0" v-if="activeTabSource.canLoadMore" @click="activeReportTab && reportSources.loadMore(activeReportTab)">TẢI THÊM 500 ĐƠN</button>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 text-[var(--admin-warning)] rounded-xl px-4 py-2" v-if="activeTabSource.fallback">
+            ⚠️ Chưa có index sắp xếp theo ngày tạo — đang dùng truy vấn dự phòng: đơn được tải theo thứ tự mã đơn, không phải mới nhất trước (bấm TẢI THÊM tới khi hết cảnh báo để chắc chắn thấy đủ).
+            <a class="underline text-[var(--admin-primary)] ml-1" v-for="url in activeTabSource.indexUrls" :key="url" :href="url" target="_blank" rel="noopener">Tạo index ↗</a>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 text-[var(--admin-warning)] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2" v-if="activeTabSource.countErrors.length">
+            <span>⚠️ Không đếm được số đơn trên server — chưa xác nhận được đã tải đủ. Lỗi: {{ activeTabSource.countErrors.join(' · ') }}</span>
+            <button class="bg-[var(--admin-warning)] hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shrink-0" @click="reportSources.refreshCounts()">ĐẾM LẠI</button>
+          </div>
+          <div class="bg-blue-50 border border-blue-200 text-[var(--admin-primary)] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2" v-if="reportSourceState.sweep.state === 'running'">
+            <span>🔎 Đang quét tìm đơn thiếu jobId / jobId lạ: {{ reportSourceState.sweep.scanned.toLocaleString('vi-VN') }} / {{ reportSourceState.sweep.toScan != null ? reportSourceState.sweep.toScan.toLocaleString('vi-VN') : '?' }} đơn…</span>
+            <button class="bg-slate-200 hover:bg-slate-300 text-[var(--admin-text)] px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shrink-0" @click="reportSources.stopSweep()">DỪNG</button>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 text-[var(--admin-warning)] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2" v-else-if="(reportSourceState.unknown ?? 0) > 0">
+            <span>⚠️ Còn {{ reportSourceState.unknown?.toLocaleString('vi-VN') }} đơn {{ REPORT_STATUS_LABELS[statusFilter] }} thiếu jobId hoặc có jobId lạ chưa được tải (thường là đơn cũ trước 20/05/2026 hoặc đơn từ site khác) — trong đó có thể có đơn của tab này.{{ statusFilter === 'pending' ? ' Hệ thống tự quét (tối đa 1 lần / 5 phút) — có thể bấm QUÉT TÌM ngay.' : '' }}</span>
+            <button class="bg-[var(--admin-warning)] hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shrink-0" @click="reportSources.sweep()" :title="`Đọc lần lượt toàn bộ ${reportSourceState.statusTotal ?? ''} đơn ${REPORT_STATUS_LABELS[statusFilter]} để tìm các đơn này`">QUÉT TÌM ({{ reportSourceState.statusTotal?.toLocaleString('vi-VN') ?? '?' }} ĐƠN)</button>
+          </div>
+          <div class="bg-red-50 border border-red-200 text-[var(--admin-danger)] rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-2" v-if="reportSourceState.sweep.state === 'error'">
+            <span>❌ Quét tìm đơn thiếu jobId bị lỗi: {{ reportSourceState.sweep.error }}</span>
+            <button class="bg-[var(--admin-danger)] hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase shrink-0" @click="reportSources.sweep()">QUÉT LẠI</button>
+          </div>
+          <div class="text-[var(--admin-muted)] px-1" v-if="reportSourceState.sweep.state === 'done' || reportSourceState.sweep.state === 'stopped'">
+            {{ reportSourceState.sweep.state === 'stopped' ? 'Đã dừng quét sau' : 'Đã quét' }} {{ reportSourceState.sweep.scanned.toLocaleString('vi-VN') }} đơn: thấy {{ reportSourceState.sweep.found }} đơn ngoài nhóm jobId ({{ reportSourceState.sweep.foundApp }} đơn APP NGÂN HÀNG) — đã đưa vào danh sách.<template v-if="reportSourceState.extraJobIds.length"> jobId lạ: {{ reportSourceState.extraJobIds.join(', ') }}.</template>
+          </div>
+          <div class="text-[var(--admin-muted)] px-1" v-if="reportSourceState.undocStatic">{{ reportSourceState.undocStatic }} đơn thiếu jobId đang hiện dữ liệu lúc quét (không tự cập nhật) — F5 để tải lại.</div>
+          <div class="text-[var(--admin-success)] px-1" v-if="activeTabSource.complete">✓ Đã tải đủ {{ activeTabSource.total?.toLocaleString('vi-VN') }} đơn {{ REPORT_STATUS_LABELS[statusFilter] }} của tab này (mọi site) — khớp số đếm trên server lúc {{ formatClock(reportSourceState.countsAt) }}.</div>
+          <div class="text-[var(--admin-muted)] px-1" v-else-if="!activeTabSource.checked && !activeTabSource.errors.length">Đang đối chiếu số đơn với server…</div>
+          <details class="text-[10px] text-[var(--admin-muted)] font-normal px-1">
+            <summary class="cursor-pointer select-none font-bold">Chi tiết truy vấn</summary>
+            <div v-for="s in reportSourceState.sources" :key="s.key">{{ reportSourceLabel(s.key) }}: đã tải {{ s.loaded }} / server {{ s.count ?? '?' }} (giới hạn {{ s.limit }}, {{ s.ordered ? 'mới nhất trước' : 'theo mã đơn' }}{{ s.fallback ? ', dự phòng thiếu index' : '' }}{{ s.undated ? ', gồm đơn thiếu ngày tạo' : '' }}){{ s.error ? ' — ' + s.error : '' }}</div>
+            <div>Tổng đơn {{ REPORT_STATUS_LABELS[statusFilter] }} mọi job: {{ reportSourceState.statusTotal ?? '?' }} · ngoài nhóm jobId chưa tải: {{ reportSourceState.unknown ?? '?' }} · đơn thiếu jobId đã biết: {{ reportSourceState.undocCount }}</div>
+          </details>
+        </div>
         <Transition name="fade">
           <div class="bg-blue-50 border-b border-blue-200 p-4 flex justify-between items-center px-6" v-if="activeTab === 'other_jobs' && selectedOtherJobs.length">
             <span class="text-[var(--admin-primary)] text-sm tracking-widest">ĐÃ CHỌN: <span class="text-[var(--admin-text)] text-lg">{{ selectedOtherJobs.length }}</span> ĐƠN</span>
@@ -1858,7 +2071,9 @@ const handleAdminLogout = async () => {
                   <div class="flex flex-col items-end gap-1">
                     <span class="bg-pink-100 text-pink-600 border border-pink-200 text-[8px] px-2 py-0.5 rounded" v-if="rp.site === 'freelance'">FREELANCE</span>
                     <span class="bg-violet-100 text-violet-600 border border-violet-200 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site === 'rapjob'">RAP JOB</span>
-                    <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
+                    <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site === 'mmo'">MMO</span>
+                    <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[8px] px-2 py-0.5 rounded" v-else-if="rp.site">{{ String(rp.site).toUpperCase() }}</span>
+                    <span class="bg-slate-100 text-slate-500 border border-slate-300 text-[8px] px-2 py-0.5 rounded" v-else>CHƯA GẮN SITE</span>
                     <button class="bg-amber-50 text-[var(--admin-warning)] hover:bg-[var(--admin-warning)] hover:text-white border border-amber-200 px-2 py-1 rounded-lg text-[8px]" @click="fixUserWallet(effUid(rp))">SỬA VÍ</button>
                     <button class="bg-emerald-50 text-[var(--admin-success)] hover:bg-[var(--admin-success)] hover:text-white border border-emerald-200 px-2 py-1 rounded-lg text-[8px]" @click="addXuToUser(effUid(rp))">💰 CỘNG XU</button>
                     <button v-if="activeTab === 'app_jobs'" class="bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white border border-violet-200 px-2 py-1 rounded-lg text-[8px]" @click="recomputeUserVipCount(effUid(rp))" title="Tính lại vipCompletedCount từ lịch sử đơn VIP đã duyệt">SỬA VIP ({{ usersMap[effUid(rp)]?.vipCompletedCount ?? 0 }})</button>
@@ -2011,11 +2226,16 @@ const handleAdminLogout = async () => {
             </tr>
           </tbody>
         </table>
-        <div class="p-20 text-center text-slate-400 text-xs" v-if="(activeTab === 'app_jobs' && !filteredAppReports.length) || (activeTab === 'other_jobs' && !filteredOtherReports.length)">KHÔNG CÓ DỮ LIỆU.</div>
+        <div :class="['p-20 text-center text-xs', activeTabSource?.errors.length && !searchQuery.trim() ? 'text-[var(--admin-danger)]' : 'text-slate-400']" v-if="(activeTab === 'app_jobs' && !filteredAppReports.length) || (activeTab === 'other_jobs' && !filteredOtherReports.length)">{{ reportEmptyText }}</div>
       </div>
 
       <!-- RÚT TIỀN -->
       <div class="overflow-x-auto" v-else-if="activeTab === 'withdrawals'">
+        <div class="border-b border-[var(--admin-border)] px-6 py-3 space-y-2 font-sans not-italic normal-case text-[11px] font-bold" v-if="searchQuery.trim() ? !!searchInfo.error : (withdrawalsError || withdrawalsLimitHit)">
+          <div class="bg-red-50 border border-red-200 text-[var(--admin-danger)] rounded-xl px-4 py-2" v-if="searchQuery.trim()">❌ Lỗi tìm kiếm — kết quả có thể thiếu: {{ searchInfo.error }}</div>
+          <div class="bg-red-50 border border-red-200 text-[var(--admin-danger)] rounded-xl px-4 py-2" v-else-if="withdrawalsError">❌ Không tải được yêu cầu rút tiền — danh sách có thể đang THIẾU. Lỗi: {{ withdrawalsError }}</div>
+          <div class="bg-amber-50 border border-amber-200 text-[var(--admin-warning)] rounded-xl px-4 py-2" v-else>⚠️ Đang hiện tối đa {{ withdrawalsLimit }} yêu cầu{{ statusFilter === 'all' ? ' mới nhất' : ' (theo thứ tự mã, không theo thời gian)' }} — có thể còn yêu cầu khác. Tìm theo username / SĐT / UID để tra user cụ thể.</div>
+        </div>
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-[var(--admin-card-soft)] text-[var(--admin-success)] text-[10px] tracking-[2px] border-b border-[var(--admin-border)]">
@@ -2033,7 +2253,9 @@ const handleAdminLogout = async () => {
                 <div class="flex items-center gap-2 mb-1">
                   <span class="bg-pink-100 text-pink-600 border border-pink-200 text-[8px] px-2 py-0.5 rounded" v-if="wd.site === 'freelance'">FREELANCE</span>
                   <span class="bg-violet-100 text-violet-600 border border-violet-200 text-[8px] px-2 py-0.5 rounded" v-else-if="wd.site === 'rapjob'">RAP JOB</span>
-                  <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else>MMO</span>
+                  <span class="bg-blue-100 text-blue-600 border border-blue-200 text-[8px] px-2 py-0.5 rounded" v-else-if="wd.site === 'mmo'">MMO</span>
+                  <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[8px] px-2 py-0.5 rounded" v-else-if="wd.site">{{ String(wd.site).toUpperCase() }}</span>
+                  <span class="bg-slate-100 text-slate-500 border border-slate-300 text-[8px] px-2 py-0.5 rounded" v-else>CHƯA GẮN SITE</span>
                 </div>
                 <div class="text-[var(--admin-text)] text-sm font-black">{{ usersMap[wd.uid]?.username || 'CHƯA CẬP NHẬT' }}</div>
                 <div class="text-[var(--admin-muted)] text-[9px] font-sans not-italic">UID: {{ wd.uid?.slice(0, 8) }}…</div>
@@ -2071,7 +2293,7 @@ const handleAdminLogout = async () => {
             </tr>
           </tbody>
         </table>
-        <div class="p-20 text-center text-slate-400 text-xs" v-if="!filteredWithdrawals.length">KHÔNG CÓ DỮ LIỆU.</div>
+        <div :class="['p-20 text-center text-xs', withdrawalsError && !searchQuery.trim() ? 'text-[var(--admin-danger)]' : 'text-slate-400']" v-if="!filteredWithdrawals.length">{{ withdrawalsError && !searchQuery.trim() ? 'KHÔNG TẢI ĐƯỢC DỮ LIỆU — XEM LỖI PHÍA TRÊN.' : 'KHÔNG CÓ DỮ LIỆU.' }}</div>
       </div>
 
       <!-- THREAD HẰNG NGÀY — collection riêng daily_thread_reports, tách biệt hoàn toàn khỏi reports -->
